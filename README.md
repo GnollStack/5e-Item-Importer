@@ -1,10 +1,11 @@
 # 5e-Item-Importer
-A simple module to parse item for the dnd 5e system and create them in Foundry VTT.
 
 ![alt text](https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer)
 ![alt text](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/total)
 ![alt text](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/total)
 ![alt text](https://img.shields.io/badge/Foundry-v13-informational)
+
+A simple module to parse items for the dnd 5e system and create them in Foundry VTT.
 
 The architecture and foundational parsing concepts for this module were inspired by the excellent [5e Statblock Importer](https://github.com/Aioros/5e-statblock-importer) by Aioros.
 
@@ -13,13 +14,13 @@ Import D&D 5e items from text format (PDFs, websites, homebrew documents) into F
 📋 Features
 ✅ What Works Now:
 
-✅ Multiple Input Formats:
+Multiple Input Formats:
 
 Natural text format (standard D&D item descriptions)
 Structured format (Name:, Type:, Description:, etc.)
 
 
-✅ Item Types:
+Item Types:
 
 Weapons (all types, including magic weapons with bonuses)
 Armor/Equipment (all types, including magic armor)
@@ -29,7 +30,7 @@ Containers (with weight and volume capacity)
 Loot with automatic subtype detection (Art, Gemstone, Treasure, Materials, etc.)
 
 
-✅ Parsing Features:
+Parsing Features:
 
 Attunement (required, optional, specific requirements)
 Cost/weight parsing (all currency types)
@@ -42,7 +43,7 @@ Automatic magical property for uncommon+ items
 Identification system (unidentified items with alternate names/descriptions)
 
 
-✅ Quality of Life:
+Quality of Life:
 
 Icon matching from compendiums and system files
 Folder organization
@@ -53,11 +54,9 @@ Debug mode with detailed logging
 ⚠️ Known Limitations:
 
 ⚠️ Spell scrolls (not yet fully implemented)
-⚠️ Batch import (feature flagged)
-⚠️ Export to text (planned)
 
 
-🚀 Quick Start
+Quick Start
 Installation
 
 Open Foundry VTT
@@ -122,7 +121,7 @@ Fields like `Description:`, `Unidentified Description:`, and `Chat Description:`
 
 ---
 
-## 🎯 Loot Item Subtypes
+## Loot Item Subtypes
 
 The parser automatically detects loot subtypes based on keywords:
 
@@ -138,7 +137,7 @@ The parser automatically detects loot subtypes based on keywords:
 
 ---
 
-## 🧪 Test Cases
+## Test Cases
 
 ### Test 1: Basic Weapon
 ```
@@ -272,7 +271,7 @@ Expected Results:
 ✅ Properties: Magical (auto-detected from rarity)
 
 
-📝 Known Behaviors
+Known Behaviors
 Automatic Type Detection
 
 Loot subtypes are automatically detected from item names and properties
@@ -300,7 +299,7 @@ Can mix both formats (some fields structured, description natural)
 Empty fields are handled gracefully
 
 
-⚙️ Settings
+Settings
 Access settings via: Game Settings → Module Settings → 5e Item Importer
 Available Settings:
 
@@ -354,7 +353,7 @@ Description comes after "Description:" label in structured format
 No blank lines between item data and description
 
 
-🔧 Module API
+Module API
 The module exposes an API for programmatic access:
 javascript// Access the API
 const api = game.modules.get("5e-item-importer").api;
@@ -372,7 +371,7 @@ api.openWindow();
 // Get module info
 const info = api.info();
 
-📊 Compatibility
+Compatibility
 
 Foundry VTT: v13.315+
 D&D 5e System: v5.1.10+
@@ -399,7 +398,7 @@ Long-term (3-6 months):
  Browser extension for quick imports
 
 
-💡 Tips & Tricks
+Tips & Tricks
 Best Practices:
 
 Use standard D&D formatting for best results
