@@ -1,6 +1,11 @@
 # 5e-Item-Importer
 A simple module to parse item for the dnd 5e system and create them in Foundry VTT.
 
+![alt text](https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer)
+![alt text](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/total)
+![alt text](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/total)
+![alt text](https://img.shields.io/badge/Foundry-v13-informational)
+
 The architecture and foundational parsing concepts for this module were inspired by the excellent [5e Statblock Importer](https://github.com/Aioros/5e-statblock-importer) by Aioros.
 
 5e Item Importer
