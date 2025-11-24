@@ -9,7 +9,7 @@
 The **5e Item Importer** allows you to import D&D 5e items (Weapons, Loot, Containers, Spells, etc.) directly from text into Foundry VTT. It supports two powerful workflows:
 
 1.  **Natural Language:** Copy/paste directly from PDFs, D&D Beyond, or websites. This method handles standard D&D 5e formatting.
-2.  **Strict Format:** Use the provided templates to generate near perfect imports every time. Great for homebrew, bulk generation, or working with LLMs. **Supports Batch support**
+2.  **Strict Format:** Use the provided templates to generate near perfect imports every time. Great for homebrew, bulk generation, or working with LLMs. **Supports Batches**.
 
 <img width="700" height="602" alt="image" src="https://github.com/user-attachments/assets/c608cb8f-fc8a-405e-b68c-5152508e0d5e" />
 
@@ -1201,11 +1201,8 @@ Masterwork thieves' tools that grant a +2 bonus.
 
 ## Common Issues
 
-**The "Import Item" button isn't showing up.**
-> Ensure you are in the **Items Directory** tab (the dagger icon). The button does not appear in the Actors or Compendium tabs.
-
 **Icons aren't matching automatically.**
-> Go to Module Settings and enable **"Match Icons from Compendiums"**. Note: This feature works best with standard D&D 5e item names (e.g., "Longsword", "Potion of Healing").
+> Go to Module Settings and enable **"Match Icons from Compendiums"**. Note: This feature works best with standard D&D 5e item names (e.g., "Longsword", "Potion of Healing"). Im hoping to include randomized compedium images in the near future
 
 **Description is empty.**
 > If using Natural Language: Ensure there is a blank line between the stat block and the description.
