@@ -1201,6 +1201,12 @@ Masterwork thieves' tools that grant a +2 bonus.
 
 ## Common Issues
 
+**Item Recovery**
+> Item Recovery is actively being worked on and will be added in the near future.
+
+**Natural Parsing Improvements**
+> Natural Parsing is still being worked on.
+
 **Icons aren't matching automatically.**
 > Go to Module Settings and enable **"Match Icons from Compendiums"**. Note: This feature works best with standard D&D 5e item names (e.g., "Longsword", "Potion of Healing"). Im hoping to include randomized compedium images in the near future
 
