@@ -8,13 +8,17 @@
 **Stop manually typing items.**  
 The **5e Item Importer** allows you to import D&D 5e items (Weapons, Loot, Containers, Spells, etc.) directly from text into Foundry VTT. It supports two powerful workflows:
 
-1.  **Natural Language:** Copy/paste directly from PDFs, D&D Beyond, or websites.
-2.  **Strict Format (AI-Ready):** Use the provided templates with ChatGPT/Claude to generate perfect, error-free imports every time.
+1.  **Natural Language:** Copy/paste directly from PDFs, D&D Beyond, or websites. This method handles standard D&D 5e formatting.
+2.  **Strict Format:** Use the provided templates to generate near perfect imports every time. Great for homebrew, bulk generation, or working with LLMs. **Supports Batch support**
+
+<img width="700" height="602" alt="image" src="https://github.com/user-attachments/assets/c608cb8f-fc8a-405e-b68c-5152508e0d5e" />
 
 ---
 
-## 🚀 1. Natural Language Parser
+##  1. Natural Language Parser
 *Best for: Quick imports from books, PDFs, or websites.*
+
+**This feaure is still under active development**
 
 The module attempts to read standard D&D 5e statblock formatting. It automatically detects item types, costs, weights, and damage formulas.
 
@@ -23,6 +27,7 @@ The module attempts to read standard D&D 5e statblock formatting. It automatical
 2.  Open the **Items Directory** in Foundry.
 3.  Click **Import Item**.
 4.  Paste the text and click **Import**.
+5.  Parse and then Import. You can choose a file to put it into.
 
 <details>
 <summary><strong>📄 View Natural Language Template & Examples</strong></summary>
@@ -41,16 +46,46 @@ AC: [Number] (max Dex [Number])
 [Description Paragraphs...]
 ```
 
-**Example (Bag of Holding):**
-```text
-Bag of Holding
-Wondrous item, uncommon
-Weight: 15 lb.
+---
 
-This bag has an interior space considerably larger than its outside dimensions. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet.
-```
+## **BEST PRACTICE PATTERNS**
 
-**Example (Sun Blade):**
+### **1. Naming & Header**
+The parser uses 3 strategies. The safest is Title Case on the first line.
+*   **Good:** `Flame Tongue`
+*   **Better:** `Name: Flame Tongue` (Guarantees 100% confidence)
+
+### **2. Type Detection**
+Include specific keywords in the first 3 lines to trigger type detection:
+*   **Weapon:** "Weapon", "Melee Weapon", "Ranged Weapon", "Attack Roll"
+*   **Armor:** "Armor", "Shield", "Plate", "Leather", "AC"
+*   **Consumable:** "Potion", "Scroll", "Food", "Drink", "Ammunition"
+*   **Tool:** "Tool", "Kit", "Instrument", "Gaming Set"
+*   **Container:** "Bag", "Backpack", "Box", "Holds", "Capacity"
+*   **Loot:** "Gem", "Art Object", "Treasure", "Material"
+
+### **3. Weapons**
+To ensure correct parsing of damage and properties:
+*   **Type:** Use full terms like "Martial Melee Weapon" or "Simple Ranged Weapon".
+*   **Damage:** Format as `1d8 slashing` or `Damage: 2d6 fire`.
+*   **Properties:** List them clearly: `Finesse, Light, Thrown`.
+*   **Versatile:** Use the specific format `Versatile (1d10)`.
+
+### **4. Armor & Equipment**
+*   **AC:** Use `AC 18` or `Armor Class: 14`.
+*   **Stealth:** Use the phrase `Disadvantage on Stealth checks`.
+*   **Strength:** Use `Requires Strength 13` or `Str 15`.
+
+### **5. Containers**
+The parser looks for specific capacity phrases:
+*   **Weight:** "Holds 500 pounds" or "Capacity: 500 lbs".
+*   **Volume:** "64 cubic feet".
+*   **Currency:** "Contains 50 gp" or "Holds 10 platinum".
+
+---
+
+## **EXAMPLE: WEAPON (Best Result)**
+
 ```text
 Sun Blade
 Weapon (longsword), rare (requires attunement)
@@ -58,18 +93,50 @@ Cost: 5000 gp, Weight: 3 lb.
 Damage: 1d8 radiant
 Properties: Finesse, Versatile (1d10)
 
-This item appears to be a longsword hilt. While grasping the hilt, you can use a bonus action to cause a blade of pure radiance to spring into existence.
+This item appears to be a longsword hilt. While grasping the hilt, you can use a bonus action to cause a blade of pure radiance to spring into existence, or make the blade disappear.
+```
+
+## **EXAMPLE: ARMOR (Best Result)**
+
+```text
+Dragon Scale Mail
+Armor (scale mail), very rare (requires attunement)
+Cost: 4000 gp, Weight: 45 lb.
+AC: 14 (max Dex 2)
+
+Dragon scale mail is made of the scales of one kind of dragon. While wearing this armor, you have advantage on saving throws against the Frightful Presence and breath weapons of dragons.
+```
+
+## **EXAMPLE: CONTAINER (Best Result)**
+
+```text
+Bag of Holding
+Wondrous item, uncommon
+Weight: 15 lb.
+
+This bag has an interior space considerably larger than its outside dimensions. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet.
+The bag currently contains 50 gp and 10 sp.
+```
+
+## **EXAMPLE: TOOL (Best Result)**
+
+```text
+Thieves' Tools
+Tool, common
+Cost: 25 gp, Weight: 1 lb.
+
+This set of tools includes a small file, a set of lock picks, a small mirror mounted on a metal handle, a set of narrow-bladed scissors, and a pair of pliers. Proficiency with these tools lets you add your proficiency bonus to any ability checks you make to disarm traps or open locks.
 ```
 </details>
 
 ---
 
-## 🤖 2. Strict Format Parser (AI Powered)
+## 2. Strict Format Parser (AI Powered)
 *Best for: Complex homebrew, bulk generation, and 100% accuracy.*
 
 The Strict Parser uses a specific key/value format. This is ideal for using with **LLMs (ChatGPT, Claude, DeepSeek)**. You can paste a "System Prompt" into an AI, tell it "Make me a sword that does ice damage," and it will output a block you can paste directly into Foundry with perfect stats, icons, and configuration.
 
-### 🛠️ Strict Templates
+### Strict Templates
 Expand the sections below to copy the templates for your AI prompt or manual entry.
 
 <details>
@@ -1132,7 +1199,7 @@ Masterwork thieves' tools that grant a +2 bonus.
 
 ---
 
-## ❓ Common Issues
+## Common Issues
 
 **The "Import Item" button isn't showing up.**
 > Ensure you are in the **Items Directory** tab (the dagger icon). The button does not appear in the Actors or Compendium tabs.
@@ -1146,7 +1213,7 @@ Masterwork thieves' tools that grant a +2 bonus.
 
 ---
 
-## 📜 License & Credits
+## License & Credits
 
 **License:** MIT License  
 **Author:** [GnollStack](https://github.com/GnollStack)  
