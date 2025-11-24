@@ -131,13 +131,13 @@ This set of tools includes a small file, a set of lock picks, a small mirror mou
 
 ---
 
-## 2. Strict Format Parser (AI Powered)
-*Best for: Complex homebrew, bulk generation, and 100% accuracy.*
+## 2. Strict Format Parser
+*Best for: Complex homebrew and bulk generation.*
 
-The Strict Parser uses a specific key/value format. This is ideal for using with **LLMs (ChatGPT, Claude, DeepSeek)**. You can paste a "System Prompt" into an AI, tell it "Make me a sword that does ice damage," and it will output a block you can paste directly into Foundry with perfect stats, icons, and configuration.
+The Strict Parser uses a specific key/value format. This is ideal for using with **LLMs (ChatGPT, Claude, DeepSeek)**. You can paste a System Prompt into an AI, tell it "Make me a sword that does ice damage," and it will output a block you can paste directly into Foundry with the  stats, icons, and configuration filled in on the imported item, Not that this only fills in the basic item fields and details
 
 ### Strict Templates
-Expand the sections below to copy the templates for your AI prompt or manual entry.
+Expand the sections below to copy the templates for prompts and to view example items.
 
 <details>
 <summary><strong>⚔️ Strict Weapon Template</strong></summary>
@@ -1037,7 +1037,7 @@ Chat Description:
 
 ---
 
-## **EXAMPLE: FILLED TEMPLATE**
+## **EXAMPLE: LOOT TEMPLATE**
 
 ```text
 ===LOOT===
