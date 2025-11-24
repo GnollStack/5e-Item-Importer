@@ -6,7 +6,7 @@
 ![alt text](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/total)
 
 **Stop manually typing items.**  
-The **5e Item Importer** allows you to import D&D 5e items (Weapons, Loot, Containers, Spells, etc.) directly from text into Foundry VTT. It supports two powerful workflows:
+The **5e Item Importer** allows you to import D&D 5e items directly from text into Foundry VTT. It supports two powerful workflows:
 
 1.  **Natural Language:** Copy/paste directly from PDFs, D&D Beyond, or websites. This method handles standard D&D 5e formatting.
 2.  **Strict Format:** Use the provided templates to generate near perfect imports every time. Great for homebrew, bulk generation, or working with LLMs. **Supports Batches**.
