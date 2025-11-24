@@ -1,420 +1,1155 @@
-# 5e-Item-Importer
+# 5e Item Importer
 
-![alt text](https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer)
+![Foundry v13](https://img.shields.io/badge/Foundry-v13-informational)
+![Latest Release](https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer)
 ![alt text](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/total)
 ![alt text](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/total)
-![alt text](https://img.shields.io/badge/Foundry-v13-informational)
 
-A simple module to parse items for the dnd 5e system and create them in Foundry VTT.
+**Stop manually typing items.**  
+The **5e Item Importer** allows you to import D&D 5e items (Weapons, Loot, Containers, Spells, etc.) directly from text into Foundry VTT. It supports two powerful workflows:
 
-The architecture and foundational parsing concepts for this module were inspired by the excellent [5e Statblock Importer](https://github.com/Aioros/5e-statblock-importer) by Aioros.
+1.  **Natural Language:** Copy/paste directly from PDFs, D&D Beyond, or websites.
+2.  **Strict Format (AI-Ready):** Use the provided templates with ChatGPT/Claude to generate perfect, error-free imports every time.
 
-5e Item Importer
-Import D&D 5e items from text format (PDFs, websites, homebrew documents) into Foundry VTT.
-📋 Features
-✅ What Works Now:
+---
 
-Multiple Input Formats:
+## 🚀 1. Natural Language Parser
+*Best for: Quick imports from books, PDFs, or websites.*
 
-Natural text format (standard D&D item descriptions)
-Structured format (Name:, Type:, Description:, etc.)
+The module attempts to read standard D&D 5e statblock formatting. It automatically detects item types, costs, weights, and damage formulas.
 
+**How to use:**
+1.  Copy the item text from your source.
+2.  Open the **Items Directory** in Foundry.
+3.  Click **Import Item**.
+4.  Paste the text and click **Import**.
 
-Item Types:
+<details>
+<summary><strong>📄 View Natural Language Template & Examples</strong></summary>
 
-Weapons (all types, including magic weapons with bonuses)
-Armor/Equipment (all types, including magic armor)
-Consumables (potions, scrolls, etc.)
-Tools
-Containers (with weight and volume capacity)
-Loot with automatic subtype detection (Art, Gemstone, Treasure, Materials, etc.)
+### Best Practice Patterns
+For best results, try to match the standard D&D 5e Statblock format:
 
+```text
+[Item Name]
+[Type], [Rarity] (requires attunement [by Class/Race])
+Cost: [Value] [gp/sp/cp], Weight: [Value] [lb]
+Damage: [Formula] [Type]
+Properties: [Prop1], [Prop2], [Versatile (1d10)]
+AC: [Number] (max Dex [Number])
 
-Parsing Features:
+[Description Paragraphs...]
+```
 
-Attunement (required, optional, specific requirements)
-Cost/weight parsing (all currency types)
-Properties parsing (finesse, versatile, reach, etc.)
-Damage formulas with types
-Armor Class with DEX modifiers
-Range (normal/long)
-Capacity (weight and volume for containers)
-Automatic magical property for uncommon+ items
-Identification system (unidentified items with alternate names/descriptions)
-
-
-Quality of Life:
-
-Icon matching from compendiums and system files
-Folder organization
-Auto-parse on input (configurable)
-Debug mode with detailed logging
-
-
-⚠️ Known Limitations:
-
-⚠️ Spell scrolls (not yet fully implemented)
-
-
-Quick Start
-Installation
-
-Open Foundry VTT
-Go to Add-on Modules
-Install "5e Item Importer"
-Enable in your world
-
-Basic Usage
-
-Click "Import Item" button in Items Directory
-Paste your item text
-Click "Parse" to preview (or wait for auto-parse)
-Click "Import" to create the item
-
-
-📖 Supported Formats
-Natural Text Format (Standard D&D)
-The parser works with standard D&D item text from books, PDFs, and websites:
+**Example (Bag of Holding):**
+```text
 Bag of Holding
 Wondrous item, uncommon
-Cost: 500 gp, Weight: 15 lb.
+Weight: 15 lb.
 
-This bag has an interior space considerably larger than its outside dimensions, roughly 2 feet in diameter at the mouth and 4 feet deep. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet. Retrieving an item from the bag requires an action.
+This bag has an interior space considerably larger than its outside dimensions. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet.
 ```
 
-### Structured Format (Key: Value pairs)
-
-The parser supports structured format with labeled fields for precise control:
-```
-Name: Ring of Minor Illusion
-Type: Loot
-Rarity: Uncommon
-Identified: false
-Unidentified Name: Simple Silver Ring
-Properties: Jewelry, Magical
-Cost: 150 gp
-Weight: 0.1 lb
-Unidentified Description:
-This simple silver ring is cool to the touch and hums with a faint, almost imperceptible energy. It is stamped with the maker's mark of a stylized eye.
-Chat Description:
-As an action, you cast the Minor Illusion cantrip.
-Description:
-While wearing this ring, you can cast the Minor Illusion cantrip at will.
-```
-
-**Supported Fields:**
-- `Name:` - Item name (required)
-- `Type:` - Item type: Weapon, Armor/Equipment, Loot, Consumable, Tool, Container
-- `Rarity:` - Common, Uncommon, Rare, Very Rare, Legendary, Artifact
-- `Identified:` - true/false (controls whether item is identified)
-- `Unidentified Name:` - Name shown when item is unidentified
-- `Attunement:` - None, Yes, Required, or specific requirement (e.g., "by a spellcaster")
-- `Cost:` - Value and currency (e.g., "150 gp")
-- `Weight:` - Value and unit (e.g., "0.1 lb")
-- `Properties:` - Comma-separated properties (used to detect loot subtype and magical status)
-- `Unidentified Description:` - Description shown when item is unidentified (multi-line)
-- `Chat Description:` - Short description for chat cards (multi-line)
-- `Description:` - Full identified description (multi-line, required)
-
-**Multi-line Fields:**
-Fields like `Description:`, `Unidentified Description:`, and `Chat Description:` can span multiple lines. The parser will automatically collect all text until it encounters the next field label.
-
----
-
-## Loot Item Subtypes
-
-The parser automatically detects loot subtypes based on keywords:
-
-- **Art Objects** - Detected from: jewelry, ring, necklace, bracelet, earring, crown, tiara
-- **Gemstones** - Detected from: gemstone, gem, diamond, ruby, sapphire, emerald, pearl, opal
-- **Treasure** - Detected from: treasure, coins, gold, silver, platinum
-- **Materials** - Detected from: material, component, ore, ingot, cloth, leather, hide
-- **Resources** - Detected from: resource, food, water, rations
-- **Junk** - Detected from: junk, scrap, broken, worthless
-- **Adventuring Gear** - Default if no other type matches
-
-**Note:** Items with Uncommon or higher rarity are automatically marked as magical.
-
----
-
-## Test Cases
-
-### Test 1: Basic Weapon
-```
-Longsword
-Weapon (longsword), martial melee weapon
-Cost: 15 gp
-Weight: 3 lb.
-Damage: 1d8 slashing
-Properties: Versatile (1d10)
-
-A versatile sword used by many warriors.
-```
-
-**Expected Results:**
-- ✅ Type: Weapon
-- ✅ Damage: 1d8 slashing
-- ✅ Properties: Versatile (1d10)
-- ✅ Cost: 15 gp
-- ✅ Weight: 3 lb
-
-### Test 2: Magic Weapon
-```
-Flame Tongue
+**Example (Sun Blade):**
+```text
+Sun Blade
 Weapon (longsword), rare (requires attunement)
-Cost: 5000 gp
-Weight: 3 lb.
+Cost: 5000 gp, Weight: 3 lb.
+Damage: 1d8 radiant
+Properties: Finesse, Versatile (1d10)
 
-You can use a bonus action to speak this magic sword's command word, causing flames to erupt from the blade. These flames shed bright light in a 40-foot radius and dim light for an additional 40 feet. While the sword is ablaze, it deals an extra 2d6 fire damage to any target it hits. The flames last until you use a bonus action to speak the command word again or until you drop or sheathe the sword.
+This item appears to be a longsword hilt. While grasping the hilt, you can use a bonus action to cause a blade of pure radiance to spring into existence.
 ```
+</details>
 
-**Expected Results:**
-- ✅ Type: Weapon
-- ✅ Rarity: Rare
-- ✅ Attunement: Required
-- ✅ Description: Full text preserved
+---
 
-### Test 3: Magic Armor
-```
-Plate Armor +1
-Armor (plate), uncommon
-Cost: 2000 gp
-Weight: 65 lb.
-AC: 19
+## 🤖 2. Strict Format Parser (AI Powered)
+*Best for: Complex homebrew, bulk generation, and 100% accuracy.*
 
-You have a +1 bonus to AC while wearing this armor.
-```
+The Strict Parser uses a specific key/value format. This is ideal for using with **LLMs (ChatGPT, Claude, DeepSeek)**. You can paste a "System Prompt" into an AI, tell it "Make me a sword that does ice damage," and it will output a block you can paste directly into Foundry with perfect stats, icons, and configuration.
 
-**Expected Results:**
-- ✅ Type: Equipment (Armor)
-- ✅ Rarity: Uncommon
-- ✅ AC: 19
-- ✅ Magic Bonus: +1
+### 🛠️ Strict Templates
+Expand the sections below to copy the templates for your AI prompt or manual entry.
 
-### Test 4: Potion
-```
-Potion of Healing
-Potion, common
-Cost: 50 gp
-Weight: 0.5 lb.
+<details>
+<summary><strong>⚔️ Strict Weapon Template</strong></summary>
 
-You regain 2d4 + 2 hit points when you drink this potion.
-```
+```markdown
+===WEAPON===
+Name: [text]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+Weapon Type: [simpleM|simpleR|martialM|martialR|natural|improv|siege]
+Base Weapon: [e.g. longsword, dagger, bow - see list below - OR blank]
 
-**Expected Results:**
-- ✅ Type: Consumable
-- ✅ Subtype: Potion
-- ✅ Rarity: Common
-- ✅ Description: Healing effect
+---INVENTORY---
+Quantity: [integer]
+Identified: [true|false]
+Equipped: [true|false]
 
-### Test 5: Container
-```
-Bag of Holding
-Wondrous item, uncommon
-Cost: 500 gp, Weight: 15 lb.
+---COST AND WEIGHT---
+Price Value: [number]
+Price Denomination: [pp|gp|ep|sp|cp]
+Weight Value: [number]
+Weight Units: [lb|tn|kg|t]
 
-This bag has an interior space considerably larger than its outside dimensions, roughly 2 feet in diameter at the mouth and 4 feet deep. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet. Retrieving an item from the bag requires an action.
-```
+---PROPERTIES---
+Adamantine: [true|false]
+Ammunition: [true|false]
+Finesse: [true|false]
+Firearm: [true|false]
+Focus: [true|false]
+Heavy: [true|false]
+Light: [true|false]
+Loading: [true|false]
+Magical: [true|false]
+Reach: [true|false]
+Reload: [true|false]
+Returning: [true|false]
+Silvered: [true|false]
+Special: [true|false]
+Thrown: [true|false]
+Two-Handed: [true|false]
+Versatile: [true|false]
 
-**Expected Results:**
-- ✅ Type: Container
-- ✅ Rarity: Uncommon
-- ✅ Weight Capacity: 500 lb
-- ✅ Volume Capacity: 64 cu. ft.
-- ✅ Activation: Action
+---ATTUNEMENT---
+(Required only if Magical is true)
+Attunement: [none|required|optional]
+Attunement By: [text|blank]
+Magic Bonus: [integer|blank]
 
-### Test 6: Loot Item with Properties
-```
-Name: Jeweled Signet Ring (House Valtoris)
-Type: Loot
-Rarity: Uncommon
-Attunement: None
-Cost: 75 gp
-Weight: 0 lb
-Properties: Jewelry, Noble, Inscribed
+---AMMUNITION---
+(Required only if Ammunition is true)
+Ammunition Type: [arrow|crossbowBolt|firearmBullet|slingBullet|energyCell|blowgunNeedle]
+
+---RELOAD---
+(Required only if Reload is true)
+Reload Amount: [integer]
+
+---VERSATILE DAMAGE---
+(Required only if Versatile is true)
+Versatile Formula: [e.g. 1d10 + @mod]
+Versatile Damage Type: [slashing|piercing|bludgeoning|etc]
+
+---SIEGE PROPERTIES---
+(Required only if Weapon Type is siege)
+Siege Armor Class: [integer]
+Cover: [none|half|threequarters|total]
+Hit Points Current: [integer]
+Hit Points Max: [integer]
+Hit Points Threshold: [integer]
+Health Conditions: [text|blank]
+
+---RANGE---
+Reach: [integer|blank]
+Range Normal: [integer|blank]
+Range Long: [integer|blank]
+Range Units: [ft|m|sq|mi]
+
+---DAMAGE---
+Damage Formula: [e.g. 2d6 + @mod]
+Damage Type: [acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder]
+
+---MASTERY---
+Mastery: [cleave|graze|nick|push|sap|slow|topple|vex|blank]
+
+---PROFICIENCY---
+Proficiency: [automatic|notProficient|proficient]
+
+---USAGE---
+Uses Current: [integer]
+Uses Max: [integer]
+
+---DESCRIPTION---
 Description:
-A gold signet ring set with a tiny garnet. Bears the crest of House Valtoris; useful for favors—or for fencing.
-```
+[multiline text content]
+===END DESCRIPTION===
 
-**Expected Results:**
-- ✅ Type: Loot (Adventuring Gear)
-- ✅ Subtype: Art Object (detected from "Jewelry")
-- ✅ Rarity: Uncommon
-- ✅ Properties: Magical (automatically added for uncommon+ items)
-- ✅ Description: Properly formatted
-
-### Test 7: Unidentified Magic Item (Structured Format)
-```
-Name: Ring of Minor Illusion
-Type: Loot
-Rarity: Uncommon
-Identified: false
-Unidentified Name: Simple Silver Ring
-Properties: Jewelry, Magical
-Cost: 150 gp
-Weight: 0.1 lb
+---UNIDENTIFIED DESCRIPTION---
 Unidentified Description:
-This simple silver ring is cool to the touch and hums with a faint, almost imperceptible energy. It is stamped with the maker's mark of a stylized eye.
+[multiline text content]
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
 Chat Description:
-As an action, you cast the Minor Illusion cantrip.
+[multiline text content]
+===END CHAT FLAVOR===
+
+===END WEAPON===
+```
+
+**Valid Base Weapons:**
+*   **Melee:** `club`, `dagger`, `greatclub`, `handaxe`, `javelin`, `lighthammer`, `mace`, `quarterstaff`, `sickle`, `spear`, `battleaxe`, `flail`, `glaive`, `greataxe`, `greatsword`, `halberd`, `lance`, `longsword`, `maul`, `morningstar`, `pike`, `rapier`, `scimitar`, `shortsword`, `trident`, `warpick`, `warhammer`, `whip`
+*   **Ranged:** `dart`, `lightcrossbow`, `shortbow`, `sling`, `blowgun`, `handcrossbow`, `heavycrossbow`, `longbow`, `net`
+
+---
+
+## **EXAMPLE 1: MELEE WEAPON (Greataxe)**
+
+```text
+===WEAPON===
+Name: Greataxe
+Rarity: common
+Weapon Type: martialM
+Base Weapon: greataxe
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: true
+
+---COST AND WEIGHT---
+Price Value: 30
+Price Denomination: gp
+Weight Value: 7
+Weight Units: lb
+
+---PROPERTIES---
+Adamantine: false
+Ammunition: false
+Finesse: false
+Firearm: false
+Focus: false
+Heavy: true
+Light: false
+Loading: false
+Magical: false
+Reach: false
+Reload: false
+Returning: false
+Silvered: false
+Special: false
+Thrown: false
+Two-Handed: true
+Versatile: false
+
+---ATTUNEMENT---
+Attunement: none
+Attunement By: blank
+Magic Bonus: blank
+
+---RANGE---
+Reach: 5
+Range Normal: blank
+Range Long: blank
+Range Units: ft
+
+---DAMAGE---
+Damage Formula: 1d12 + @mod
+Damage Type: slashing
+
+---MASTERY---
+Mastery: cleave
+
+---PROFICIENCY---
+Proficiency: proficient
+
+---USAGE---
+Uses Current: 0
+Uses Max: 0
+
+---DESCRIPTION---
 Description:
-While wearing this ring, you can cast the Minor Illusion cantrip at will.
-Expected Results:
+A heavy, double-bladed axe capable of cleaving through armor and bone alike.
+===END DESCRIPTION===
 
-✅ Type: Loot (Art Object)
-✅ Rarity: Uncommon
-✅ Identified: false
-✅ Unidentified Name: "Simple Silver Ring"
-✅ Unidentified Description: Full unidentified text
-✅ Chat Description: Short action description
-✅ Description: Full identified effect
-✅ Properties: Magical (auto-detected from rarity)
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+blank
+===END UNIDENTIFIED DESCRIPTION===
 
+---CHAT FLAVOR---
+Chat Description:
+blank
+===END CHAT FLAVOR===
 
-Known Behaviors
-Automatic Type Detection
+===END WEAPON===
+```
 
-Loot subtypes are automatically detected from item names and properties
-Items containing "ring", "necklace", etc. → Art Object
-Items containing "gem", "diamond", etc. → Gemstone
-Default → Adventuring Gear
+---
 
-Identification System
+## **EXAMPLE 2: RANGED WEAPON (Hand Crossbow)**
 
-Set Identified: false to create unidentified items
-Unidentified Name: displays instead of real name when unidentified
-Unidentified Description: shows different text to players
-Chat Description: appears in chat cards when item is used
-Items Directory automatically updates when identification status changes
+```text
+===WEAPON===
+Name: Hand Crossbow
+Rarity: common
+Weapon Type: martialR
+Base Weapon: handcrossbow
 
-Magical Items
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: true
 
-Items with Uncommon or higher rarity are automatically marked as magical
-Magic weapons/armor with bonuses (+1, +2, +3) are detected from the name
+---COST AND WEIGHT---
+Price Value: 75
+Price Denomination: gp
+Weight Value: 3
+Weight Units: lb
 
-Format Flexibility
+---PROPERTIES---
+Adamantine: false
+Ammunition: true
+Finesse: false
+Firearm: false
+Focus: false
+Heavy: false
+Light: true
+Loading: true
+Magical: false
+Reach: false
+Reload: false
+Returning: false
+Silvered: false
+Special: false
+Thrown: false
+Two-Handed: false
+Versatile: false
 
-Parser automatically detects structured vs. natural format
-Can mix both formats (some fields structured, description natural)
-Empty fields are handled gracefully
+---ATTUNEMENT---
+Attunement: none
+Attunement By: blank
+Magic Bonus: blank
 
+---AMMUNITION---
+Ammunition Type: crossbowBolt
 
-Settings
-Access settings via: Game Settings → Module Settings → 5e Item Importer
-Available Settings:
+---RANGE---
+Reach: blank
+Range Normal: 30
+Range Long: 120
+Range Units: ft
 
-Debug Mode - Enable detailed console logging
-Show Parse Results - Display parsed data in console
-Auto-Parse on Input - Automatically parse as you type
-Auto-Parse Delay - Milliseconds to wait before parsing (250-3000ms)
-Default Item Type - Type to use when detection fails
-Match Icons from Compendiums - Search for matching item icons
-Create Items as Identified - Mark imported items as identified
-Parse Currency Values - Extract cost from descriptions
-Parse Weight Values - Extract weight from descriptions
-Preserve Description Formatting - Maintain paragraph breaks
+---DAMAGE---
+Damage Formula: 1d6 + @mod
+Damage Type: piercing
 
+---MASTERY---
+Mastery: vex
 
-🛠 Troubleshooting
-Module doesn't load
-Check:
+---PROFICIENCY---
+Proficiency: proficient
 
-Module is enabled in world settings
-No console errors (F12)
-Files are in correct location
+---USAGE---
+Uses Current: 0
+Uses Max: 0
 
-"Import Item" button doesn't appear
-Check:
+---DESCRIPTION---
+Description:
+A small crossbow that can be fired with one hand.
+===END DESCRIPTION===
 
-You have ITEM_CREATE permission
-You're in the Items Directory (not Actors/Scenes)
-Page has fully loaded
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+blank
+===END UNIDENTIFIED DESCRIPTION===
 
-Items import but data is wrong
-Solutions:
+---CHAT FLAVOR---
+Chat Description:
+blank
+===END CHAT FLAVOR===
 
-Enable Debug Mode in settings
-Enable Show Parse Results
-Check console (F12) for parsing information
-Verify text format matches expected structure
+===END WEAPON===
+```
+</details>
 
-Icons don't match
-Solutions:
+<details>
+<summary><strong>🧪 Strict Consumable Template</strong></summary>
 
-Enable "Match Icons from Compendiums" in settings
-Ensure you have dnd5e system compendiums active
-Icon matching requires standard item names
+```markdown
+===CONSUMABLE===
+Name: [text]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+Consumable Type: [ammo|food|poison|potion|rod|scroll|trinket|wand]
 
-Description is empty
-Check:
+---INVENTORY---
+Quantity: [integer]
+Identified: [true|false]
+Equipped: [true|false]
 
-Description comes after type/rarity line in natural format
-Description comes after "Description:" label in structured format
-No blank lines between item data and description
+---COST AND WEIGHT---
+Price Value: [number]
+Price Denomination: [pp|gp|ep|sp|cp]
+Weight Value: [number]
+Weight Units: [lb|tn|kg|t]
 
+---PROPERTIES---
+Magical: [true|false]
 
-Module API
-The module exposes an API for programmatic access:
-javascript// Access the API
-const api = game.modules.get("5e-item-importer").api;
+---ATTUNEMENT---
+(Required only if Magical is true)
+Attunement: [none|required|optional]
+Attunement By: [text|blank]
 
-// Parse item text
-const result = api.parse("Longsword\nWeapon (longsword), martial\nCost: 15 gp");
-// Returns: { item: ItemData, issues: [] }
+---AMMUNITION PROPERTIES---
+(Required only if Consumable Type is ammo)
+Ammunition Type: [arrow|bolt|dart|needle|bullet|slingbullet|energycell]
+Adamantine: [true|false]
+Silvered: [true|false]
+Returning: [true|false]
+Magic Bonus: [integer|blank]
+Damage Formula: [e.g. 1d6 + @mod]
+Damage Type: [piercing|bludgeoning|slashing|etc]
+Damage Replace: [true|false]
 
-// Import item
-const imported = await api.import("Longsword\n...", folderId);
+---POISON PROPERTIES---
+(Required only if Consumable Type is poison)
+Poison Type: [contact|ingested|inhaled|injury]
 
-// Open import window
-api.openWindow();
+---SCROLL PROPERTIES---
+(Required only if Consumable Type is scroll)
+Concentration: [true|false]
+Somatic: [true|false]
+Verbal: [true|false]
+Ritual: [true|false]
 
-// Get module info
-const info = api.info();
+---USAGE---
+Uses Current: [integer]
+Uses Max: [integer]
+Destroy on Empty: [true|false]
 
-Compatibility
+---DESCRIPTION---
+Description:
+[multiline text content]
+===END DESCRIPTION===
 
-Foundry VTT: v13.315+
-D&D 5e System: v5.1.10+
-Module Version: 13.1.1
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+[multiline text content]
+===END UNIDENTIFIED DESCRIPTION===
 
+---CHAT FLAVOR---
+Chat Description:
+[multiline text content]
+===END CHAT FLAVOR===
 
-🎯 Roadmap
-Short-term (1-2 weeks):
+===END CONSUMABLE===
+```
 
- Full spell scroll support with v5.1 structure
- Improved natural language parsing
- Better error messages
+---
 
-Medium-term (1-3 months):
+## **EXAMPLE 1: AMMUNITION (+1 Arrow)**
 
- Batch import feature
- Export to text feature
- Item templates system
+```text
+===CONSUMABLE===
+Name: Arrow +1
+Rarity: uncommon
+Consumable Type: ammo
 
-Long-term (3-6 months):
+---INVENTORY---
+Quantity: 20
+Identified: true
+Equipped: false
 
- Custom property support
- AI-powered parsing suggestions
- Browser extension for quick imports
+---COST AND WEIGHT---
+Price Value: 5
+Price Denomination: gp
+Weight Value: 0.05
+Weight Units: lb
 
+---PROPERTIES---
+Magical: true
 
-Tips & Tricks
-Best Practices:
+---ATTUNEMENT---
+Attunement: none
+Attunement By: blank
 
-Use standard D&D formatting for best results
-Enable Auto-Parse for real-time feedback
-Check parsed data before importing
-Use folders to organize imported items
-Enable Debug Mode when troubleshooting
+---AMMUNITION PROPERTIES---
+Ammunition Type: arrow
+Adamantine: false
+Silvered: false
+Returning: false
+Magic Bonus: 1
+Damage Formula: blank
+Damage Type: blank
+Damage Replace: false
 
-Common Issues:
+---USAGE---
+Uses Current: 20
+Uses Max: 20
+Destroy on Empty: true
 
-Name too long? Parser will auto-truncate at 100 characters
-Wrong item type? Use structured format with Type: field
-Missing properties? Add them manually after import
-Icon doesn't match? Disable icon matching or change after import
+---DESCRIPTION---
+Description:
+You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical.
+===END DESCRIPTION===
 
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+This arrow features perfect fletching and a head that never seems to dull.
+===END UNIDENTIFIED DESCRIPTION===
 
-Module version (v13.1.0)
-Foundry version
-dnd5e system version
+---CHAT FLAVOR---
+Chat Description:
+A magic arrow that grants a +1 bonus to hit and damage.
+===END CHAT FLAVOR===
+
+===END CONSUMABLE===
+```
+
+---
+
+## **EXAMPLE 2: POTION (Standard)**
+
+```text
+===CONSUMABLE===
+Name: Potion of Healing
+Rarity: common
+Consumable Type: potion
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: false
+
+---COST AND WEIGHT---
+Price Value: 50
+Price Denomination: gp
+Weight Value: 0.5
+Weight Units: lb
+
+---PROPERTIES---
+Magical: true
+
+---ATTUNEMENT---
+Attunement: none
+Attunement By: blank
+
+---USAGE---
+Uses Current: 1
+Uses Max: 1
+Destroy on Empty: true
+
+---DESCRIPTION---
+Description:
+You regain 2d4 + 2 hit points when you drink this potion. The potion's red liquid glimmers when agitated.
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+A glass vial filled with a glimmering red liquid.
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+A character drinks the potion and feels their wounds knit together.
+===END CHAT FLAVOR===
+
+===END CONSUMABLE===
+```
+</details>
+
+<details>
+<summary><strong>🎒 Strict Container Template</strong></summary>
+
+```markdown
+===CONTAINER===
+Name: [text]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+
+---INVENTORY---
+Quantity: [integer]
+Identified: [true|false]
+Equipped: [true|false]
+
+---COST AND WEIGHT---
+Price Value: [number]
+Price Denomination: [pp|gp|ep|sp|cp]
+Weight Value: [number]
+Weight Units: [lb|tn|kg|t]
+
+---PROPERTIES---
+Magical: [true|false]
+Weightless Contents: [true|false]
+
+---ATTUNEMENT---
+(Required only if Magical is true)
+Attunement: [none|required|optional]
+Attunement By: [text|blank]
+
+---CAPACITY---
+Item Count: [integer|blank]
+Weight Capacity Value: [number|blank]
+Weight Capacity Units: [lb|tn|kg|t|blank]
+Volume Capacity Value: [number|blank]
+Volume Capacity Units: [cubicfoot|liter|blank]
+
+---CURRENCY CONTENTS---
+(All fields required, use 0 for empty)
+Platinum: [integer]
+Gold: [integer]
+Electrum: [integer]
+Silver: [integer]
+Copper: [integer]
+
+---DESCRIPTION---
+Description:
+[multiline text content]
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+[multiline text content]
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+[multiline text content]
+===END CHAT FLAVOR===
+
+===END CONTAINER===
+```
+
+---
+
+## **EXAMPLE: MAGICAL CONTAINER (Bag of Holding)**
+
+```text
+===CONTAINER===
+Name: Bag of Holding
+Rarity: uncommon
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: false
+
+---COST AND WEIGHT---
+Price Value: 500
+Price Denomination: gp
+Weight Value: 15
+Weight Units: lb
+
+---PROPERTIES---
+Magical: true
+Weightless Contents: true
+
+---ATTUNEMENT---
+Attunement: none
+Attunement By: blank
+
+---CAPACITY---
+Item Count: blank
+Weight Capacity Value: 500
+Weight Capacity Units: lb
+Volume Capacity Value: 64
+Volume Capacity Units: cubicfoot
+
+---CURRENCY CONTENTS---
+Platinum: 0
+Gold: 250
+Electrum: 0
+Silver: 100
+Copper: 0
+
+---DESCRIPTION---
+Description:
+This bag has an interior space considerably larger than its outside dimensions, roughly 2 feet in diameter at the mouth and 4 feet deep. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet. The bag weighs 15 pounds, regardless of its contents.
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+A worn leather bag that seems lighter than it should be.
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+A magical bag with extradimensional space.
+===END CHAT FLAVOR===
+
+===END CONTAINER===
+```
+</details>
+
+<details>
+<summary><strong>🛡️ Strict Equipment Template</strong></summary>
+
+```markdown
+===EQUIPMENT===
+Name: [text]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+Equipment Type: [light|medium|heavy|natural|shield|clothing|ring|rod|trinket|wand|wondrous|vehicle]
+Base Equipment: [e.g. plate, leather, shield - OR blank for wondrous items]
+
+---INVENTORY---
+Quantity: [integer]
+Identified: [true|false]
+Equipped: [true|false]
+
+---COST AND WEIGHT---
+Price Value: [number]
+Price Denomination: [pp|gp|ep|sp|cp]
+Weight Value: [number]
+Weight Units: [lb|tn|kg|t]
+
+---PROPERTIES---
+Magical: [true|false]
+Adamantine: [true|false]
+Focus: [true|false]
+Stealth Disadvantage: [true|false]
+
+---ATTUNEMENT---
+(Required only if Magical is true)
+Attunement: [none|required|optional]
+Attunement By: [text|blank]
+Magic Bonus: [integer|blank]
+
+---ARMOR---
+(Required only for Armor/Shields)
+Armor Class: [integer]
+Max Dex Modifier: [integer|blank]
+Strength Requirement: [integer|blank]
+
+---VEHICLE PROPERTIES---
+(Required only if Equipment Type is vehicle)
+Vehicle Armor Class: [integer]
+Cover: [none|half|threequarters|total]
+Hit Points Current: [integer]
+Hit Points Max: [integer]
+Hit Points Threshold: [integer]
+Health Conditions: [text|blank]
+Speed: [integer]
+Speed Conditions: [text|blank]
+
+---PROFICIENCY---
+Proficiency: [automatic|notProficient|proficient]
+
+---USAGE---
+Uses Current: [integer]
+Uses Max: [integer]
+
+---DESCRIPTION---
+Description:
+[multiline text content]
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+[multiline text content]
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+[multiline text content]
+===END CHAT FLAVOR===
+
+===END EQUIPMENT===
+```
+
+---
+
+## **EXAMPLE 1: ARMOR (Plate Armor +1)**
+
+```text
+===EQUIPMENT===
+Name: Plate Armor +1
+Rarity: rare
+Equipment Type: heavy
+Base Equipment: plate
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: true
+
+---COST AND WEIGHT---
+Price Value: 1500
+Price Denomination: gp
+Weight Value: 65
+Weight Units: lb
+
+---PROPERTIES---
+Magical: true
+Adamantine: false
+Focus: false
+Stealth Disadvantage: true
+
+---ATTUNEMENT---
+Attunement: none
+Attunement By: blank
+Magic Bonus: 1
+
+---ARMOR---
+Armor Class: 18
+Max Dex Modifier: 0
+Strength Requirement: 15
+
+---PROFICIENCY---
+Proficiency: proficient
+
+---USAGE---
+Uses Current: 0
+Uses Max: 0
+
+---DESCRIPTION---
+Description:
+You have a +1 bonus to AC while wearing this armor. Plate consists of shaped, interlocking metal plates to cover the entire body.
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+A suit of heavy plate armor that gleams with a magical aura.
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+Magical plate armor.
+===END CHAT FLAVOR===
+
+===END EQUIPMENT===
+```
+
+---
+
+## **EXAMPLE 2: WONDROUS ITEM (Cloak of Protection)**
+
+```text
+===EQUIPMENT===
+Name: Cloak of Protection
+Rarity: uncommon
+Equipment Type: wondrous
+Base Equipment: blank
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: true
+
+---COST AND WEIGHT---
+Price Value: 350
+Price Denomination: gp
+Weight Value: 3
+Weight Units: lb
+
+---PROPERTIES---
+Magical: true
+Adamantine: false
+Focus: false
+Stealth Disadvantage: false
+
+---ATTUNEMENT---
+Attunement: required
+Attunement By: blank
+Magic Bonus: 1
+
+---ARMOR---
+Armor Class: blank
+Max Dex Modifier: blank
+Strength Requirement: blank
+
+---PROFICIENCY---
+Proficiency: automatic
+
+---USAGE---
+Uses Current: 0
+Uses Max: 0
+
+---DESCRIPTION---
+Description:
+You gain a +1 bonus to AC and saving throws while you wear this cloak.
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+A finely made cloak that feels warm to the touch.
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+A magical cloak of protection.
+===END CHAT FLAVOR===
+
+===END EQUIPMENT===
+```
+
+---
+
+## **EXAMPLE 3: VEHICLE (Naval Ram)**
+
+```text
+===EQUIPMENT===
+Name: Naval Ram
+Rarity: common
+Equipment Type: vehicle
+Base Equipment: blank
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: true
+
+---COST AND WEIGHT---
+Price Value: 1000
+Price Denomination: gp
+Weight Value: 2000
+Weight Units: lb
+
+---PROPERTIES---
+Magical: false
+Adamantine: false
+Focus: false
+Stealth Disadvantage: false
+
+---VEHICLE PROPERTIES---
+Vehicle Armor Class: 20
+Cover: total
+Hit Points Current: 100
+Hit Points Max: 100
+Hit Points Threshold: 10
+Health Conditions: blank
+Speed: 0
+Speed Conditions: blank
+
+---PROFICIENCY---
+Proficiency: automatic
+
+---USAGE---
+Uses Current: 0
+Uses Max: 0
+
+---DESCRIPTION---
+Description:
+A massive iron ram attached to the front of a warship.
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+blank
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+A siege weapon for ships.
+===END CHAT FLAVOR===
+
+===END EQUIPMENT===
+```
+</details>
+
+<details>
+<summary><strong>💎 Strict Loot Template</strong></summary>
+
+```markdown
+===LOOT===
+Name: [text]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+Loot Type: [art|gear|gem|junk|material|resource|treasure]
+
+---INVENTORY---
+Quantity: [integer]
+Identified: [true|false]
+Equipped: [true|false]
+
+---COST AND WEIGHT---
+Price Value: [number]
+Price Denomination: [pp|gp|ep|sp|cp]
+Weight Value: [number]
+Weight Units: [lb|tn|kg|t]
+
+---PROPERTIES---
+Magical: [true|false]
+
+---DESCRIPTION---
+Description:
+[multiline text content]
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+[multiline text content]
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+[multiline text content]
+===END CHAT FLAVOR===
+
+===END LOOT===
+```
+
+---
+
+## **EXAMPLE: FILLED TEMPLATE**
+
+```text
+===LOOT===
+Name: Diamond of the Deep
+Rarity: rare
+Loot Type: gem
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: false
+
+---COST AND WEIGHT---
+Price Value: 5000
+Price Denomination: gp
+Weight Value: 0.5
+Weight Units: lb
+
+---PROPERTIES---
+Magical: true
+
+---DESCRIPTION---
+Description:
+A flawless blue diamond found in the deepest mines of the material plane. It glows faintly in the dark.
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+A heavy, blue stone that feels cold to the touch.
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+The gem sparkles with an inner light.
+===END CHAT FLAVOR===
+
+===END LOOT===
+```
+</details>
+
+<details>
+<summary><strong>⚒️ Strict Tool Template</strong></summary>
+
+```markdown
+===TOOL===
+Name: [text]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+Tool Type: [art|game|music|other]
+Base Tool: [e.g. smith, thief, lute, dice - see list below]
+
+---INVENTORY---
+Quantity: [integer]
+Identified: [true|false]
+Equipped: [true|false]
+
+---COST AND WEIGHT---
+Price Value: [number]
+Price Denomination: [pp|gp|ep|sp|cp]
+Weight Value: [number]
+Weight Units: [lb|tn|kg|t]
+
+---PROPERTIES---
+Magical: [true|false]
+Tool Bonus: [integer or blank]
+
+---ATTUNEMENT---
+(Required only if Magical is true)
+Attunement: [none|required|optional]
+Attunement By: [text|blank]
+
+---ABILITY CHECK---
+Proficiency: [notProficient|proficient|expert]
+Ability: [str|dex|con|int|wis|cha|blank]
+
+---USAGE---
+Uses Current: [integer]
+Uses Max: [integer]
+
+---DESCRIPTION---
+Description:
+[multiline text content]
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+[multiline text content]
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+[multiline text content]
+===END CHAT FLAVOR===
+
+===END TOOL===
+```
+
+**Valid Base Tool IDs:**
+*   **art:** `alch`, `brew`, `calli`, `carp`, `carta`, `cob`, `cook`, `glass`, `jewel`, `leath`, `maso`, `paint`, `pott`, `smith`, `tink`, `weav`, `wood`
+*   **game:** `dice`, `card`, `chess`
+*   **music:** `bagpipes`, `drum`, `dulcimer`, `flute`, `horn`, `lute`, `lyre`, `panflute`, `shawm`, `viol`
+*   **other:** `disg`, `forg`, `herb`, `navg`, `pois`, `thief`
+
+---
+
+## **EXAMPLE: MAGICAL TOOL (Thieves' Tools +2)**
+
+```text
+===TOOL===
+Name: Thieves' Tools +2
+Rarity: rare
+Tool Type: other
+Base Tool: thief
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: true
+
+---COST AND WEIGHT---
+Price Value: 500
+Price Denomination: gp
+Weight Value: 1
+Weight Units: lb
+
+---PROPERTIES---
+Magical: true
+Tool Bonus: 2
+
+---ATTUNEMENT---
+Attunement: none
+Attunement By: blank
+
+---ABILITY CHECK---
+Proficiency: proficient
+Ability: dex
+
+---USAGE---
+Uses Current: 0
+Uses Max: 0
+
+---DESCRIPTION---
+Description:
+These masterwork thieves' tools grant a +2 bonus to ability checks made to pick locks and disarm traps. The tools are made of mithral and darkwood.
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+An exceptionally well-crafted set of thieves' tools. The picks gleam with an unusual sheen.
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+Masterwork thieves' tools that grant a +2 bonus.
+===END CHAT FLAVOR===
+
+===END TOOL===
+```
+</details>
+
+---
+
+## ❓ Common Issues
+
+**The "Import Item" button isn't showing up.**
+> Ensure you are in the **Items Directory** tab (the dagger icon). The button does not appear in the Actors or Compendium tabs.
+
+**Icons aren't matching automatically.**
+> Go to Module Settings and enable **"Match Icons from Compendiums"**. Note: This feature works best with standard D&D 5e item names (e.g., "Longsword", "Potion of Healing").
+
+**Description is empty.**
+> If using Natural Language: Ensure there is a blank line between the stat block and the description.
+> If using Strict Format: Ensure the description is between `Description:` and `===END DESCRIPTION===`.
+
+---
+
+## 📜 License & Credits
+
+**License:** MIT License  
+**Author:** [GnollStack](https://github.com/GnollStack)  
+**Compatibility:** Foundry VTT v13+ / dnd5e 5.1+
+
+*Concept inspired by the original 5e-statblock-importer by Aioros.*
