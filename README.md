@@ -229,12 +229,20 @@ Proficiency: [automatic|notProficient|proficient]
 Uses Current: [integer]
 Uses Max: [integer]
 
+---RECOVERY---
+(Optional, repeatable. Only relevant if Uses Max > 0)
+Period: [lr|sr|day|dawn|dusk|recharge]
+Type: [recoverAll|loseAll|formula]
+Formula: [text|blank]
+===END RECOVERY===
+
 ---DESCRIPTION---
 Description:
 [multiline text content]
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: [text|blank]
 Unidentified Description:
 [multiline text content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -250,6 +258,27 @@ Chat Description:
 **Valid Base Weapons:**
 *   **Melee:** `club`, `dagger`, `greatclub`, `handaxe`, `javelin`, `lighthammer`, `mace`, `quarterstaff`, `sickle`, `spear`, `battleaxe`, `flail`, `glaive`, `greataxe`, `greatsword`, `halberd`, `lance`, `longsword`, `maul`, `morningstar`, `pike`, `rapier`, `scimitar`, `shortsword`, `trident`, `warpick`, `warhammer`, `whip`
 *   **Ranged:** `dart`, `lightcrossbow`, `shortbow`, `sling`, `blowgun`, `handcrossbow`, `heavycrossbow`, `longbow`, `net`
+
+### **Recovery Field Rules:**
+
+| Period | Type | Formula | Description |
+|--------|------|---------|-------------|
+| `lr` | `recoverAll` | `blank` | Recover all uses on Long Rest |
+| `lr` | `loseAll` | `blank` | Lose all uses on Long Rest |
+| `lr` | `formula` | Dice formula | Recover formula result on Long Rest |
+| `sr` | `recoverAll` | `blank` | Recover all uses on Short Rest |
+| `sr` | `loseAll` | `blank` | Lose all uses on Short Rest |
+| `sr` | `formula` | Dice formula | Recover formula result on Short Rest |
+| `day` | `recoverAll` | `blank` | Recover all uses daily |
+| `day` | `loseAll` | `blank` | Lose all uses daily |
+| `day` | `formula` | Dice formula | Recover formula result daily |
+| `dawn` | `recoverAll` | `blank` | Recover all uses at dawn |
+| `dawn` | `loseAll` | `blank` | Lose all uses at dawn |
+| `dawn` | `formula` | Dice formula | Recover formula result at dawn |
+| `dusk` | `recoverAll` | `blank` | Recover all uses at dusk |
+| `dusk` | `loseAll` | `blank` | Lose all uses at dusk |
+| `dusk` | `formula` | Dice formula | Recover formula result at dusk |
+| `recharge` | `formula` | `2`-`6` | Recharge on d6 roll ≥ Formula value |
 
 ---
 
@@ -323,13 +352,14 @@ A heavy, double-bladed axe capable of cleaving through armor and bone alike.
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Heavy Axe
 Unidentified Description:
-blank
+A large axe with a double head.
 ===END UNIDENTIFIED DESCRIPTION===
 
 ---CHAT FLAVOR---
 Chat Description:
-blank
+A standard greataxe.
 ===END CHAT FLAVOR===
 
 ===END WEAPON===
@@ -337,14 +367,14 @@ blank
 
 ---
 
-## **EXAMPLE 2: RANGED WEAPON (Hand Crossbow)**
+## **EXAMPLE 2: MAGICAL WEAPON (Custom Dagger)**
 
 ```text
 ===WEAPON===
-Name: Hand Crossbow
-Rarity: common
-Weapon Type: martialR
-Base Weapon: handcrossbow
+Name: Magma Tooth
+Rarity: rare
+Weapon Type: simpleM
+Base Weapon: dagger
 
 ---INVENTORY---
 Quantity: 1
@@ -352,71 +382,91 @@ Identified: true
 Equipped: true
 
 ---COST AND WEIGHT---
-Price Value: 75
+Price Value: 2500
 Price Denomination: gp
-Weight Value: 3
+Weight Value: 1
 Weight Units: lb
 
 ---PROPERTIES---
 Adamantine: false
-Ammunition: true
-Finesse: false
+Ammunition: false
+Finesse: true
 Firearm: false
 Focus: false
 Heavy: false
 Light: true
-Loading: true
-Magical: false
+Loading: false
+Magical: true
 Reach: false
 Reload: false
-Returning: false
+Returning: true
 Silvered: false
 Special: false
-Thrown: false
+Thrown: true
 Two-Handed: false
 Versatile: false
 
 ---ATTUNEMENT---
-Attunement: none
+Attunement: required
 Attunement By: blank
-Magic Bonus: blank
-
----AMMUNITION---
-Ammunition Type: crossbowBolt
+Magic Bonus: 1
 
 ---RANGE---
-Reach: blank
-Range Normal: 30
-Range Long: 120
+Reach: 5
+Range Normal: 20
+Range Long: 60
 Range Units: ft
 
 ---DAMAGE---
-Damage Formula: 1d6 + @mod
-Damage Type: piercing
+Damage Formula: 1d4[piercing] + @mod + 1d6[fire] + 1
+Damage Type: piercing, fire
 
 ---MASTERY---
-Mastery: vex
+Mastery: nick
 
 ---PROFICIENCY---
 Proficiency: proficient
 
 ---USAGE---
-Uses Current: 0
-Uses Max: 0
+Uses Current: 3
+Uses Max: 3
+Destroy on Empty: false
+
+---RECOVERY---
+Period: dawn
+Type: formula
+Formula: 1d3
+===END RECOVERY===
 
 ---DESCRIPTION---
 Description:
-A small crossbow that can be fired with one hand.
+<p><i>This dagger appears to be a shard of jagged obsidian. The core glows with a dull, rhythmic heat, like a heartbeat of magma.</i></p>
+
+<h3>Burning Edge</h3>
+<p>You have a +1 bonus to attack and damage rolls made with this magic weapon. On a hit, the dagger deals an extra [[/damage 1d6 type=fire]] damage (included in the item formula).</p>
+
+<h3>Magma Burst</h3>
+<p>The dagger has 3 charges. While holding it, you can use an action to expend 1 charge to cast <i>Burning Hands</i> (DC 15) from the blade.</p>
+
+<p>You create a cone of fire shooting outward:</p>
+<ul>
+    <li><b>Area:</b> [[/template type=cone distance=15]]</li>
+    <li><b>Save:</b> [[/save ability=dex dc=15]]</li>
+    <li><b>Damage:</b> [[/damage 3d6 type=fire]] (Half on success)</li>
+</ul>
+
+<p>The dagger regains <b>1d3</b> expended charges daily at dawn.</p>
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Hot Black Shard
 Unidentified Description:
-blank
+<p>A jagged piece of black glass wrapped in leather. It feels uncomfortably warm to the touch.</p>
 ===END UNIDENTIFIED DESCRIPTION===
 
 ---CHAT FLAVOR---
 Chat Description:
-blank
+<i>The dagger flares with volcanic heat as it strikes.</i>
 ===END CHAT FLAVOR===
 
 ===END WEAPON===
@@ -474,9 +524,17 @@ Verbal: [true|false]
 Ritual: [true|false]
 
 ---USAGE---
+(See Field Reference below for rules on Potions vs Wands)
 Uses Current: [integer]
 Uses Max: [integer]
 Destroy on Empty: [true|false]
+
+---RECOVERY---
+(Optional, repeatable. Only relevant if Uses Max > 0)
+Period: [lr|sr|day|dawn|dusk|recharge]
+Type: [recoverAll|loseAll|formula]
+Formula: [text|blank]
+===END RECOVERY===
 
 ---DESCRIPTION---
 Description:
@@ -484,6 +542,7 @@ Description:
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: [text|blank]
 Unidentified Description:
 [multiline text content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -498,23 +557,52 @@ Chat Description:
 
 ---
 
-## **EXAMPLE 1: AMMUNITION (+1 Arrow)**
+## **FIELD REFERENCE**
 
+### **Usage & Recovery Rules:**
+*   **For Potions, Food, Poison:** Set `Uses Max: 0`. These are tracked by `Quantity` in Inventory.
+*   **For Wands & Rods:** Set `Uses Max` to the number of charges (e.g., 7). Set `Destroy on Empty` if it crumbles to dust.
+*   **For Ammunition:** Set `Uses Max: 0`. Tracked by `Quantity`.
+
+### **Recovery Field Rules:**
+
+| Period | Type | Formula | Description |
+|--------|------|---------|-------------|
+| `lr` | `recoverAll` | `blank` | Recover all uses on Long Rest |
+| `lr` | `loseAll` | `blank` | Lose all uses on Long Rest |
+| `lr` | `formula` | Dice formula | Recover formula result on Long Rest |
+| `sr` | `recoverAll` | `blank` | Recover all uses on Short Rest |
+| `sr` | `loseAll` | `blank` | Lose all uses on Short Rest |
+| `sr` | `formula` | Dice formula | Recover formula result on Short Rest |
+| `day` | `recoverAll` | `blank` | Recover all uses daily |
+| `day` | `loseAll` | `blank` | Lose all uses daily |
+| `day` | `formula` | Dice formula | Recover formula result daily |
+| `dawn` | `recoverAll` | `blank` | Recover all uses at dawn |
+| `dawn` | `loseAll` | `blank` | Lose all uses at dawn |
+| `dawn` | `formula` | Dice formula | Recover formula result at dawn |
+| `dusk` | `recoverAll` | `blank` | Recover all uses at dusk |
+| `dusk` | `loseAll` | `blank` | Lose all uses at dusk |
+| `dusk` | `formula` | Dice formula | Recover formula result at dusk |
+| `recharge` | `formula` | `2`-`6` | Recharge on d6 roll ≥ Formula value |
+
+---
+
+## **EXAMPLE: WAND OF MAGIC MISSILES**
 ```text
 ===CONSUMABLE===
-Name: Arrow +1
+Name: Wand of Magic Missiles
 Rarity: uncommon
-Consumable Type: ammo
+Consumable Type: wand
 
 ---INVENTORY---
-Quantity: 20
+Quantity: 1
 Identified: true
-Equipped: false
+Equipped: true
 
 ---COST AND WEIGHT---
-Price Value: 5
+Price Value: 500
 Price Denomination: gp
-Weight Value: 0.05
+Weight Value: 1
 Weight Units: lb
 
 ---PROPERTIES---
@@ -524,34 +612,33 @@ Magical: true
 Attunement: none
 Attunement By: blank
 
----AMMUNITION PROPERTIES---
-Ammunition Type: arrow
-Adamantine: false
-Silvered: false
-Returning: false
-Magic Bonus: 1
-Damage Formula: blank
-Damage Type: blank
-Damage Replace: false
-
 ---USAGE---
-Uses Current: 20
-Uses Max: 20
+Uses Current: 7
+Uses Max: 7
 Destroy on Empty: true
+
+---RECOVERY---
+Period: dawn
+Type: formula
+Formula: 1d6+1
+===END RECOVERY===
 
 ---DESCRIPTION---
 Description:
-You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition. Once it hits a target, the ammunition is no longer magical.
+This wand has 7 charges. While holding it, you can use an action to expend 1 or more of its charges to cast the magic missile spell from it. For 1 charge, you cast the 1st-level version of the spell. You can increase the spell slot level by one for each additional charge you expend.
+
+The wand regains 1d6 + 1 expended charges daily at dawn. If you expend the wand's last charge, roll a d20. On a 1, the wand crumbles into ashes and is destroyed.
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Slender Metal Wand
 Unidentified Description:
-This arrow features perfect fletching and a head that never seems to dull.
+A thin metal wand tipped with a quartz crystal.
 ===END UNIDENTIFIED DESCRIPTION===
 
 ---CHAT FLAVOR---
 Chat Description:
-A magic arrow that grants a +1 bonus to hit and damage.
+A wand that shoots magic missiles.
 ===END CHAT FLAVOR===
 
 ===END CONSUMABLE===
@@ -788,12 +875,20 @@ Proficiency: [automatic|notProficient|proficient]
 Uses Current: [integer]
 Uses Max: [integer]
 
+---RECOVERY---
+(Optional, repeatable. Only relevant if Uses Max > 0)
+Period: [lr|sr|day|dawn|dusk|recharge]
+Type: [recoverAll|loseAll|formula]
+Formula: [text|blank]
+===END RECOVERY===
+
 ---DESCRIPTION---
 Description:
 [multiline text content]
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: [text|blank]
 Unidentified Description:
 [multiline text content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -805,6 +900,38 @@ Chat Description:
 
 ===END EQUIPMENT===
 ```
+
+---
+
+## **FIELD REFERENCE**
+
+### **Valid Equipment Types & Base Equipment:**
+*   **light:** `padded`, `leather`, `studdedleather`
+*   **medium:** `hide`, `chainshirt`, `scalemail`, `breastplate`, `halfplate`
+*   **heavy:** `ringmail`, `chainmail`, `splint`, `plate`
+*   **shield:** `shield`
+*   **wondrous, ring, clothing, trinket:** Usually `blank` Base Equipment.
+
+### **Recovery Field Rules:**
+
+| Period | Type | Formula | Description |
+|--------|------|---------|-------------|
+| `lr` | `recoverAll` | `blank` | Recover all uses on Long Rest |
+| `lr` | `loseAll` | `blank` | Lose all uses on Long Rest |
+| `lr` | `formula` | Dice formula | Recover formula result on Long Rest |
+| `sr` | `recoverAll` | `blank` | Recover all uses on Short Rest |
+| `sr` | `loseAll` | `blank` | Lose all uses on Short Rest |
+| `sr` | `formula` | Dice formula | Recover formula result on Short Rest |
+| `day` | `recoverAll` | `blank` | Recover all uses daily |
+| `day` | `loseAll` | `blank` | Lose all uses daily |
+| `day` | `formula` | Dice formula | Recover formula result daily |
+| `dawn` | `recoverAll` | `blank` | Recover all uses at dawn |
+| `dawn` | `loseAll` | `blank` | Lose all uses at dawn |
+| `dawn` | `formula` | Dice formula | Recover formula result at dawn |
+| `dusk` | `recoverAll` | `blank` | Recover all uses at dusk |
+| `dusk` | `loseAll` | `blank` | Lose all uses at dusk |
+| `dusk` | `formula` | Dice formula | Recover formula result at dusk |
+| `recharge` | `formula` | `2`-`6` | Recharge on d6 roll ≥ Formula value |
 
 ---
 
@@ -857,6 +984,7 @@ You have a +1 bonus to AC while wearing this armor. Plate consists of shaped, in
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Magic Plate
 Unidentified Description:
 A suit of heavy plate armor that gleams with a magical aura.
 ===END UNIDENTIFIED DESCRIPTION===
@@ -864,6 +992,76 @@ A suit of heavy plate armor that gleams with a magical aura.
 ---CHAT FLAVOR---
 Chat Description:
 Magical plate armor.
+===END CHAT FLAVOR===
+
+===END EQUIPMENT===
+```
+
+---
+
+## **EXAMPLE 2: WONDROUS ITEM (Cloak of Billowing)**
+
+```text
+===EQUIPMENT===
+Name: Cloak of Billowing
+Rarity: common
+Equipment Type: wondrous
+Base Equipment: blank
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: true
+
+---COST AND WEIGHT---
+Price Value: 50
+Price Denomination: gp
+Weight Value: 3
+Weight Units: lb
+
+---PROPERTIES---
+Magical: true
+Adamantine: false
+Focus: false
+Stealth Disadvantage: false
+
+---ATTUNEMENT---
+Attunement: none
+Attunement By: blank
+Magic Bonus: blank
+
+---ARMOR---
+Armor Class: blank
+Max Dex Modifier: blank
+Strength Requirement: blank
+
+---PROFICIENCY---
+Proficiency: automatic
+
+---USAGE---
+Uses Current: 1
+Uses Max: 1
+
+---RECOVERY---
+Period: dawn
+Type: recoverAll
+Formula: blank
+===END RECOVERY===
+
+---DESCRIPTION---
+Description:
+This cloak has 1 charge. While wearing it, you can use a bonus action to expend the charge to make the cloak billow dramatically for 1 minute. The cloak regains its charge daily at dawn.
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Silk Cloak
+Unidentified Description:
+A finely made silk cloak.
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+A cloak that billows dramatically.
 ===END CHAT FLAVOR===
 
 ===END EQUIPMENT===
@@ -1118,12 +1316,20 @@ Ability: [str|dex|con|int|wis|cha|blank]
 Uses Current: [integer]
 Uses Max: [integer]
 
+---RECOVERY---
+(Optional, repeatable. Only relevant if Uses Max > 0)
+Period: [lr|sr|day|dawn|dusk|recharge]
+Type: [recoverAll|loseAll|formula]
+Formula: [text|blank]
+===END RECOVERY===
+
 ---DESCRIPTION---
 Description:
 [multiline text content]
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: [text|blank]
 Unidentified Description:
 [multiline text content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -1136,16 +1342,100 @@ Chat Description:
 ===END TOOL===
 ```
 
-**Valid Base Tool IDs:**
+---
+
+## **FIELD REFERENCE**
+
+### **Valid Base Tool IDs:**
 *   **art:** `alch`, `brew`, `calli`, `carp`, `carta`, `cob`, `cook`, `glass`, `jewel`, `leath`, `maso`, `paint`, `pott`, `smith`, `tink`, `weav`, `wood`
 *   **game:** `dice`, `card`, `chess`
 *   **music:** `bagpipes`, `drum`, `dulcimer`, `flute`, `horn`, `lute`, `lyre`, `panflute`, `shawm`, `viol`
 *   **other:** `disg`, `forg`, `herb`, `navg`, `pois`, `thief`
 
+### **Recovery Field Rules:**
+
+| Period | Type | Formula | Description |
+|--------|------|---------|-------------|
+| `lr` | `recoverAll` | `blank` | Recover all uses on Long Rest |
+| `lr` | `loseAll` | `blank` | Lose all uses on Long Rest |
+| `lr` | `formula` | Dice formula | Recover formula result on Long Rest |
+| `sr` | `recoverAll` | `blank` | Recover all uses on Short Rest |
+| `sr` | `loseAll` | `blank` | Lose all uses on Short Rest |
+| `sr` | `formula` | Dice formula | Recover formula result on Short Rest |
+| `day` | `recoverAll` | `blank` | Recover all uses daily |
+| `day` | `loseAll` | `blank` | Lose all uses daily |
+| `day` | `formula` | Dice formula | Recover formula result daily |
+| `dawn` | `recoverAll` | `blank` | Recover all uses at dawn |
+| `dawn` | `loseAll` | `blank` | Lose all uses at dawn |
+| `dawn` | `formula` | Dice formula | Recover formula result at dawn |
+| `dusk` | `recoverAll` | `blank` | Recover all uses at dusk |
+| `dusk` | `loseAll` | `blank` | Lose all uses at dusk |
+| `dusk` | `formula` | Dice formula | Recover formula result at dusk |
+| `recharge` | `formula` | `2`-`6` | Recharge on d6 roll ≥ Formula value |
+
+### **Recharge Values (recharge period):**
+| Formula | Display |
+|---------|---------|
+| `6` | Recharge 6 |
+| `5` | Recharge 5-6 |
+| `4` | Recharge 4-6 |
+| `3` | Recharge 3-6 |
+| `2` | Recharge 2-6 |
+
+---
+
+## **EXAMPLE: NON-MAGICAL TOOL (Smith's Tools)**
+```text
+===TOOL===
+Name: Smith's Tools
+Rarity: common
+Tool Type: art
+Base Tool: smith
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: false
+
+---COST AND WEIGHT---
+Price Value: 20
+Price Denomination: gp
+Weight Value: 8
+Weight Units: lb
+
+---PROPERTIES---
+Magical: false
+Tool Bonus: blank
+
+---ABILITY CHECK---
+Proficiency: proficient
+Ability: blank
+
+---USAGE---
+Uses Current: 0
+Uses Max: 0
+
+---DESCRIPTION---
+Description:
+These special tools include the items needed to pursue a craft or trade. Proficiency with a set of artisan's tools lets you add your proficiency bonus to any ability checks you make using the tools in your craft.
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+A set of metalworking tools.
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+Smith's tools for metalworking.
+===END CHAT FLAVOR===
+
+===END TOOL===
+```
+
 ---
 
 ## **EXAMPLE: MAGICAL TOOL (Thieves' Tools +2)**
-
 ```text
 ===TOOL===
 Name: Thieves' Tools +2
@@ -1193,6 +1483,134 @@ An exceptionally well-crafted set of thieves' tools. The picks gleam with an unu
 ---CHAT FLAVOR---
 Chat Description:
 Masterwork thieves' tools that grant a +2 bonus.
+===END CHAT FLAVOR===
+
+===END TOOL===
+```
+
+---
+
+## **EXAMPLE: MAGICAL TOOL WITH USES (Pipes of Haunting)**
+```text
+===TOOL===
+Name: Pipes of Haunting
+Rarity: uncommon
+Tool Type: music
+Base Tool: panflute
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: true
+
+---COST AND WEIGHT---
+Price Value: 500
+Price Denomination: gp
+Weight Value: 2
+Weight Units: lb
+
+---PROPERTIES---
+Magical: true
+Tool Bonus: blank
+
+---ATTUNEMENT---
+Attunement: required
+Attunement By: blank
+
+---ABILITY CHECK---
+Proficiency: proficient
+Ability: cha
+
+---USAGE---
+Uses Current: 3
+Uses Max: 3
+
+---RECOVERY---
+Period: dawn
+Type: formula
+Formula: 1d3
+===END RECOVERY===
+
+---DESCRIPTION---
+Description:
+You must be proficient with wind instruments to use these pipes. They have 3 charges. You can use an action to play them and expend 1 charge to create an eerie, spellbinding tune. Each creature within 30 feet of you that hears you play must succeed on a DC 15 Wisdom saving throw or become frightened of you for 1 minute. If you wish, all creatures in the area that aren't hostile toward you automatically succeed on the saving throw. A creature that fails the saving throw can repeat it at the end of each of its turns, ending the effect on itself on a success. A creature that succeeds on its saving throw is immune to the effect of these pipes for 24 hours. The pipes regain 1d3 expended charges daily at dawn.
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+An ornate set of pan pipes carved from dark wood with silver inlay.
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+Eerie pipes that can frighten nearby creatures.
+===END CHAT FLAVOR===
+
+===END TOOL===
+```
+
+---
+
+## **EXAMPLE: TOOL WITH MULTIPLE RECOVERY PERIODS**
+```text
+===TOOL===
+Name: Lyre of Building
+Rarity: rare
+Tool Type: music
+Base Tool: lyre
+
+---INVENTORY---
+Quantity: 1
+Identified: true
+Equipped: true
+
+---COST AND WEIGHT---
+Price Value: 5000
+Price Denomination: gp
+Weight Value: 3
+Weight Units: lb
+
+---PROPERTIES---
+Magical: true
+Tool Bonus: blank
+
+---ATTUNEMENT---
+Attunement: required
+Attunement By: a bard
+
+---ABILITY CHECK---
+Proficiency: proficient
+Ability: cha
+
+---USAGE---
+Uses Current: 5
+Uses Max: 5
+
+---RECOVERY---
+Period: dawn
+Type: formula
+Formula: 1d4+1
+===END RECOVERY===
+
+---RECOVERY---
+Period: sr
+Type: formula
+Formula: 1
+===END RECOVERY===
+
+---DESCRIPTION---
+Description:
+This magical lyre has 5 charges. While playing it, you can expend charges to cast spells. The lyre regains 1d4+1 charges daily at dawn, and you can recover 1 additional charge during a short rest by playing a soothing melody.
+===END DESCRIPTION===
+
+---UNIDENTIFIED DESCRIPTION---
+Unidentified Description:
+A golden lyre with strings that shimmer with magical energy.
+===END UNIDENTIFIED DESCRIPTION===
+
+---CHAT FLAVOR---
+Chat Description:
+A magical lyre that aids in construction.
 ===END CHAT FLAVOR===
 
 ===END TOOL===
