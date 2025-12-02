@@ -683,6 +683,7 @@ You regain 2d4 + 2 hit points when you drink this potion. The potion's red liqui
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: [text|blank]
 Unidentified Description:
 A glass vial filled with a glimmering red liquid.
 ===END UNIDENTIFIED DESCRIPTION===
@@ -745,6 +746,7 @@ Description:
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: [text|blank]
 Unidentified Description:
 [multiline text content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -805,6 +807,7 @@ This bag has an interior space considerably larger than its outside dimensions, 
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Worn Leather Bag
 Unidentified Description:
 A worn leather bag that seems lighter than it should be.
 ===END UNIDENTIFIED DESCRIPTION===
@@ -1118,6 +1121,7 @@ You gain a +1 bonus to AC and saving throws while you wear this cloak.
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Fine Cloak
 Unidentified Description:
 A finely made cloak that feels warm to the touch.
 ===END UNIDENTIFIED DESCRIPTION===
@@ -1181,8 +1185,9 @@ A massive iron ram attached to the front of a warship.
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: blank
 Unidentified Description:
-blank
+ blank
 ===END UNIDENTIFIED DESCRIPTION===
 
 ---CHAT FLAVOR---
@@ -1223,6 +1228,7 @@ Description:
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: [text|blank]
 Unidentified Description:
 [multiline text content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -1265,6 +1271,7 @@ A flawless blue diamond found in the deepest mines of the material plane. It glo
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Heavy Blue Stone
 Unidentified Description:
 A heavy, blue stone that feels cold to the touch.
 ===END UNIDENTIFIED DESCRIPTION===
@@ -1421,6 +1428,7 @@ These special tools include the items needed to pursue a craft or trade. Profici
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Metal Tools
 Unidentified Description:
 A set of metalworking tools.
 ===END UNIDENTIFIED DESCRIPTION===
@@ -1476,6 +1484,7 @@ These masterwork thieves' tools grant a +2 bonus to ability checks made to pick 
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Shiny Tools
 Unidentified Description:
 An exceptionally well-crafted set of thieves' tools. The picks gleam with an unusual sheen.
 ===END UNIDENTIFIED DESCRIPTION===
@@ -1537,6 +1546,7 @@ You must be proficient with wind instruments to use these pipes. They have 3 cha
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Dark Pipes
 Unidentified Description:
 An ornate set of pan pipes carved from dark wood with silver inlay.
 ===END UNIDENTIFIED DESCRIPTION===
@@ -1604,6 +1614,7 @@ This magical lyre has 5 charges. While playing it, you can expend charges to cas
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
+Unidentified Name: Shimmering Lyre
 Unidentified Description:
 A golden lyre with strings that shimmer with magical energy.
 ===END UNIDENTIFIED DESCRIPTION===
