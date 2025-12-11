@@ -1632,9 +1632,6 @@ A magical lyre that aids in construction.
 
 ## Common Issues
 
-**Item Recovery**
-> Item Recovery is actively being worked on and will be added in the near future.
-
 **Natural Parsing Improvements**
 > Natural Parsing is still being worked on.
 
