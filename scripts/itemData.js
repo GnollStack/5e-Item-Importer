@@ -292,8 +292,18 @@ export class ItemData {
     if (icon) {
       this.#dnd5e.img = icon;
     }
+   // AutoAnimations integration
+    if(this.type == "weapon" && game.modules.get("autoanimations")?.active){
+      const autoAnimationFlag = this.createAutoAnimationFlagWeapon();
 
-    ItemUtils.log("Foundry data built", this.#dnd5e);
+      if(autoAnimationFlag){
+         const existingFlags = this.getProperty("flags") || {};
+         this.setProperty("flags", foundry.utils.mergeObject(existingFlags, autoAnimationFlag));
+         ItemUtils.log("Applied AutoAnimations flags", autoAnimationFlag);
+      }
+
+      ItemUtils.log("Foundry data built", this.#dnd5e);
+   }
   }
 
   /**
@@ -549,6 +559,248 @@ export class ItemData {
     }
   }
 
+  createAutoAnimationFlagWeapon(){
+   let menuType = "";
+   let animationName = "";
+   let label = this.baseWeapon;
+   if (label == "Longsword"){ label = "Sword";}
+   let color = "white";
+
+   if(this.type == "weapon"){
+      if(this.weaponType == "simpleR" || this.weaponType == "martialR"){ menuType = "range"; label = "Arrow";} 
+      else{ menuType = "melee";}
+      animationName = label.toLowerCase().replace(/\s+/g, '');
+   }
+   if (!animationName) return null;
+   // The .json flag structure for AutoAnimations
+   return {
+      autoanimations: {
+        id: foundry.utils.randomID(),
+        label: label,
+        isEnabled: true,
+        isCustomized: true,
+        fromAmmo: false,
+        version: 5,
+        menu: menuType,
+
+        primary: {
+          video: {
+            dbSection: menuType, 
+            menuType: "weapon",
+            animation: animationName,
+            variant: "01",
+            color: color,
+            enableCustom: false,
+            customPath: ""
+          },
+          sound: {
+            enable: false,
+            delay: 0,
+            repeat: 1,
+            repeatDelay: 250,
+            startTime: 0,
+            volume: 0.75
+          },
+          options: {
+            contrast: 0,
+            delay: 0,
+            elevation: 1000,
+            isWait: false,
+            opacity: 1,
+            playbackRate: 1,
+            repeat: 1,
+            repeatDelay: 250,
+            saturate: 0,
+            size: 1,
+            tint: false,
+            tintColor: "#FFFFFF",
+            zIndex: 1
+          }
+        },
+
+        meleeSwitch: {
+          video: {
+            dbSection: "range",
+            menuType: "weapon",
+            animation: "arrow", 
+            variant: "regular",
+            color: "regular"
+          },
+          sound: {
+            enable: false,
+            delay: 0,
+            repeat: 1,
+            repeatDelay: 250,
+            startTime: 0,
+            volume: 0.75
+          },
+          options: {
+            detect: "automatic",
+            range: 2,
+            returning: false,
+            switchType: "on"
+          }
+        },
+
+        secondary: {
+          enable: false,
+          video: {
+            dbSection: "static",
+            menuType: "spell",
+            animation: "curewounds",
+            variant: "01",
+            color: "blue",
+            enableCustom: false,
+            customPath: ""
+          },
+          sound: {
+            enable: false,
+            delay: 0,
+            repeat: 1,
+            repeatDelay: 250,
+            startTime: 0,
+            volume: 0.75
+          },
+          options: {
+            addTokenWidth: false,
+            anchor: "0.5",
+            contrast: 0,
+            delay: 0,
+            elevation: 1000,
+            fadeIn: 250,
+            fadeOut: 500,
+            isMasked: false,
+            isRadius: true,
+            isWait: false,
+            opacity: 1,
+            repeat: 1,
+            repeatDelay: 250,
+            saturate: 0,
+            size: 1.5,
+            tint: false,
+            tintColor: "#FFFFFF",
+            zIndex: 1
+          }
+        },
+        source: {
+          enable: false,
+          video: {
+            dbSection: "static",
+            menuType: "spell",
+            animation: "curewounds",
+            variant: "01",
+            color: "blue",
+            enableCustom: false,
+            customPath: ""
+          },
+          sound: {
+            enable: false,
+            delay: 0,
+            repeat: 1,
+            repeatDelay: 250,
+            startTime: 0,
+            volume: 0.75
+          },
+          options: {
+            addTokenWidth: false,
+            anchor: "0.5",
+            contrast: 0,
+            delay: 0,
+            elevation: 1000,
+            fadeIn: 250,
+            fadeOut: 500,
+            isMasked: false,
+            isRadius: false,
+            isWait: true,
+            opacity: 1,
+            repeat: 1,
+            repeatDelay: 250,
+            saturate: 0,
+            size: 1,
+            tint: false,
+            tintColor: "#FFFFFF",
+            zIndex: 1
+          }
+        },
+        target: {
+          enable: false,
+          video: {
+            dbSection: "static",
+            menuType: "spell",
+            animation: "curewounds",
+            variant: "01",
+            color: "blue",
+            enableCustom: false,
+            customPath: ""
+          },
+          sound: {
+            enable: false,
+            delay: 0,
+            repeat: 1,
+            repeatDelay: 250,
+            startTime: 0,
+            volume: 0.75
+          },
+          options: {
+            addTokenWidth: false,
+            anchor: "0.5",
+            contrast: 0,
+            delay: 0,
+            elevation: 1000,
+            fadeIn: 250,
+            fadeOut: 500,
+            isMasked: false,
+            isRadius: false,
+            opacity: 1,
+            persistent: false,
+            repeat: 1,
+            repeatDelay: 250,
+            saturate: 0,
+            size: 1,
+            tint: false,
+            tintColor: "#FFFFFF",
+            unbindAlpha: false,
+            unbindVisibility: false,
+            zIndex: 1
+          }
+        },
+        levels3d: {
+          type: "explosion",
+          data: {
+            color01: "#FFFFFF",
+            color02: "#FFFFFF",
+            spritePath: "modules/levels-3d-preview/assets/particles/dust.png"
+          },
+          sound: {
+            enable: false
+          },
+          secondary: {
+            enable: false,
+            data: {
+              color01: "#FFFFFF",
+              color02: "#FFFFFF",
+              spritePath: "modules/levels-3d-preview/assets/particles/dust.png"
+            }
+          }
+        },
+        macro: {
+          enable: false,
+          playWhen: "0"
+        },
+        soundOnly: {
+          sound: {
+            enable: false,
+            delay: 0,
+            repeat: 1,
+            repeatDelay: 250,
+            startTime: 0,
+            volume: 0.75
+          }
+        }
+      }
+    };
+
+  }
   /**
    * Build equipment/armor data
    */
