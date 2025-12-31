@@ -1,0 +1,43 @@
+<form class="ii-form">
+    <!-- Top Controls -->
+    <div class="ii-form-group">
+        <label>
+            <input type="checkbox" id="ii-auto-parse-checkbox" {{#if autoParse}}checked{{/if}} />
+            Auto-Parse on Input
+        </label>
+    </div>
+
+    <!-- Input Area -->
+    <div class="ii-form-group ii-input-group">
+        <label for="ii-input">Item Text</label>
+        <div id="ii-input" contenteditable="true" spellcheck="false" data-placeholder="{{placeholder}}"></div>
+    </div>
+
+    <!-- Parse Output -->
+    <div class="ii-form-group ii-output-group">
+        <label>Parsed Data</label>
+        <div id="ii-parse-output" class="ii-parse-output">
+            <p><em>Enter item text to parse...</em></p>
+        </div>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="ii-form-group ii-controls-group">
+        <label for="ii-folder-select">Import to Folder</label>
+        <select id="ii-folder-select" name="folder">
+            <option value="">None (Root Level)</option>
+        </select>
+
+        <div class="ii-button-group">
+            <button type="button" data-action="parse" class="ii-btn-parse">
+                <i class="fas fa-search"></i> Parse
+            </button>
+            <button type="button" data-action="reset" class="ii-btn-reset">
+                <i class="fas fa-redo"></i> Reset
+            </button>
+            <button type="button" data-action="import" class="ii-btn-import" disabled>
+                <i class="fas fa-file-import"></i> Import
+            </button>
+        </div>
+    </div>
+</form>

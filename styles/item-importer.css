@@ -1,0 +1,345 @@
+/**
+ * 5e Item Importer - Styles
+ */
+
+/* Theme variables */
+:root {
+    --ii-primary: #3f88c5;
+    --ii-success: #2d8f51;
+    --ii-warning: #f6ae2d;
+    --ii-error: #e63946;
+    --ii-border: #999;
+    --ii-bg: #fff;
+    --ii-text: #000;
+}
+
+body.theme-dark {
+    --ii-border: #555;
+    --ii-bg: #222;
+    --ii-text: #eee;
+}
+
+/* Main button in Items Directory */
+.ii-directory-btn {
+    width: 97%;
+    height: 28px;
+    margin: 4px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.ii-directory-btn i {
+    margin-right: 4px;
+}
+
+/* Window styling */
+.ii-window {
+    min-width: 600px;
+    min-height: 500px;
+}
+
+.ii-window .window-content {
+    padding: 0;
+}
+
+/* Form layout */
+.ii-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 12px;
+    gap: 12px;
+}
+
+.ii-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ii-form label {
+    font-weight: bold;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+/* Input area */
+.ii-input-group {
+    flex: 1;
+    min-height: 150px;
+}
+
+#ii-input {
+    flex: 1;
+    min-height: 150px;
+    border: 2px solid var(--ii-border);
+    border-radius: 4px;
+    padding: 10px;
+    font-family: "Roboto Mono", "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    background: var(--ii-bg);
+    color: var(--ii-text);
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+#ii-input:empty::before {
+    content: attr(data-placeholder);
+    color: #999;
+    font-style: italic;
+}
+
+#ii-input:empty:before {
+    content: attr(data-placeholder);
+    color: #999;
+    font-style: italic;
+    pointer-events: none;
+}
+
+#ii-input:focus:empty:before {
+    content: attr(data-placeholder);
+}
+
+#ii-input:focus {
+    outline: none;
+    border-color: var(--ii-primary);
+    box-shadow: 0 0 0 2px rgba(63, 136, 197, 0.2);
+}
+
+/* Output area */
+.ii-output-group {
+    flex: 1;
+    min-height: 150px;
+}
+
+.ii-parse-output {
+    flex: 1;
+    min-height: 150px;
+    border: 2px solid var(--ii-border);
+    border-radius: 4px;
+    padding: 12px;
+    background: var(--ii-bg);
+    color: var(--ii-text);
+    overflow-y: auto;
+    font-size: 13px;
+}
+
+.ii-parse-output em {
+    color: #999;
+}
+
+/* Parse results */
+.ii-parse-success {
+    color: var(--ii-success);
+}
+
+.ii-parse-success h3 {
+    margin: 0 0 12px 0;
+    color: var(--ii-text);
+    font-size: 18px;
+    border-bottom: 2px solid var(--ii-success);
+    padding-bottom: 6px;
+}
+
+.ii-parse-details {
+    margin: 12px 0;
+}
+
+.ii-parse-row {
+    padding: 4px 0;
+    display: flex;
+    gap: 8px;
+}
+
+.ii-parse-row strong {
+    min-width: 100px;
+    color: var(--ii-text);
+}
+
+.ii-parse-issues {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(246, 174, 45, 0.1);
+    border-left: 4px solid var(--ii-warning);
+    border-radius: 4px;
+}
+
+.ii-parse-issues p {
+    margin: 0 0 8px 0;
+    color: var(--ii-warning);
+    font-weight: bold;
+}
+
+.ii-parse-issues ul {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--ii-text);
+}
+
+.ii-parse-error {
+    color: var(--ii-error);
+    padding: 12px;
+    background: rgba(230, 57, 70, 0.1);
+    border-left: 4px solid var(--ii-error);
+    border-radius: 4px;
+}
+
+.ii-parse-error p {
+    margin: 0 0 8px 0;
+}
+
+.ii-parse-error strong {
+    font-size: 16px;
+}
+
+.ii-parse-error ul {
+    margin: 8px 0 0 0;
+    padding-left: 20px;
+}
+
+/* Controls */
+.ii-controls-group {
+    flex: 0;
+    margin-top: auto;
+}
+
+.ii-controls-group label {
+    margin-bottom: 6px;
+}
+
+#ii-folder-select {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--ii-border);
+    border-radius: 4px;
+    background: var(--ii-bg);
+    color: var(--ii-text);
+    margin-bottom: 12px;
+}
+
+.ii-button-group {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.ii-button-group button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.ii-button-group button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.ii-btn-parse {
+    background: var(--ii-primary);
+    color: white;
+}
+
+.ii-btn-parse:hover:not(:disabled) {
+    background: #336ba3;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.ii-btn-reset {
+    background: #6c757d;
+    color: white;
+}
+
+.ii-btn-reset:hover:not(:disabled) {
+    background: #5a6268;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.ii-btn-import {
+    background: var(--ii-success);
+    color: white;
+}
+
+.ii-btn-import:hover:not(:disabled) {
+    background: #257043;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Auto-parse checkbox */
+#ii-auto-parse-checkbox {
+    margin-right: 6px;
+}
+
+/* Scrollbar styling */
+#ii-input::-webkit-scrollbar,
+.ii-parse-output::-webkit-scrollbar {
+    width: 8px;
+}
+
+#ii-input::-webkit-scrollbar-track,
+.ii-parse-output::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.1);
+    border-radius: 4px;
+}
+
+#ii-input::-webkit-scrollbar-thumb,
+.ii-parse-output::-webkit-scrollbar-thumb {
+    background: var(--ii-border);
+    border-radius: 4px;
+}
+
+#ii-input::-webkit-scrollbar-thumb:hover,
+.ii-parse-output::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .ii-window {
+        min-width: 100%;
+    }
+    
+    .ii-button-group {
+        flex-direction: column;
+    }
+    
+    .ii-button-group button {
+        width: 100%;
+    }
+}
+
+/* Loading state */
+.ii-btn-import.loading {
+    position: relative;
+}
+
+.ii-btn-import.loading::after {
+    content: "";
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid white;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: ii-spin 0.6s linear infinite;
+}
+
+@keyframes ii-spin {
+    to { transform: rotate(360deg); }
+}

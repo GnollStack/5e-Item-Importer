@@ -1,0 +1,314 @@
+/**
+ * 5e Item Importer
+ * Main entry point for the module
+ * 
+ * This module allows you to import D&D 5e items from text format
+ * (like from PDFs, websites, or homebrew documents) into Foundry VTT.
+ */
+
+import { MODULE_NAME, MODULE_TITLE, registerSettings } from "./itemConfig.js";
+import { ItemUtils } from "./itemUtils.js";
+import { ItemWindow } from "./itemWindow.js";
+import { getParserForText } from './strictItemParsers/strictParserDispatcher.js';
+
+/**
+ * Initialize module
+ */
+Hooks.on("init", () => {
+    console.log(`${MODULE_TITLE} | Initializing module...`);
+
+    // Register settings
+    registerSettings();
+
+    // Register API for programmatic access
+    registerAPI();
+
+    console.log(`${MODULE_TITLE} | Initialization complete`);
+});
+
+/**
+ * Register module API
+ * Allows other modules or macros to use the importer programmatically
+ */
+function registerAPI() {
+    // This is the code that points towards the NaturalItemParser.
+    // We keep it commented out for future use.
+    // const parse = NaturalItemParser.parseInput.bind(NaturalItemParser);
+
+    // Create a new 'parse' function that uses our strict dispatcher.
+    // This will be the function exposed by the API.
+    const parse = (text) => {
+        const parser = getParserForText(text); // Get the correct parser (e.g., Base, Weapon)
+        return parser.parse(text);             // Run the parse and return the result
+    };
+
+    game.modules.get(MODULE_NAME).api = {
+        // Expose utility functions
+        utils: ItemUtils,
+
+        // Programmatic import now uses our new strict 'parse' function
+        parse: parse,
+        import: async (text, folderId) => {
+            const result = parse(text);
+            return result?.item ? await result.item.createItem5e(folderId) : null;
+        },
+
+        // Open the import window
+        openWindow: () => ItemWindow.renderWindow(),
+
+        // Version info
+        version: game.modules.get(MODULE_NAME).version,
+
+        // Module info
+        info: () => {
+            return {
+                name: MODULE_NAME,
+                title: MODULE_TITLE,
+                version: game.modules.get(MODULE_NAME).version,
+                debug: game.settings.get(MODULE_NAME, "debug")
+            };
+        }
+    };
+
+    ItemUtils.log("Module API registered", game.modules.get(MODULE_NAME).api);
+}
+
+/**
+ * Add button to Items Directory
+ */
+Hooks.on("renderItemDirectory", (app, html, data) => {
+    // Only add button if user has permission to create items
+    if (!game.user.hasPermission("ITEM_CREATE")) {
+        return;
+    }
+
+    // Convert jQuery to DOM element if needed
+    const element = html instanceof jQuery ? html.get(0) : html;
+
+    // Check if button already exists
+    // UPDATED ID to match namespacing convention
+    let importButton = element.querySelector("#ii-main-button");
+    if (importButton) {
+        return;
+    }
+
+    ItemUtils.log("Adding Item Importer button to Items Directory");
+
+    // Create the import button
+    importButton = document.createElement("button");
+    importButton.id = "ii-main-button"; // UPDATED ID
+    importButton.setAttribute("type", "button");
+    importButton.classList.add("ii-directory-btn"); // UPDATED CLASS to match CSS
+    importButton.innerHTML = `<i class="fas fa-file-import"></i> Import Item`;
+
+    // Add click handler
+    importButton.addEventListener("click", () => {
+        ItemUtils.log("Import Item button clicked");
+        ItemWindow.renderWindow();
+    });
+
+    // Add button to directory footer
+    const footer = element.querySelector(".directory-footer");
+    if (footer) {
+        footer.appendChild(importButton);
+        ItemUtils.log("Import button added successfully");
+    } else {
+        ItemUtils.warn("Could not find directory footer to add button");
+    }
+});
+
+/**
+ * Ready hook - module is fully loaded
+ */
+Hooks.on("ready", () => {
+    const debugMode = game.settings.get(MODULE_NAME, "debug");
+
+    if (debugMode) {
+        console.log(`${MODULE_TITLE} | Module ready in DEBUG mode`);
+        console.log(`${MODULE_TITLE} | Settings:`, {
+            debug: game.settings.get(MODULE_NAME, "debug"),
+            showParseResults: game.settings.get(MODULE_NAME, "showParseResults"),
+            autoParse: game.settings.get(MODULE_NAME, "autoParse"),
+            matchIcons: game.settings.get(MODULE_NAME, "matchIcons"),
+            parseCurrency: game.settings.get(MODULE_NAME, "parseCurrency"),
+            parseWeight: game.settings.get(MODULE_NAME, "parseWeight")
+        });
+    }
+
+    // Show welcome message for first-time users
+    const hasShownWelcome = game.settings.get(MODULE_NAME, "hasShownWelcome");
+    if (!hasShownWelcome && game.user.isGM) {
+        showWelcomeMessage();
+        game.settings.set(MODULE_NAME, "hasShownWelcome", true);
+    }
+});
+
+/**
+ * Show welcome message for first-time users
+ */
+function showWelcomeMessage() {
+    const content = `
+        <div style="text-align: center; margin: 1em 0;">
+            <h2><i class="fas fa-magic"></i> Welcome to ${MODULE_TITLE}!</h2>
+            <p>Import D&D 5e items from text format into Foundry VTT.</p>
+        </div>
+        <div style="margin: 1em 0;">
+            <h3>Quick Start:</h3>
+            <ol>
+                <li>Click the "Import Item" button in the Items Directory</li>
+                <li>Paste your item text (from PDFs, websites, etc.)</li>
+                <li>Click "Parse" to preview</li>
+                <li>Click "Import" to create the item</li>
+            </ol>
+        </div>
+        <div style="margin: 1em 0;">
+            <h3>Tips:</h3>
+            <ul>
+                <li>Enable <strong>Debug Mode</strong> in settings for detailed logging</li>
+                <li>Auto-Parse will parse as you type (configurable)</li>
+                <li>The parser works best with standard D&D item formats</li>
+            </ul>
+        </div>
+        <p style="text-align: center; margin-top: 1em;">
+            <em>Check the module settings for more options!</em>
+        </p>
+    `;
+
+    foundry.applications.api.DialogV2.prompt({
+        window: {
+            title: `${MODULE_TITLE} - Welcome`,
+            icon: "fas fa-magic"
+        },
+        position: { width: 500 },
+        content: content,
+        rejectClose: false,
+        modal: false,
+        ok: {
+            label: "Get Started",
+            icon: "fas fa-check"
+        }
+    });
+}
+
+// Register settings to track if welcome was shown
+Hooks.once("init", () => {
+    game.settings.register(MODULE_NAME, "hasShownWelcome", {
+        name: "Has Shown Welcome",
+        scope: "client",
+        config: false,
+        type: Boolean,
+        default: false
+    });
+});
+
+/**
+ * Add context menu option to items
+ */
+Hooks.on("getItemDirectoryEntryContext", (html, contextOptions) => {
+    contextOptions.push({
+        name: "Export to Text",
+        icon: '<i class="fas fa-file-export"></i>',
+        condition: () => true,
+        callback: (li) => {
+            const item = game.items.get(li.data("documentId"));
+            if (item) {
+                exportItemToText(item);
+            }
+        }
+    });
+});
+
+/**
+ * Export item to text format (future feature)
+ */
+function exportItemToText(item) {
+    ItemUtils.log("Exporting item to text", item);
+    ui.notifications.info(`${MODULE_TITLE} | Export feature coming soon!`);
+
+    // Future implementation will convert Foundry item back to text format
+    // For now, just show the item data
+    if (game.settings.get(MODULE_NAME, "debug")) {
+        console.log("Item data:", item.toObject());
+    }
+}
+
+/**
+ * Console command helpers for development
+ */
+if (typeof window !== "undefined") {
+    window.ItemImporter = {
+        // Quick access to module
+        get module() {
+            return game.modules.get(MODULE_NAME);
+        },
+
+        // Quick access to API
+        get api() {
+            return game.modules.get(MODULE_NAME)?.api;
+        },
+
+        // Quick access to settings
+        get settings() {
+            return {
+                debug: game.settings.get(MODULE_NAME, "debug"),
+                showParseResults: game.settings.get(MODULE_NAME, "showParseResults"),
+                autoParse: game.settings.get(MODULE_NAME, "autoParse"),
+                matchIcons: game.settings.get(MODULE_NAME, "matchIcons"),
+                parseCurrency: game.settings.get(MODULE_NAME, "parseCurrency"),
+                parseWeight: game.settings.get(MODULE_NAME, "parseWeight")
+            };
+        },
+
+        // Toggle debug mode quickly
+        toggleDebug() {
+            const current = game.settings.get(MODULE_NAME, "debug");
+            game.settings.set(MODULE_NAME, "debug", !current);
+            console.log(`${MODULE_TITLE} | Debug mode: ${!current ? "ON" : "OFF"}`);
+        },
+
+        // Test utility functions
+        test: {
+            currency: (text) => ItemUtils.parseCurrency(text),
+            weight: (text) => ItemUtils.parseWeight(text),
+            dice: (text) => ItemUtils.parseDice(text),
+            normalize: (text) => ItemUtils.normalizeUnicode(text)
+        },
+
+        // Get version info
+        version: () => {
+            const mod = game.modules.get(MODULE_NAME);
+            console.log(`${MODULE_TITLE} v${mod.version}`);
+            return mod.version;
+        },
+
+        // Help text
+        help: () => {
+            console.log(`
+${MODULE_TITLE} - Console Commands
+=====================================
+
+ItemImporter.module          - Get module object
+ItemImporter.api             - Get module API
+ItemImporter.settings        - View current settings
+ItemImporter.toggleDebug()   - Toggle debug mode
+ItemImporter.version()       - Show version
+ItemImporter.test            - Test utilities
+
+Test Commands:
+  ItemImporter.test.currency("50 gp")
+  ItemImporter.test.weight("15 lb")
+  ItemImporter.test.dice("2d6+3")
+  ItemImporter.test.normalize("some–text")
+
+For more info, see the module documentation.
+            `);
+        }
+    };
+
+    // Show helper on load if debug mode
+    Hooks.once("ready", () => {
+        if (game.settings.get(MODULE_NAME, "debug")) {
+            console.log(`${MODULE_TITLE} | Debug mode active. Type 'ItemImporter.help()' for console commands.`);
+        }
+    });
+}

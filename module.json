@@ -1,0 +1,37 @@
+{
+  "id": "5e-item-importer",
+  "title": "5e Item Importer",
+  "description": "A module to parse and import D&D 5e items from text format (PDFs, websites, homebrew) into Foundry VTT.",
+  "version": "13.4.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13.351"
+  },
+  "authors": [
+    {
+      "name": "GnollStack",
+      "url": "https://github.com/GnollStack",
+      "discord": "GnollStack"
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "5.1.10",
+          "verified": "5.2.4"
+        }
+      }
+    ]
+  },
+  "esmodules": ["./scripts/itemImporter.js"],
+  "styles": ["./styles/item-importer.css"],
+  "url": "https://github.com/GnollStack/5e-Item-Importer",
+  "manifest": "https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.json",
+  "download": "https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/5e-item-importer.zip",
+  "readme": "https://github.com/GnollStack/5e-Item-Importer/blob/main/README.md",
+  "bugs": "https://github.com/GnollStack/5e-Item-Importer/issues",
+  "license": "MIT"
+}
