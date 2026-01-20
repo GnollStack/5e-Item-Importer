@@ -5147,4 +5147,4 @@ For licensing inquiries or permission slips:
 
 ---
 **Author:** [GnollStack](https://github.com/GnollStack)
-**Compatibility:** Foundry VTT v13+ / dnd5e 5.1+
+**Compatibility:** Foundry VTT v13 / dnd5e 5.2.x+
