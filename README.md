@@ -11,7 +11,7 @@ The **5e Item Importer** allows you to import D&D 5e items directly from text in
 1.  **Natural Language:** Copy/paste directly from PDFs, D&D Beyond, or websites. This method handles standard D&D 5e formatting.
 2.  **Strict Format:** Use the provided templates to generate near perfect imports every time. Great for homebrew, bulk generation, or working with LLMs. **Supports Batches**.
 
-<img width="700" height="602" alt="image" src="https://github.com/user-attachments/assets/c608cb8f-fc8a-405e-b68c-5152508e0d5e" />
+<img width="640" height="865" alt="image" src="https://github.com/user-attachments/assets/c9d0b2ea-930d-4600-849c-200e8b4f40e6" />
 
 ## See it in Action on Youtube: [5e Importer V13.2.0](https://youtu.be/THrikJq0EY4)
 
