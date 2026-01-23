@@ -17,7 +17,9 @@ import {
   getRandomToolIcon,
   getRandomContainerIcon,
   getRandomLootIcon,
+  getRandomSpellIcon
 } from "./iconSemantics.js";
+import { AutoAnimationsHandler } from "./integrations/autoAnimations.js";
 
 export class ItemData {
   constructor(name) {
@@ -115,10 +117,54 @@ export class ItemData {
     this.itemCapacity = null; // Item count capacity
     this.weightlessContents = false; // Weightless contents property
 
+    // Spell Properties
+    this.spellLevel = 0;
+    this.spellSchool = null;
+
+    // Components
+    this.vocal = false;
+    this.somatic = false;
+    this.material = false;
+    this.materialValue = '';
+    this.materialCost = null;
+    this.materialSupply = null;
+    this.materialConsumed = false;
+
+    // Preparation
+    this.preparationMode = 'prepared';
+    this.prepared = false;
+    this.ritual = false;
+    this.concentration = false;
+
+    // Duration (spell-specific structure)
+    this.duration = null; // { value, units }
+
+    // Target (spell-specific structure)
+    this.target = null; // { type, count, choice, special }
+
+    // Area of Effect
+    this.area = null; // { type, size, units }
+
     // Activation
     this.activationType = null; // action, bonus, reaction, special
     this.saveDC = null; // DC for saving throw
     this.saveAbility = null; // Ability for saving throw
+
+    // Spell Properties
+    this.spellLevel = 0;
+    this.spellSchool = null;
+    this.vocal = false;
+    this.somatic = false;
+    this.material = false;
+    this.materialValue = '';
+    this.materialCost = null;
+    this.materialSupply = null;
+    this.materialConsumed = false;
+    this.preparationMode = 'prepared';
+    this.prepared = false;
+    this.duration = null;
+    this.target = null;
+    this.area = null;
 
     // Foundry data holder
     this.#dnd5e = {};
@@ -150,7 +196,7 @@ export class ItemData {
   /**
    * Transform parsed data to Foundry V13 item structure
    */
-  async buildFoundryData() {
+  async buildFoundryData(options = {}) {
     ItemUtils.log("Building Foundry data for:", this.name);
     ItemUtils.log("ChatDescription before build:", this.chatDescription);
     ItemUtils.log(
@@ -174,6 +220,7 @@ export class ItemData {
           consumable: "systems/dnd5e/icons/svg/items/consumable.svg",
           tool: "systems/dnd5e/icons/svg/items/tool.svg",
           loot: "systems/dnd5e/icons/svg/items/loot.svg",
+          spell: "systems/dnd5e/icons/svg/items/spell.svg",
         }[this.type] ?? "icons/svg/item-bag.svg",
       system: {
         description: {
@@ -218,6 +265,9 @@ export class ItemData {
         break;
       case "loot":
         await this.buildLootData();
+        break;
+      case "spell":
+        await this.buildSpellData();
         break;
     }
 
@@ -268,6 +318,13 @@ export class ItemData {
       case "loot":
         icon = await getRandomLootIcon(this.lootType, this.name);
         break;
+      case "spell":
+        icon = await getRandomSpellIcon(
+          this.spellSchool,
+          this.spellLevel,
+          this.name
+        );
+        break;
     }
 
     // 2. Fall back to compendium search (if enabled and no semantic icon found)
@@ -291,6 +348,20 @@ export class ItemData {
     // Apply found icon
     if (icon) {
       this.#dnd5e.img = icon;
+    }
+
+    // AutoAnimations Integration
+    // 1. Check if user checked the box (options.generateAnimations)
+    // 2. Check if module is active (safety)
+    if (options.generateAnimations && game.modules.get("autoanimations")?.active) {
+      const aaFlags = AutoAnimationsHandler.generateFlags(this);
+
+      if (aaFlags) {
+        const existingFlags = this.getProperty("flags") || {};
+        const mergedFlags = foundry.utils.mergeObject(existingFlags, aaFlags);
+        this.setProperty("flags", mergedFlags);
+        ItemUtils.log("Applied AutoAnimations flags for:", this.name);
+      }
     }
 
     ItemUtils.log("Foundry data built", this.#dnd5e);
@@ -373,10 +444,10 @@ export class ItemData {
             ? this.versatileDamage.type
             : [this.versatileDamage.type]
           : this.damage && this.damage.type
-          ? Array.isArray(this.damage.type)
-            ? this.damage.type
-            : [this.damage.type]
-          : [];
+            ? Array.isArray(this.damage.type)
+              ? this.damage.type
+              : [this.damage.type]
+            : [];
 
         this.setProperty("system.damage.versatile", {
           number: null,
@@ -1085,6 +1156,182 @@ export class ItemData {
   }
 
   /**
+ * Build spell-specific data
+ */
+  async buildSpellData() {
+    ItemUtils.log("Building spell data");
+
+    // Spell level
+    this.setProperty("system.level", this.spellLevel);
+    ItemUtils.log("Spell level set to", this.spellLevel);
+
+    // Spell school
+    if (this.spellSchool) {
+      this.setProperty("system.school", this.spellSchool);
+      ItemUtils.log("Spell school set to", this.spellSchool);
+    }
+
+    // Build properties Set for components and special properties
+    const props = new Set();
+
+    if (this.vocal) {
+      props.add("vocal");
+      ItemUtils.log("Vocal component added");
+    }
+    if (this.somatic) {
+      props.add("somatic");
+      ItemUtils.log("Somatic component added");
+    }
+    if (this.material) {
+      props.add("material");
+      ItemUtils.log("Material component added");
+    }
+    if (this.concentration) {
+      props.add("concentration");
+      ItemUtils.log("Concentration added");
+    }
+    if (this.ritual) {
+      props.add("ritual");
+      ItemUtils.log("Ritual added");
+    }
+
+    this.setProperty("system.properties", props);
+
+    // Materials (if material component exists)
+    if (this.material) {
+      this.setProperty("system.materials.value", this.materialValue || "");
+      this.setProperty("system.materials.consumed", this.materialConsumed);
+
+      if (this.materialCost !== null) {
+        this.setProperty("system.materials.cost", this.materialCost);
+      }
+      if (this.materialSupply !== null) {
+        this.setProperty("system.materials.supply", this.materialSupply);
+      }
+
+      ItemUtils.log("Materials set", {
+        value: this.materialValue,
+        consumed: this.materialConsumed,
+        cost: this.materialCost,
+        supply: this.materialSupply
+      });
+    }
+
+    // Preparation
+    this.setProperty("system.method", this.preparationMode);
+    this.setProperty("system.prepared", this.prepared ? 1 : 0);
+    ItemUtils.log("Preparation set", {
+      method: this.preparationMode,
+      prepared: this.prepared
+    });
+
+    // Activation
+    if (this.activationType) {
+      this.setProperty("system.activation.type", this.activationType);
+      this.setProperty("system.activation.value", this.activationValue || 1);
+
+      if (this.activationCondition) {
+        this.setProperty("system.activation.condition", this.activationCondition);
+      }
+
+      ItemUtils.log("Activation set", {
+        type: this.activationType,
+        value: this.activationValue,
+        condition: this.activationCondition
+      });
+    }
+
+    // Duration
+    if (this.duration) {
+      if (this.duration.value !== null && this.duration.value !== undefined) {
+        this.setProperty("system.duration.value", this.duration.value.toString());
+      }
+      if (this.duration.units) {
+        this.setProperty("system.duration.units", this.duration.units);
+      }
+      ItemUtils.log("Duration set", this.duration);
+    }
+
+    // Range
+    if (this.range) {
+      if (this.range.value !== null && this.range.value !== undefined) {
+        this.setProperty("system.range.value", this.range.value);
+      }
+      if (this.range.units) {
+        this.setProperty("system.range.units", this.range.units);
+      }
+      ItemUtils.log("Range set", this.range);
+    }
+
+    // Target
+    if (this.target) {
+      if (this.target.type) {
+        this.setProperty("system.target.affects.type", this.target.type);
+      }
+      if (this.target.count !== null) {
+        this.setProperty("system.target.affects.count", this.target.count.toString());
+      }
+      if (this.target.choice !== undefined) {
+        this.setProperty("system.target.affects.choice", this.target.choice);
+      }
+      if (this.target.special) {
+        this.setProperty("system.target.affects.special", this.target.special);
+      }
+      ItemUtils.log("Target affects set", this.target);
+    }
+
+    // Area of Effect (template)
+    if (this.area) {
+      if (this.area.type) {
+        this.setProperty("system.target.template.type", this.area.type);
+      }
+      if (this.area.size !== null) {
+        this.setProperty("system.target.template.size", this.area.size.toString());
+      }
+      if (this.area.units) {
+        this.setProperty("system.target.template.units", this.area.units);
+      }
+      ItemUtils.log("Area template set", this.area);
+    }
+
+    // Uses (for limited-use spells like innate spellcasting)
+    if (this.uses && this.uses.max > 0) {
+      this.setProperty("system.uses.spent", 0);
+      this.setProperty("system.uses.max", this.uses.max.toString());
+
+      // Set current value as spent
+      if (this.uses.value !== undefined) {
+        const spent = this.uses.max - this.uses.value;
+        this.setProperty("system.uses.spent", spent);
+      }
+
+      ItemUtils.log("Spell uses set to", this.uses);
+
+      // Set recovery configurations
+      if (this.recovery && this.recovery.length > 0) {
+        const recoveryArray = this.recovery.map((rec) => {
+          const recoveryConfig = {
+            period: rec.period,
+            type: rec.type,
+          };
+
+          // Add formula if type is formula
+          if (rec.type === "formula" && rec.formula) {
+            recoveryConfig.formula = rec.formula;
+          }
+
+          return recoveryConfig;
+        });
+
+        this.setProperty("system.uses.recovery", recoveryArray);
+        ItemUtils.log("Spell recovery set to", recoveryArray);
+      }
+    }
+
+    ItemUtils.log("Spell data build complete");
+  }
+
+  /**
    * Get cost in the appropriate display denomination
    * @returns {number} Cost value in the display denomination
    */
@@ -1120,18 +1367,19 @@ export class ItemData {
   }
 
   /**
-   * Create the item in Foundry
-   * @param {string} folderId - Optional folder to create item in
-   * @returns {Promise<Object>} Created item and any issues
-   */
-  async createItem5e(folderId = null) {
+     * Create the item in Foundry
+     * @param {string} folderId - Optional folder to create item in
+     * @param {object} options - UI Options (generateAnimations, etc)
+     * @returns {Promise<Object>} Created item and any issues
+     */
+  async createItem5e(folderId = null, options = {}) {
     ItemUtils.log("State of ItemData before building", this);
 
     ItemUtils.log("Creating item in Foundry");
 
     try {
       // Build Foundry data structure
-      await this.buildFoundryData();
+      await this.buildFoundryData(options);
 
       // Validate
       const validation = ItemUtils.validateItemData(this.#dnd5e);

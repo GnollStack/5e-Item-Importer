@@ -8,11 +8,23 @@ import { ItemData } from "../itemData.js";
 import { ItemUtils } from "../itemUtils.js";
 import { MODULE_NAME } from "../itemConfig.js";
 
-/**
- * Base Strict Parser - Handles universal fields common to all items
- * This is the foundation that all specific parsers extend
- */
 export class BaseStrictParser {
+
+    /**
+     * Sections to extract for this item type.
+     * Override in subclasses to customize which sections are parsed.
+     * 
+     * Reference:
+     * - Physical items (weapon, equipment, consumable, tool, container, loot): all true
+     * - Non-physical items (spell, feat, class, subclass, background, race): inventory/costWeight false
+     */
+    static SECTIONS = {
+        inventory: true,
+        costWeight: true,
+        description: true,
+        unidentified: true,
+        chatFlavor: true
+    };
 
     constructor() {
         this.errors = [];
@@ -123,7 +135,8 @@ export class BaseStrictParser {
             'TOOL': 'tool',
             'LOOT': 'loot',
             'CONTAINER': 'container',
-            'BACKPACK': 'backpack'
+            'BACKPACK': 'backpack',
+            'SPELL': 'spell'
         };
 
         return typeMap[typeText] || null;
@@ -174,9 +187,12 @@ export class BaseStrictParser {
 
     /**
      * Extract all universal fields from the template
+     * Uses this.constructor.SECTIONS to determine which sections to extract
      * @returns {Object|null} Object containing all universal field values
      */
     extractUniversalFields() {
+        const sections = this.constructor.SECTIONS;
+
         const data = {
             name: null,
             rarity: "common",
@@ -194,43 +210,53 @@ export class BaseStrictParser {
         };
 
         try {
-            // Extract Name (required)
+            // Extract Name (required for all items)
             data.name = this.extractName();
             if (!data.name) {
                 this.addError("Name field is required but was not found or is empty");
                 data.name = "Unnamed Item"; // Fallback to allow continued parsing
             }
 
-            // Extract Rarity
+            // Extract Rarity (common to all items)
             data.rarity = this.extractRarity();
 
-            // Extract Inventory section
-            const inventory = this.extractInventorySection();
-            if (inventory) {
-                data.quantity = inventory.quantity;
-                data.identified = inventory.identified;
-                data.equipped = inventory.equipped;
+            // Extract Inventory section (physical items only)
+            if (sections.inventory) {
+                const inventory = this.extractInventorySection();
+                if (inventory) {
+                    data.quantity = inventory.quantity;
+                    data.identified = inventory.identified;
+                    data.equipped = inventory.equipped;
+                }
             }
 
-            // Extract Cost and Weight section
-            const costWeight = this.extractCostAndWeightSection();
-            if (costWeight) {
-                data.priceValue = costWeight.priceValue;
-                data.priceDenomination = costWeight.priceDenomination;
-                data.weightValue = costWeight.weightValue;
-                data.weightUnits = costWeight.weightUnits;
+            // Extract Cost and Weight section (physical items only)
+            if (sections.costWeight) {
+                const costWeight = this.extractCostAndWeightSection();
+                if (costWeight) {
+                    data.priceValue = costWeight.priceValue;
+                    data.priceDenomination = costWeight.priceDenomination;
+                    data.weightValue = costWeight.weightValue;
+                    data.weightUnits = costWeight.weightUnits;
+                }
             }
 
-            // Extract Description
-            data.description = this.extractDescription();
+            // Extract Description (all items)
+            if (sections.description) {
+                data.description = this.extractDescription();
+            }
 
-            // Extract Unidentified Section (Name + Description)
-            const unidentData = this.extractUnidentifiedData();
-            data.unidentifiedName = unidentData.name;
-            data.unidentifiedDescription = unidentData.description;
+            // Extract Unidentified Section (physical/magical items)
+            if (sections.unidentified) {
+                const unidentData = this.extractUnidentifiedData();
+                data.unidentifiedName = unidentData.name;
+                data.unidentifiedDescription = unidentData.description;
+            }
 
-            // Extract Chat Flavor
-            data.chatDescription = this.extractChatDescription();
+            // Extract Chat Flavor (most items)
+            if (sections.chatFlavor) {
+                data.chatDescription = this.extractChatDescription();
+            }
 
             return data;
 
@@ -314,7 +340,10 @@ export class BaseStrictParser {
         // Find the ---INVENTORY--- marker
         const sectionStart = this.findLine(/^---INVENTORY---$/);
         if (!sectionStart) {
-            this.addWarning("INVENTORY section not found, using defaults");
+            // Only warn if this section type expects inventory
+            if (this.constructor.SECTIONS.inventory) {
+                this.addWarning("INVENTORY section not found, using defaults");
+            }
             return null;
         }
 
@@ -363,7 +392,10 @@ export class BaseStrictParser {
         // Find the ---COST AND WEIGHT--- marker
         const sectionStart = this.findLine(/^---COST AND WEIGHT---$/);
         if (!sectionStart) {
-            this.addWarning("COST AND WEIGHT section not found, using defaults");
+            // Only warn if this section type expects cost/weight
+            if (this.constructor.SECTIONS.costWeight) {
+                this.addWarning("COST AND WEIGHT section not found, using defaults");
+            }
             return null;
         }
 
@@ -539,7 +571,7 @@ export class BaseStrictParser {
 
         // Join description lines
         data.description = descLines.join("\n").trim();
-        
+
         return data;
     }
 

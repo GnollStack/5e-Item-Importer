@@ -1,0 +1,398 @@
+/**
+ * 5e Item Importer - Component Styles
+ * Collapsible sections, quick settings, batch controls
+ */
+
+/* ===========================================
+   Collapsible Sections
+   =========================================== */
+
+.ii-section {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    background: var(--ii-bg);
+}
+
+body.theme-dark .ii-section {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.ii-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+}
+
+body.theme-dark .ii-section-header {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.ii-section-header:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+body.theme-dark .ii-section-header:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.ii-section-header i.ii-section-icon {
+    color: var(--ii-primary);
+    width: 16px;
+    text-align: center;
+}
+
+.ii-section-header .ii-section-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ii-text);
+}
+
+.ii-section-header .ii-section-toggle {
+    color: #888;
+    transition: transform 0.2s ease;
+}
+
+.ii-section.collapsed .ii-section-toggle {
+    transform: rotate(-90deg);
+}
+
+.ii-section-content {
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 16px;
+}
+
+.ii-section.collapsed .ii-section-content {
+    display: none;
+}
+
+.ii-section-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.ii-section-row.full-width {
+    grid-column: 1 / -1;
+}
+
+.ii-section-row .ii-row-label {
+    color: #888;
+    min-width: 80px;
+    font-size: 11px;
+}
+
+.ii-section-row .ii-row-value {
+    color: var(--ii-text);
+    font-weight: 500;
+}
+
+/* Description section special styling */
+.ii-section.ii-section-description .ii-section-content {
+    display: block;
+}
+
+.ii-description-text {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ii-text);
+    max-height: 100px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.ii-description-text::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ii-description-text::-webkit-scrollbar-thumb {
+    background: var(--ii-border);
+    border-radius: 2px;
+}
+
+/* Issues section */
+.ii-section.ii-section-issues {
+    border-color: var(--ii-warning);
+}
+
+.ii-section.ii-section-issues .ii-section-header {
+    background: rgba(246, 174, 45, 0.1);
+}
+
+.ii-section.ii-section-issues .ii-section-icon {
+    color: var(--ii-warning);
+}
+
+.ii-issues-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.ii-issues-list li {
+    padding: 4px 0;
+    font-size: 12px;
+    color: var(--ii-text);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.ii-issues-list li::before {
+    content: "•";
+    color: var(--ii-warning);
+    font-weight: bold;
+}
+
+/* ===========================================
+   Inline Quick Settings
+   =========================================== */
+
+.ii-quick-settings {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+body.theme-dark .ii-quick-settings {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.ii-quick-settings-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888;
+    margin-right: 4px;
+}
+
+.ii-quick-setting {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+}
+
+.ii-quick-setting:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.theme-dark .ii-quick-setting:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.ii-quick-setting input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.ii-quick-setting span {
+    color: var(--ii-text);
+    user-select: none;
+}
+
+/* ===========================================
+   Batch Preview Grid
+   =========================================== */
+
+.ii-batch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.ii-batch-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    padding-right: 32px; /* Space for checkbox */
+    background: var(--ii-bg);
+    border: 1px solid var(--ii-border);
+    border-radius: 6px;
+    font-size: 12px;
+    position: relative;
+    transition: all 0.15s ease;
+}
+
+.ii-batch-item.success {
+    border-left: 3px solid var(--ii-success);
+}
+
+.ii-batch-item.failure {
+    border-left: 3px solid var(--ii-error);
+    opacity: 0.8;
+}
+
+.ii-batch-item-icon-wrapper {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.ii-batch-item-icon-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.ii-batch-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ii-batch-item-name {
+    font-weight: 600;
+    color: var(--ii-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ii-batch-item-type {
+    font-size: 10px;
+    color: #888;
+    text-transform: uppercase;
+}
+
+/* ===========================================
+   Batch Selection Controls
+   =========================================== */
+
+.ii-batch-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    margin-bottom: 8px;
+}
+
+body.theme-dark .ii-batch-controls {
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.ii-batch-select-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.ii-batch-select-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid var(--ii-border);
+    border-radius: 4px;
+    background: var(--ii-bg);
+    color: var(--ii-text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ii-batch-select-btn:hover {
+    background: var(--ii-primary);
+    border-color: var(--ii-primary);
+    color: #fff;
+}
+
+.ii-batch-count {
+    font-size: 12px;
+    color: #888;
+}
+
+.ii-batch-count strong {
+    color: var(--ii-success);
+}
+
+/* Selectable batch items */
+.ii-batch-item.selectable {
+    cursor: pointer;
+}
+
+.ii-batch-item.selectable:hover {
+    background: rgba(63, 136, 197, 0.08);
+    border-color: var(--ii-primary);
+}
+
+.ii-batch-item.selected {
+    background: rgba(45, 143, 81, 0.08);
+    border-color: var(--ii-success);
+}
+
+.ii-batch-item.selectable:not(.selected) {
+    opacity: 0.7;
+}
+
+.ii-batch-item.selectable:not(.selected):hover {
+    opacity: 1;
+}
+
+/* Batch checkbox */
+.ii-batch-checkbox {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--ii-success);
+}
+
+/* Selection checkmark overlay on icon */
+.ii-batch-item.selected .ii-batch-item-icon-wrapper::after {
+    content: "\f00c"; /* fa-check */
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    background: var(--ii-success);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Import button selection count badge */
+.ii-btn-import.has-selection::after {
+    content: attr(data-count);
+    margin-left: 6px;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    font-size: 10px;
+}

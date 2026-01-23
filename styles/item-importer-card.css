@@ -1,0 +1,248 @@
+/**
+ * 5e Item Importer - Item Card Styles
+ * Foundry-style item card preview with rarity colors and type badges
+ */
+
+/* ===========================================
+   Item Card Container
+   =========================================== */
+
+.ii-item-card {
+    background: var(--ii-bg);
+    border: 1px solid var(--ii-border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* ===========================================
+   Card Header
+   =========================================== */
+
+.ii-card-header {
+    display: flex;
+    align-items: stretch;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    min-height: 64px;
+}
+
+.ii-card-icon {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ii-card-icon img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.ii-card-title-block {
+    flex: 1;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+}
+
+.ii-card-name {
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+    margin: 0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    line-height: 1.2;
+}
+
+.ii-card-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ===========================================
+   Type Badges
+   =========================================== */
+
+.ii-card-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.ii-card-type-badge i {
+    font-size: 9px;
+}
+
+/* Type-specific badge colors */
+.ii-card-type-badge.type-weapon {
+    background: rgba(220, 53, 69, 0.8);
+}
+
+.ii-card-type-badge.type-equipment {
+    background: rgba(13, 110, 253, 0.8);
+}
+
+.ii-card-type-badge.type-consumable {
+    background: rgba(25, 135, 84, 0.8);
+}
+
+.ii-card-type-badge.type-tool {
+    background: rgba(111, 66, 193, 0.8);
+}
+
+.ii-card-type-badge.type-container {
+    background: rgba(108, 117, 125, 0.8);
+}
+
+.ii-card-type-badge.type-loot {
+    background: rgba(255, 193, 7, 0.8);
+    color: #000;
+}
+
+.ii-card-type-badge.type-spell {
+    background: rgba(102, 16, 242, 0.8);
+}
+
+/* ===========================================
+   Rarity Badges
+   =========================================== */
+
+.ii-card-rarity {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ii-card-rarity.rarity-common {
+    background: rgba(158, 158, 158, 0.3);
+    color: #ccc;
+}
+
+.ii-card-rarity.rarity-uncommon {
+    background: rgba(30, 255, 0, 0.2);
+    color: #4ade80;
+}
+
+.ii-card-rarity.rarity-rare {
+    background: rgba(0, 112, 221, 0.3);
+    color: #60a5fa;
+}
+
+.ii-card-rarity.rarity-veryRare {
+    background: rgba(163, 53, 238, 0.3);
+    color: #c084fc;
+}
+
+.ii-card-rarity.rarity-legendary {
+    background: rgba(255, 128, 0, 0.3);
+    color: #fb923c;
+}
+
+.ii-card-rarity.rarity-artifact {
+    background: rgba(190, 49, 68, 0.3);
+    color: #f87171;
+    text-shadow: 0 0 10px rgba(248, 113, 113, 0.5);
+}
+
+/* ===========================================
+   Special Indicators
+   =========================================== */
+
+.ii-card-magical {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(147, 51, 234, 0.3);
+    color: #a78bfa;
+}
+
+.ii-card-magical i {
+    font-size: 9px;
+}
+
+.ii-card-attunement {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(236, 72, 153, 0.3);
+    color: #f472b6;
+}
+
+/* ===========================================
+   Card Body
+   =========================================== */
+
+.ii-card-body {
+    padding: 12px;
+}
+
+/* ===========================================
+   Quick Stats Row
+   =========================================== */
+
+.ii-card-stats {
+    display: flex;
+    gap: 16px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    flex-wrap: wrap;
+}
+
+body.theme-dark .ii-card-stats {
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.ii-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+
+.ii-stat-item i {
+    color: var(--ii-primary);
+    width: 14px;
+    text-align: center;
+}
+
+.ii-stat-item .ii-stat-label {
+    color: #888;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.ii-stat-item .ii-stat-value {
+    font-weight: 600;
+    color: var(--ii-text);
+}

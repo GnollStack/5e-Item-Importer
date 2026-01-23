@@ -705,13 +705,13 @@ async function getIconsFromFolder(folderPath) {
 
     try {
       // Core Foundry icons are typically in the public/icons directory
-      response = await FilePicker.browse("public", folderPath);
+      response = await foundry.applications.apps.FilePicker.implementation.browse("public", folderPath);
     } catch (e) {
       // Fallback to data source
       ItemUtils.log(
         `Public browse failed for ${folderPath}, trying data source`
       );
-      response = await FilePicker.browse("data", folderPath);
+      response = await foundry.applications.apps.FilePicker.implementation.browse("data", folderPath);
     }
 
     if (!response.files || response.files.length === 0) {
@@ -1543,4 +1543,228 @@ function selectBestLootIcon(icons, lootType, lootKeywords, itemName) {
     `No keyword match, selecting random icon: ${icons[randomIndex]}`
   );
   return icons[randomIndex];
+}
+
+/**
+ * Spell icon semantic mappings
+ * Maps spell schools and keywords to appropriate icons
+ */
+const SPELL_SCHOOL_ICONS = {
+    // Abjuration - protective, warding magic
+    abj: [
+        "icons/magic/defensive/shield-barrier-blue.webp",
+        "icons/magic/defensive/shield-barrier-glowing-blue.webp",
+        "icons/magic/defensive/shield-barrier-flaming-pentagon-blue.webp",
+        "icons/magic/defensive/barrier-shield-dome-blue-purple.webp",
+        "icons/magic/defensive/illusion-evasion-echo-purple.webp",
+        "icons/magic/control/debuff-chains-ropes-purple.webp"
+    ],
+    // Conjuration - summoning, teleportation
+    con: [
+        "icons/magic/symbols/runes-star-pentagon-blue.webp",
+        "icons/magic/symbols/rune-sigil-black-pink.webp",
+        "icons/magic/symbols/runes-star-blue.webp",
+        "icons/magic/control/silhouette-hold-beam-blue.webp",
+        "icons/magic/air/air-burst-spiral-blue-gray.webp",
+        "icons/magic/lightning/bolt-strike-blue.webp"
+    ],
+    // Divination - knowledge, scrying
+    div: [
+        "icons/magic/perception/eye-ringed-glow-angry-large-teal.webp",
+        "icons/magic/perception/eye-ringed-glow-angry-large-red.webp",
+        "icons/magic/perception/orb-crystal-ball-scrying-pink.webp",
+        "icons/magic/perception/third-eye-blue-red.webp",
+        "icons/magic/perception/eye-tendrils-web-purple.webp",
+        "icons/magic/light/beam-rays-magenta.webp"
+    ],
+    // Enchantment - mind control, charm
+    enc: [
+        "icons/magic/control/hypnosis-mesmerism-swirl.webp",
+        "icons/magic/control/debuff-chains-blue.webp",
+        "icons/magic/control/fear-fright-monster-grin-purple.webp",
+        "icons/magic/control/silhouette-hold-change-blue.webp",
+        "icons/magic/control/buff-luck-fortune-green.webp",
+        "icons/magic/light/explosion-star-pink.webp"
+    ],
+    // Evocation - elemental, energy manipulation
+    evo: [
+        "icons/magic/fire/beam-jet-stream-embers.webp",
+        "icons/magic/fire/explosion-fireball-large-orange.webp",
+        "icons/magic/lightning/bolt-strike-blue.webp",
+        "icons/magic/lightning/bolt-strike-orange.webp",
+        "icons/magic/light/explosion-star-large-blue-yellow.webp",
+        "icons/magic/fire/flame-burning-hand-red.webp",
+        "icons/magic/acid/projectile-bolts-green.webp",
+        "icons/magic/cold/snowflake-ice-blue-white.webp"
+    ],
+    // Illusion - trickery, deception
+    ill: [
+        "icons/magic/perception/silhouette-stealth-shadow.webp",
+        "icons/magic/perception/eye-ringed-glow-angry-large-teal.webp",
+        "icons/magic/control/silhouette-hold-change-blue.webp",
+        "icons/magic/light/beam-rays-magenta.webp",
+        "icons/magic/light/swords-light-702702.webp",
+        "icons/magic/perception/shadow-eyed-green.webp"
+    ],
+    // Necromancy - death, undead
+    nec: [
+        "icons/magic/death/skull-energy-light-purple.webp",
+        "icons/magic/death/skull-shadow-dark-purple.webp",
+        "icons/magic/death/hand-undead-skeleton-fire-gray.webp",
+        "icons/magic/death/skull-humanoid-crown-white-red.webp",
+        "icons/magic/unholy/strike-hand-glow-pink.webp",
+        "icons/magic/death/weapon-sword-skull-purple.webp"
+    ],
+    // Transmutation - transformation, alteration
+    trs: [
+        "icons/magic/nature/root-vines-grow-green.webp",
+        "icons/magic/nature/hand-nature-environment-green.webp",
+        "icons/magic/control/buff-flight-wings-blue.webp",
+        "icons/magic/nature/leaf-glow-triple-green.webp",
+        "icons/magic/holy/yin-yang-eastern-blue.webp",
+        "icons/magic/nature/tree-spirit-green.webp"
+    ]
+};
+
+/**
+ * Cantrip-specific icons (level 0 spells)
+ */
+const CANTRIP_ICONS = [
+    "icons/magic/light/orbs-hand-gray.webp",
+    "icons/magic/light/explosion-star-small-blue-yellow.webp",
+    "icons/magic/fire/flame-burning-hand-red.webp",
+    "icons/magic/cold/snowflake-ice-blue-white.webp",
+    "icons/magic/lightning/bolt-strike-blue.webp"
+];
+
+/**
+ * Keyword-based icon mapping for spell names
+ */
+const SPELL_KEYWORD_ICONS = {
+    // Fire spells
+    fire: ["icons/magic/fire/beam-jet-stream-embers.webp", "icons/magic/fire/explosion-fireball-large-orange.webp", "icons/magic/fire/flame-burning-hand-red.webp"],
+    flame: ["icons/magic/fire/beam-jet-stream-embers.webp", "icons/magic/fire/explosion-fireball-large-orange.webp"],
+    burn: ["icons/magic/fire/flame-burning-hand-red.webp"],
+    fireball: ["icons/magic/fire/explosion-fireball-large-orange.webp"],
+    
+    // Cold/Ice spells
+    cold: ["icons/magic/cold/snowflake-ice-blue-white.webp", "icons/magic/cold/ice-crystal-blue-white.webp"],
+    ice: ["icons/magic/cold/snowflake-ice-blue-white.webp", "icons/magic/cold/ice-crystal-blue-white.webp"],
+    frost: ["icons/magic/cold/snowflake-ice-blue-white.webp"],
+    freeze: ["icons/magic/cold/ice-crystal-blue-white.webp"],
+    
+    // Lightning spells
+    lightning: ["icons/magic/lightning/bolt-strike-blue.webp", "icons/magic/lightning/bolt-strike-orange.webp"],
+    thunder: ["icons/magic/lightning/bolt-strike-orange.webp"],
+    shock: ["icons/magic/lightning/bolt-strike-blue.webp"],
+    
+    // Light/Radiant spells
+    light: ["icons/magic/light/beam-rays-magenta.webp", "icons/magic/light/explosion-star-large-blue-yellow.webp"],
+    radiant: ["icons/magic/holy/beam-pillar-gold.webp", "icons/magic/light/explosion-star-large-blue-yellow.webp"],
+    holy: ["icons/magic/holy/beam-pillar-gold.webp"],
+    divine: ["icons/magic/holy/beam-pillar-gold.webp"],
+    
+    // Darkness/Necrotic spells
+    dark: ["icons/magic/death/skull-shadow-dark-purple.webp"],
+    shadow: ["icons/magic/perception/silhouette-stealth-shadow.webp", "icons/magic/perception/shadow-eyed-green.webp"],
+    death: ["icons/magic/death/skull-energy-light-purple.webp", "icons/magic/death/skull-shadow-dark-purple.webp"],
+    undead: ["icons/magic/death/hand-undead-skeleton-fire-gray.webp"],
+    necrotic: ["icons/magic/death/skull-energy-light-purple.webp"],
+    
+    // Healing spells
+    heal: ["icons/magic/life/cross-area-circle-green-white.webp", "icons/magic/life/heart-cross-strong-flame-green.webp"],
+    cure: ["icons/magic/life/cross-area-circle-green-white.webp"],
+    restore: ["icons/magic/life/heart-cross-strong-flame-green.webp"],
+    
+    // Shield/Protection spells
+    shield: ["icons/magic/defensive/shield-barrier-blue.webp", "icons/magic/defensive/shield-barrier-glowing-blue.webp"],
+    protect: ["icons/magic/defensive/barrier-shield-dome-blue-purple.webp"],
+    ward: ["icons/magic/defensive/barrier-shield-dome-blue-purple.webp"],
+    
+    // Mind/Psychic spells
+    mind: ["icons/magic/control/hypnosis-mesmerism-swirl.webp"],
+    charm: ["icons/magic/control/hypnosis-mesmerism-swirl.webp"],
+    psychic: ["icons/magic/perception/eye-ringed-glow-angry-large-teal.webp"],
+    
+    // Teleportation spells
+    teleport: ["icons/magic/symbols/runes-star-pentagon-blue.webp"],
+    dimension: ["icons/magic/symbols/runes-star-pentagon-blue.webp"],
+    portal: ["icons/magic/symbols/rune-sigil-black-pink.webp"],
+    
+    // Nature spells
+    nature: ["icons/magic/nature/root-vines-grow-green.webp", "icons/magic/nature/hand-nature-environment-green.webp"],
+    plant: ["icons/magic/nature/root-vines-grow-green.webp"],
+    animal: ["icons/magic/nature/wolf-paw-glow-teal-blue.webp"],
+    beast: ["icons/magic/nature/wolf-paw-glow-teal-blue.webp"],
+    
+    // Poison/Acid spells
+    poison: ["icons/magic/acid/projectile-bolts-green.webp"],
+    acid: ["icons/magic/acid/projectile-bolts-green.webp"],
+    venom: ["icons/magic/acid/projectile-bolts-green.webp"],
+    
+    // Air/Wind spells
+    wind: ["icons/magic/air/air-burst-spiral-blue-gray.webp"],
+    air: ["icons/magic/air/air-burst-spiral-blue-gray.webp"],
+    fly: ["icons/magic/control/buff-flight-wings-blue.webp"],
+    flight: ["icons/magic/control/buff-flight-wings-blue.webp"],
+    
+    // Water spells
+    water: ["icons/magic/water/wave-water-blue.webp"],
+    wave: ["icons/magic/water/wave-water-blue.webp"],
+    
+    // Summoning spells
+    summon: ["icons/magic/symbols/runes-star-blue.webp"],
+    conjure: ["icons/magic/symbols/runes-star-blue.webp"],
+    
+    // Divination/Vision spells
+    see: ["icons/magic/perception/eye-ringed-glow-angry-large-teal.webp"],
+    vision: ["icons/magic/perception/eye-ringed-glow-angry-large-teal.webp"],
+    detect: ["icons/magic/perception/orb-crystal-ball-scrying-pink.webp"],
+    scry: ["icons/magic/perception/orb-crystal-ball-scrying-pink.webp"]
+};
+
+/**
+ * Get a random spell icon based on school, level, and name
+ * @param {string} school - Spell school code (abj, con, div, enc, evo, ill, nec, trs)
+ * @param {number} level - Spell level (0-9)
+ * @param {string} name - Spell name for keyword matching
+ * @returns {Promise<string|null>} Icon path or null
+ */
+export async function getRandomSpellIcon(school, level, name) {
+    // Check if semantic icons are enabled
+    const MODULE_NAME = "5e-item-importer";
+    if (!game.settings.get(MODULE_NAME, "useSemanticIcons")) {
+        return null;
+    }
+
+    // 1. First try keyword matching from spell name
+    if (name) {
+        const nameLower = name.toLowerCase();
+        for (const [keyword, icons] of Object.entries(SPELL_KEYWORD_ICONS)) {
+            if (nameLower.includes(keyword)) {
+                const randomIcon = icons[Math.floor(Math.random() * icons.length)];
+                console.log(`[Item Importer] Spell icon matched by keyword "${keyword}": ${randomIcon}`);
+                return randomIcon;
+            }
+        }
+    }
+
+    // 2. Use cantrip icons for level 0 spells
+    if (level === 0) {
+        const randomIcon = CANTRIP_ICONS[Math.floor(Math.random() * CANTRIP_ICONS.length)];
+        console.log(`[Item Importer] Cantrip icon selected: ${randomIcon}`);
+        return randomIcon;
+    }
+
+    // 3. Fall back to school-based icons
+    if (school && SPELL_SCHOOL_ICONS[school]) {
+        const schoolIcons = SPELL_SCHOOL_ICONS[school];
+        const randomIcon = schoolIcons[Math.floor(Math.random() * schoolIcons.length)];
+        console.log(`[Item Importer] Spell icon matched by school "${school}": ${randomIcon}`);
+        return randomIcon;
+    }
+
+    // 4. No match found
+    console.log(`[Item Importer] No semantic spell icon found for: ${name}`);
+    return null;
 }

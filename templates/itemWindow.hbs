@@ -1,43 +1,95 @@
-<form class="ii-form">
-    <!-- Top Controls -->
-    <div class="ii-form-group">
-        <label>
-            <input type="checkbox" id="ii-auto-parse-checkbox" {{#if autoParse}}checked{{/if}} />
-            Auto-Parse on Input
+<div class="ii-form">
+    {{!-- Quick Settings Row --}}
+    <div class="ii-quick-settings">
+        <span class="ii-quick-settings-label"><i class="fas fa-sliders-h"></i> Quick Settings:</span>
+        <label class="ii-quick-setting">
+            <input type="checkbox" id="ii-setting-semantic" checked>
+            <span>Semantic Icons</span>
+        </label>
+        <label class="ii-quick-setting">
+            <input type="checkbox" id="ii-setting-identified" checked>
+            <span>Create Identified</span>
+        </label>
+        <label class="ii-quick-setting">
+            <input type="checkbox" id="ii-setting-match-icons" checked>
+            <span>Match Icons</span>
         </label>
     </div>
 
-    <!-- Input Area -->
-    <div class="ii-form-group ii-input-group">
-        <label for="ii-input">Item Text</label>
-        <div id="ii-input" contenteditable="true" spellcheck="false" data-placeholder="{{placeholder}}"></div>
+    {{!-- Input Section --}}
+    <div class="ii-form-group ii-input-group state-empty">
+        <div class="ii-input-header">
+            <label for="ii-input">
+                <i class="fas fa-paste"></i> Item Text
+            </label>
+            <span class="ii-state-indicator state-empty">
+                <i class="fas fa-edit"></i> Ready
+            </span>
+        </div>
+
+        {{!-- Hidden for now - uncomment to restore Quick Start templates
+        <div class="ii-template-group">
+            <label for="ii-template-select">Quick Start:</label>
+            <select id="ii-template-select">
+                <option value="">— Select a template —</option>
+                {{#each templates}}
+                <option value="{{this.id}}">{{this.label}}</option>
+                {{/each}}
+            </select>
+        </div>
+        --}}
+
+        <textarea id="ii-input" placeholder="{{placeholder}}" spellcheck="false"></textarea>
+
+        <div class="ii-shortcuts-hint">
+            <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd> Parse</span>
+            <span><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> Import</span>
+            <span><kbd>Esc</kbd> Reset</span>
+        </div>
     </div>
 
-    <!-- Parse Output -->
+    {{!-- Parse Output Section --}}
     <div class="ii-form-group ii-output-group">
-        <label>Parsed Data</label>
+        <label for="ii-parse-output">
+            <i class="fas fa-search"></i> Parse Results
+        </label>
         <div id="ii-parse-output" class="ii-parse-output">
             <p><em>Enter item text to parse...</em></p>
         </div>
     </div>
 
-    <!-- Bottom Controls -->
+    {{!-- Controls Section --}}
     <div class="ii-form-group ii-controls-group">
-        <label for="ii-folder-select">Import to Folder</label>
-        <select id="ii-folder-select" name="folder">
-            <option value="">None (Root Level)</option>
-        </select>
+        <label for="ii-folder-select">
+            <i class="fas fa-folder"></i> Import to Folder
+        </label>
+        <select id="ii-folder-select"></select>
 
         <div class="ii-button-group">
-            <button type="button" data-action="parse" class="ii-btn-parse">
-                <i class="fas fa-search"></i> Parse
+            <label class="ii-auto-parse-label">
+                <input type="checkbox" id="ii-auto-parse-checkbox" {{#if autoParse}}checked{{/if}}>
+                Auto-parse
+            </label>
+            <button type="button" class="ii-btn-parse" data-action="parse">
+                <i class="fas fa-cog"></i> Parse
             </button>
-            <button type="button" data-action="reset" class="ii-btn-reset">
-                <i class="fas fa-redo"></i> Reset
+            <button type="button" class="ii-btn-reset" data-action="reset">
+                <i class="fas fa-undo"></i> Reset
             </button>
-            <button type="button" data-action="import" class="ii-btn-import" disabled>
-                <i class="fas fa-file-import"></i> Import
+            <button type="button" class="ii-btn-import" data-action="import" disabled>
+                <i class="fas fa-download"></i> Import
             </button>
         </div>
+
+        <div class="ii-checkbox-wrapper">
+            <input type="checkbox" id="ii-use-autoanimations" {{#if isAutoAnimationsActive}}checked{{/if}} {{#unless
+                isAutoAnimationsActive}}disabled{{/unless}}>
+            <label for="ii-use-autoanimations">
+                Generate Available Animations
+                {{#unless isAutoAnimationsActive}}
+                <span style="font-size: 0.8em; opacity: 0.7;">(Auto Animations Module not active)</span>
+                {{/unless}}
+            </label>
+        </div>
     </div>
-</form>
+</div>

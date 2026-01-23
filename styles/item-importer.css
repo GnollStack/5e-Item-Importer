@@ -1,5 +1,6 @@
 /**
- * 5e Item Importer - Styles
+ * 5e Item Importer - Base Styles
+ * Variables, layout, form elements, state indicators
  */
 
 /* Theme variables */
@@ -69,11 +70,15 @@ body.theme-dark {
 .ii-input-group {
     flex: 1;
     min-height: 150px;
+    position: relative;
+    transition: all 0.2s ease;
 }
 
+/* Textarea Styling */
 #ii-input {
     flex: 1;
     min-height: 150px;
+    width: 100%;
     border: 2px solid var(--ii-border);
     border-radius: 4px;
     padding: 10px;
@@ -83,25 +88,13 @@ body.theme-dark {
     background: var(--ii-bg);
     color: var(--ii-text);
     overflow-y: auto;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    resize: vertical;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-#ii-input:empty::before {
-    content: attr(data-placeholder);
+#ii-input::placeholder {
     color: #999;
     font-style: italic;
-}
-
-#ii-input:empty:before {
-    content: attr(data-placeholder);
-    color: #999;
-    font-style: italic;
-    pointer-events: none;
-}
-
-#ii-input:focus:empty:before {
-    content: attr(data-placeholder);
 }
 
 #ii-input:focus {
@@ -132,7 +125,7 @@ body.theme-dark {
     color: #999;
 }
 
-/* Parse results */
+/* Parse results - legacy/fallback */
 .ii-parse-success {
     color: var(--ii-success);
 }
@@ -199,6 +192,11 @@ body.theme-dark {
 .ii-parse-error ul {
     margin: 8px 0 0 0;
     padding-left: 20px;
+}
+
+/* Error state for parse output */
+.ii-parse-output:has(.ii-parse-error) {
+    border-color: var(--ii-error);
 }
 
 /* Controls */
@@ -342,4 +340,144 @@ body.theme-dark {
 
 @keyframes ii-spin {
     to { transform: rotate(360deg); }
+}
+
+/* ===========================================
+   Parse State Indicators
+   =========================================== */
+
+.ii-state-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+}
+
+.ii-state-indicator.state-empty {
+    background: rgba(108, 117, 125, 0.15);
+    color: #6c757d;
+}
+
+.ii-state-indicator.state-parsing {
+    background: rgba(63, 136, 197, 0.15);
+    color: var(--ii-primary);
+}
+
+.ii-state-indicator.state-valid {
+    background: rgba(45, 143, 81, 0.15);
+    color: var(--ii-success);
+}
+
+.ii-state-indicator.state-error {
+    background: rgba(230, 57, 70, 0.15);
+    color: var(--ii-error);
+}
+
+/* Input group state borders */
+.ii-input-group.state-empty #ii-input {
+    border-color: var(--ii-border);
+}
+
+.ii-input-group.state-parsing #ii-input {
+    border-color: var(--ii-primary);
+    box-shadow: 0 0 0 2px rgba(63, 136, 197, 0.15);
+}
+
+.ii-input-group.state-valid #ii-input {
+    border-color: var(--ii-success);
+    box-shadow: 0 0 0 2px rgba(45, 143, 81, 0.15);
+}
+
+.ii-input-group.state-error #ii-input {
+    border-color: var(--ii-error);
+    box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.15);
+}
+
+/* ===========================================
+   Template Dropdown
+   =========================================== */
+
+.ii-template-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.ii-template-group label {
+    margin: 0;
+    font-weight: normal;
+    font-size: 12px;
+    color: #666;
+}
+
+#ii-template-select {
+    flex: 1;
+    max-width: 200px;
+    padding: 4px 8px;
+    border: 1px solid var(--ii-border);
+    border-radius: 4px;
+    background: var(--ii-bg);
+    color: var(--ii-text);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+#ii-template-select:hover {
+    border-color: var(--ii-primary);
+}
+
+#ii-template-select:focus {
+    outline: none;
+    border-color: var(--ii-primary);
+    box-shadow: 0 0 0 2px rgba(63, 136, 197, 0.2);
+}
+
+/* ===========================================
+   Input Header Row
+   =========================================== */
+
+.ii-input-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.ii-input-header label {
+    margin: 0;
+}
+
+/* ===========================================
+   Keyboard Shortcuts Hint
+   =========================================== */
+
+.ii-shortcuts-hint {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    color: #888;
+    margin-top: 4px;
+}
+
+.ii-shortcuts-hint kbd {
+    display: inline-block;
+    padding: 2px 5px;
+    font-family: "Roboto Mono", monospace;
+    font-size: 10px;
+    background: rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+}
+
+body.theme-dark .ii-shortcuts-hint kbd {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
 }
