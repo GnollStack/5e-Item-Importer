@@ -9,8 +9,8 @@
 
 .ii-section {
     border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 6px;
-    margin-bottom: 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
     overflow: hidden;
     background: var(--ii-bg);
 }
@@ -22,8 +22,8 @@ body.theme-dark .ii-section {
 .ii-section-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
+    gap: 6px;
+    padding: 6px 8px;
     background: rgba(0, 0, 0, 0.03);
     cursor: pointer;
     user-select: none;
@@ -51,7 +51,7 @@ body.theme-dark .ii-section-header:hover {
 .ii-section-header .ii-section-title {
     flex: 1;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--ii-text);
@@ -67,10 +67,10 @@ body.theme-dark .ii-section-header:hover {
 }
 
 .ii-section-content {
-    padding: 10px 12px;
+    padding: 6px 8px;
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 6px 16px;
+    gap: 4px 12px;
 }
 
 .ii-section.collapsed .ii-section-content {
@@ -163,12 +163,12 @@ body.theme-dark .ii-section-header:hover {
 .ii-quick-settings {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 8px 12px;
+    gap: 12px;
+    padding: 6px 8px;
     background: rgba(0, 0, 0, 0.03);
     border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 6px;
-    margin-bottom: 12px;
+    border-radius: 4px;
+    margin-bottom: 8px;
     flex-wrap: wrap;
 }
 
@@ -178,22 +178,22 @@ body.theme-dark .ii-quick-settings {
 }
 
 .ii-quick-settings-label {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #888;
-    margin-right: 4px;
+    margin-right: 2px;
 }
 
 .ii-quick-setting {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
+    gap: 4px;
+    font-size: 11px;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 3px 6px;
+    border-radius: 3px;
     transition: background 0.15s ease;
 }
 
@@ -221,21 +221,21 @@ body.theme-dark .ii-quick-setting:hover {
 
 .ii-batch-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 8px;
-    margin-top: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 6px;
+    margin-top: 8px;
 }
 
 .ii-batch-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px;
-    padding-right: 32px; /* Space for checkbox */
+    gap: 6px;
+    padding: 6px;
+    padding-right: 28px; /* Space for checkbox */
     background: var(--ii-bg);
     border: 1px solid var(--ii-border);
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: 4px;
+    font-size: 11px;
     position: relative;
     transition: all 0.15s ease;
 }
@@ -251,8 +251,8 @@ body.theme-dark .ii-quick-setting:hover {
 
 .ii-batch-item-icon-wrapper {
     position: relative;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     flex-shrink: 0;
 }
 
@@ -291,10 +291,10 @@ body.theme-dark .ii-quick-setting:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
+    padding: 6px 8px;
     background: rgba(0, 0, 0, 0.03);
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 body.theme-dark .ii-batch-controls {
@@ -308,11 +308,11 @@ body.theme-dark .ii-batch-controls {
 }
 
 .ii-batch-select-btn {
-    padding: 4px 10px;
-    font-size: 11px;
+    padding: 3px 8px;
+    font-size: 10px;
     font-weight: 600;
     border: 1px solid var(--ii-border);
-    border-radius: 4px;
+    border-radius: 3px;
     background: var(--ii-bg);
     color: var(--ii-text);
     cursor: pointer;
@@ -326,7 +326,7 @@ body.theme-dark .ii-batch-controls {
 }
 
 .ii-batch-count {
-    font-size: 12px;
+    font-size: 11px;
     color: #888;
 }
 
@@ -395,4 +395,231 @@ body.theme-dark .ii-batch-controls {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     font-size: 10px;
+}
+
+/* ===========================================
+   Nested Folder Browser
+   =========================================== */
+
+.ii-folder-browser {
+    border: 1px solid var(--ii-border);
+    border-radius: 4px;
+    background: var(--ii-bg);
+    overflow: hidden;
+}
+
+.ii-folder-search {
+    width: 100%;
+    padding: 6px 8px;
+    border: none;
+    border-bottom: 1px solid var(--ii-border);
+    background: var(--ii-bg);
+    color: var(--ii-text);
+    font-size: 11px;
+    outline: none;
+    transition: background 0.15s ease;
+}
+
+.ii-folder-search::placeholder {
+    color: #888;
+    font-style: italic;
+}
+
+.ii-folder-search:focus {
+    background: rgba(63, 136, 197, 0.05);
+    border-bottom-color: var(--ii-primary);
+}
+
+.ii-folder-list {
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 3px;
+}
+
+.ii-folder-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.ii-folder-list::-webkit-scrollbar-thumb {
+    background: var(--ii-border);
+    border-radius: 3px;
+}
+
+/* Folder items (expandable containers) */
+.ii-folder-item {
+    margin: 1px 0;
+}
+
+/* Leaf folders (no children) - make entire header clickable */
+.ii-folder-leaf .ii-folder-header {
+    cursor: pointer;
+    padding-left: 20px; /* Align with folders that have toggle arrows */
+}
+
+.ii-folder-leaf .ii-folder-header:hover {
+    background: rgba(63, 136, 197, 0.08);
+}
+
+.ii-folder-leaf .ii-folder-icon {
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.ii-folder-leaf .ii-folder-header:hover .ii-folder-icon {
+    opacity: 1;
+}
+
+.ii-folder-leaf .ii-folder-header.selected .ii-folder-icon {
+    opacity: 1;
+}
+
+.ii-folder-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.ii-folder-header.selected {
+    background: rgba(63, 136, 197, 0.2);
+}
+
+.ii-folder-toggle {
+    color: #888;
+    font-size: 9px;
+    transition: transform 0.2s ease;
+    width: 10px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.ii-folder-toggle:hover {
+    color: var(--ii-primary);
+}
+
+.ii-folder-item.collapsed .ii-folder-toggle {
+    transform: rotate(-90deg);
+}
+
+.ii-folder-icon {
+    color: var(--ii-primary);
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.ii-folder-icon:hover {
+    color: var(--ii-success);
+    transform: scale(1.1);
+}
+
+/* Open folder icon - slightly different color */
+.ii-folder-icon.fa-folder-open {
+    color: #5a9fd4;
+}
+
+/* Leaf folder icon - simpler styling */
+.ii-folder-leaf-icon {
+    opacity: 0.8;
+}
+
+.ii-folder-name {
+    flex: 1;
+    font-size: 11px;
+    color: var(--ii-text);
+    font-weight: 500;
+    cursor: pointer;
+    padding: 2px 3px;
+    margin: -2px -3px;
+    border-radius: 2px;
+    transition: all 0.15s ease;
+}
+
+.ii-folder-name:hover {
+    background: rgba(63, 136, 197, 0.15);
+    color: var(--ii-primary);
+}
+
+.ii-folder-header.selected .ii-folder-name {
+    font-weight: 600;
+    color: var(--ii-primary);
+}
+
+.ii-folder-contents {
+    padding-left: 16px;
+    display: block;
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+    border-left: 1px solid rgba(0, 0, 0, 0.05);
+    margin-left: 8px;
+}
+
+body.theme-dark .ii-folder-contents {
+    border-left-color: rgba(255, 255, 255, 0.05);
+}
+
+.ii-folder-item.collapsed .ii-folder-contents {
+    display: none;
+}
+
+/* Folder options (selectable items) */
+.ii-folder-option {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    margin: 1px 0;
+    cursor: pointer;
+    border-radius: 3px;
+    font-size: 11px;
+    transition: all 0.15s ease;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.theme-dark .ii-folder-option {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.ii-folder-option:hover {
+    background: rgba(63, 136, 197, 0.1);
+}
+
+.ii-folder-option.selected {
+    background: rgba(63, 136, 197, 0.2);
+    font-weight: 600;
+}
+
+.ii-folder-option i {
+    color: var(--ii-primary);
+    font-size: 11px;
+    transition: transform 0.15s ease;
+}
+
+.ii-folder-option:hover i {
+    transform: scale(1.1);
+}
+
+/* Highlight the "None (Root Level)" option */
+.ii-folder-option i.fa-home {
+    color: #888;
+}
+
+.ii-folder-option.selected i.fa-home {
+    color: var(--ii-primary);
+}
+
+/* Search filtering classes */
+.hidden {
+    display: none !important;
+}
+
+.ii-folder-item.search-hidden {
+    display: none !important;
+}
+
+.ii-folder-item.search-match .ii-folder-contents {
+    display: block !important;
 }

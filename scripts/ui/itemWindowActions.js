@@ -144,8 +144,8 @@ export async function importItems() {
         return;
     }
 
-    const folderSelect = this.element.querySelector("#ii-folder-select");
-    const folderId = folderSelect?.value || null;
+    // Get selected folder ID from the browser (set by folder selection)
+    const folderId = this.selectedFolderId || null;
 
     // Get the checkbox state
     const aaCheckbox = this.element.querySelector("#ii-use-autoanimations");

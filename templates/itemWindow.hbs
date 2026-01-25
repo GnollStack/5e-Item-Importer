@@ -63,7 +63,12 @@
         <label for="ii-folder-select">
             <i class="fas fa-folder"></i> Import to Folder
         </label>
-        <select id="ii-folder-select"></select>
+
+        {{!-- Nested Folder Browser --}}
+        <div class="ii-folder-browser">
+            <input type="text" class="ii-folder-search" placeholder="Search folders...">
+            <div class="ii-folder-list" id="ii-folder-select"></div>
+        </div>
 
         <div class="ii-button-group">
             <label class="ii-auto-parse-label">

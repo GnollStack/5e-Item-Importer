@@ -158,11 +158,183 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Folder select
     this.populateFolderSelect();
+    this._setupFolderBrowser();
 
     // Initial state
     this._updateParseState("empty");
 
     ItemUtils.log("Item window rendered");
+  }
+
+  /** Set up folder browser event listeners */
+  _setupFolderBrowser() {
+    const searchInput = this.element.querySelector(".ii-folder-search");
+    const container = this.element.querySelector(".ii-folder-list");
+
+    if (!searchInput || !container) return;
+
+    // Search functionality
+    searchInput.addEventListener("input", (event) => {
+      const query = event.target.value.toLowerCase().trim();
+
+      const rootOptions = container.querySelectorAll(".ii-folder-option");
+      const folders = container.querySelectorAll(".ii-folder-item");
+
+      // Case A: Search is empty - Show everything and restore collapsed state
+      if (query === "") {
+        rootOptions.forEach((el) => el.classList.remove("hidden"));
+        folders.forEach((el) => {
+          el.classList.remove("search-hidden", "search-match");
+          // Restore collapsed state when search is cleared
+          if (!el.classList.contains("collapsed") && !el.classList.contains("ii-folder-leaf")) {
+            el.classList.add("collapsed");
+            // Update folder icon back to closed
+            const icon = el.querySelector(".ii-folder-icon");
+            if (icon && icon.dataset.openIcon && icon.dataset.closedIcon) {
+              icon.classList.remove(icon.dataset.openIcon);
+              icon.classList.add(icon.dataset.closedIcon);
+            }
+          }
+        });
+        return;
+      }
+
+      // Case B: Filter the root options (like "None (Root Level)")
+      rootOptions.forEach((el) => {
+        const matches = el.dataset.searchText.includes(query);
+        el.classList.toggle("hidden", !matches);
+      });
+
+      // Case C: Handle the folders
+      [...folders].reverse().forEach((folder) => {
+        const folderHeader = folder.querySelector(".ii-folder-header");
+        const headerMatches = folderHeader && folderHeader.dataset.searchText.includes(query);
+
+        // Check if this folder or any child folders match
+        const childFolders = folder.querySelectorAll(".ii-folder-item");
+        const hasMatchingChildren = Array.from(childFolders).some((child) => {
+          const childHeader = child.querySelector(".ii-folder-header");
+          return childHeader && childHeader.dataset.searchText.includes(query);
+        });
+
+        const hasMatch = headerMatches || hasMatchingChildren;
+
+        folder.classList.toggle("search-hidden", !hasMatch);
+        folder.classList.toggle("search-match", hasMatch);
+
+        // Update folder icon when expanding via search
+        if (hasMatch && !folder.classList.contains("ii-folder-leaf")) {
+          const icon = folder.querySelector(".ii-folder-icon");
+          if (icon && icon.dataset.openIcon && icon.dataset.closedIcon) {
+            icon.classList.remove(icon.dataset.closedIcon);
+            icon.classList.add(icon.dataset.openIcon);
+          }
+        }
+      });
+    });
+
+    // Helper function to toggle folder and update icon
+    const toggleFolder = (folderItem) => {
+      const isCollapsed = folderItem.classList.contains("collapsed");
+      folderItem.classList.toggle("collapsed");
+
+      // Update folder icon
+      const icon = folderItem.querySelector(".ii-folder-icon");
+      if (icon && icon.dataset.openIcon && icon.dataset.closedIcon) {
+        if (isCollapsed) {
+          // Was collapsed, now opening
+          icon.classList.remove(icon.dataset.closedIcon);
+          icon.classList.add(icon.dataset.openIcon);
+        } else {
+          // Was open, now collapsing
+          icon.classList.remove(icon.dataset.openIcon);
+          icon.classList.add(icon.dataset.closedIcon);
+        }
+      }
+    };
+
+    // Folder toggle (arrow) functionality - only for folders with children
+    container.querySelectorAll(".ii-folder-toggle").forEach((element) => {
+      element.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const folderItem = element.closest(".ii-folder-item");
+        toggleFolder(folderItem);
+      });
+    });
+
+    // Folder icon toggle for folders with children
+    container.querySelectorAll(".ii-folder-item:not(.ii-folder-leaf) .ii-folder-icon").forEach((icon) => {
+      icon.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const folderItem = icon.closest(".ii-folder-item");
+        toggleFolder(folderItem);
+      });
+    });
+
+    // Folder name selection functionality (all folders)
+    container.querySelectorAll(".ii-folder-name").forEach((nameElement) => {
+      nameElement.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const header = nameElement.closest(".ii-folder-header");
+
+        // Remove previous selection
+        container.querySelectorAll(".ii-folder-header").forEach((h) => {
+          h.classList.remove("selected");
+        });
+        container.querySelectorAll(".ii-folder-option").forEach((opt) => {
+          opt.classList.remove("selected");
+        });
+
+        // Add selection to clicked folder
+        header.classList.add("selected");
+
+        // Store the selected folder ID
+        this.selectedFolderId = header.dataset.folderId;
+
+        ItemUtils.log(`Folder selected: ${this.selectedFolderId || "Root Level"}`);
+      });
+    });
+
+    // Make entire header clickable for leaf folders (no children)
+    container.querySelectorAll(".ii-folder-leaf .ii-folder-icon").forEach((icon) => {
+      icon.addEventListener("click", (e) => {
+        e.stopPropagation();
+        // Trigger the name click handler
+        const nameElement = icon.nextElementSibling;
+        if (nameElement && nameElement.classList.contains("ii-folder-name")) {
+          nameElement.click();
+        }
+      });
+    });
+
+    // Root level selection functionality
+    container.querySelectorAll(".ii-folder-option").forEach((option) => {
+      option.addEventListener("click", (e) => {
+        e.stopPropagation();
+
+        // Remove previous selection
+        container.querySelectorAll(".ii-folder-header").forEach((h) => {
+          h.classList.remove("selected");
+        });
+        container.querySelectorAll(".ii-folder-option").forEach((opt) => {
+          opt.classList.remove("selected");
+        });
+
+        // Add selection to clicked option
+        option.classList.add("selected");
+
+        // Store the selected folder ID
+        this.selectedFolderId = option.dataset.folderId;
+
+        ItemUtils.log(`Folder selected: ${this.selectedFolderId || "Root Level"}`);
+      });
+    });
+
+    // Set initial selection to root level
+    const rootOption = container.querySelector('.ii-folder-option[data-folder-id=""]');
+    if (rootOption) {
+      rootOption.classList.add("selected");
+    }
   }
 
   /** Set up quick settings toggle handlers */
@@ -184,28 +356,111 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     });
   }
 
-  /** Populate folder selection dropdown */
+  /** Populate folder selection browser with nested structure */
   populateFolderSelect() {
-    const select = this.element.querySelector("#ii-folder-select");
-    if (!select) return;
+    const container = this.element.querySelector("#ii-folder-select");
+    if (!container) return;
 
-    select.innerHTML = "";
+    container.innerHTML = "";
 
-    const defaultOption = document.createElement("option");
-    defaultOption.value = "";
-    defaultOption.textContent = "None (Root Level)";
-    select.appendChild(defaultOption);
+    // Add "None (Root Level)" option at the top
+    const rootOption = document.createElement("div");
+    rootOption.className = "ii-folder-option";
+    rootOption.dataset.folderId = "";
+    rootOption.dataset.searchText = "none root level";
+    rootOption.innerHTML = '<i class="fas fa-home"></i> None (Root Level)';
+    container.appendChild(rootOption);
 
-    const folders = game.folders
-      .filter((f) => f.type === "Item")
-      .sort((a, b) => a.name.localeCompare(b.name));
+    // Get all Item folders
+    const folders = game.folders.filter((f) => f.type === "Item");
 
-    for (const folder of folders) {
-      const option = document.createElement("option");
-      option.value = folder.id;
-      option.textContent = folder.name;
-      select.appendChild(option);
-    }
+    // Build a folder hierarchy
+    const folderMap = new Map();
+    const rootFolders = [];
+
+    // First pass: create map of all folders
+    folders.forEach((folder) => {
+      folderMap.set(folder.id, {
+        folder: folder,
+        children: []
+      });
+    });
+
+    // Second pass: organize into hierarchy
+    folders.forEach((folder) => {
+      const folderData = folderMap.get(folder.id);
+      if (folder.folder) {
+        // This folder has a parent
+        const parent = folderMap.get(folder.folder.id);
+        if (parent) {
+          parent.children.push(folderData);
+        } else {
+          rootFolders.push(folderData);
+        }
+      } else {
+        // Root level folder
+        rootFolders.push(folderData);
+      }
+    });
+
+    // Sort folders alphabetically at each level
+    const sortFolders = (folderList) => {
+      folderList.sort((a, b) => a.folder.name.localeCompare(b.folder.name));
+      folderList.forEach((f) => sortFolders(f.children));
+    };
+    sortFolders(rootFolders);
+
+    // Render the folder hierarchy
+    const renderFolder = (folderData, container) => {
+      const hasChildren = folderData.children.length > 0;
+
+      const folderItem = document.createElement("div");
+      folderItem.className = hasChildren ? "ii-folder-item collapsed" : "ii-folder-item ii-folder-leaf";
+
+      const folderHeader = document.createElement("div");
+      folderHeader.className = "ii-folder-header";
+      folderHeader.dataset.folderId = folderData.folder.id;
+      folderHeader.dataset.searchText = folderData.folder.name.toLowerCase();
+
+      // Only add toggle arrow if folder has children
+      if (hasChildren) {
+        folderHeader.innerHTML = `
+          <i class="fas fa-chevron-down ii-folder-toggle"></i>
+          <i class="fas fa-folder ii-folder-icon" data-open-icon="fa-folder-open" data-closed-icon="fa-folder"></i>
+          <span class="ii-folder-name">${folderData.folder.name}</span>
+        `;
+      } else {
+        folderHeader.innerHTML = `
+          <i class="fas fa-folder ii-folder-icon ii-folder-leaf-icon"></i>
+          <span class="ii-folder-name">${folderData.folder.name}</span>
+        `;
+      }
+
+      // Only create contents container if there are children
+      if (hasChildren) {
+        const folderContents = document.createElement("div");
+        folderContents.className = "ii-folder-contents";
+
+        // Recursively add child folders
+        folderData.children.forEach((child) => {
+          renderFolder(child, folderContents);
+        });
+
+        folderItem.appendChild(folderHeader);
+        folderItem.appendChild(folderContents);
+      } else {
+        folderItem.appendChild(folderHeader);
+      }
+
+      container.appendChild(folderItem);
+    };
+
+    rootFolders.forEach((folderData) => {
+      renderFolder(folderData, container);
+    });
+
+    // Store the selected folder ID
+    this.selectedFolderId = "";
   }
 
   /** Update the visual parse state indicator */
