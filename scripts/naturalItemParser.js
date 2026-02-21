@@ -387,7 +387,7 @@ buildWeaponSections(extracted) {
     // Weapon type and base - inherit from base weapon if not extracted
     const weaponType = extracted.weaponType || baseData.weaponType || "simpleM";
     sections += `Weapon Type: ${weaponType}\n`;
-    sections += `Base Weapon: ${extracted.baseWeapon || "blank"}\n\n`;
+    sections += `Base Weapon: ${extracted.baseWeapon || "n/a"}\n\n`;
 
     // Properties section - merge extracted properties with base weapon properties
     sections += `---PROPERTIES---\n`;
@@ -419,8 +419,8 @@ buildWeaponSections(extracted) {
     // Range section
     sections += `---RANGE---\n`;
     sections += `Reach: ${extracted.range?.reach || 5}\n`;
-    sections += `Range Normal: ${extracted.range?.normal ?? baseData.range?.normal ?? "blank"}\n`;
-    sections += `Range Long: ${extracted.range?.long ?? baseData.range?.long ?? "blank"}\n`;
+    sections += `Range Normal: ${extracted.range?.normal ?? baseData.range?.normal ?? "n/a"}\n`;
+    sections += `Range Long: ${extracted.range?.long ?? baseData.range?.long ?? "n/a"}\n`;
     sections += `Range Units: ${extracted.range?.units || "ft"}\n\n`;
 
 // Versatile damage if applicable
@@ -437,14 +437,14 @@ buildWeaponSections(extracted) {
         }\n\n`;
       } else {
         // Versatile property found but no damage specified
-        sections += `Versatile Formula: blank\n`;
-        sections += `Versatile Damage Type: blank\n\n`;
+        sections += `Versatile Formula: n/a\n`;
+        sections += `Versatile Damage Type: n/a\n\n`;
     }
 
 
     // Mastery section
     sections += `---MASTERY---\n`;
-    sections += `Mastery: ${extracted.mastery || "blank"}\n`;
+    sections += `Mastery: ${extracted.mastery || "n/a"}\n`;
     sections += `Proficiency: proficient\n`;
 
     // Attunement section (only if magical and attunement required)
@@ -454,7 +454,7 @@ buildWeaponSections(extracted) {
       if (extracted.attunement.byClass) {
         sections += `Attunement By: ${extracted.attunement.byClass}\n`;
       } else {
-        sections += `Attunement By: blank\n`;
+        sections += `Attunement By: n/a\n`;
       }
     }
 
@@ -491,7 +491,7 @@ buildWeaponSections(extracted) {
     const props = extracted.properties || {};
     sections += `Magical: ${extracted.isMagical}\n`;
     sections += `Tool Bonus: ${
-      extracted.toolBonus !== null ? extracted.toolBonus : "blank"
+      extracted.toolBonus !== null ? extracted.toolBonus : "n/a"
     }\n\n`;
 
     // Attunement section (only if magical)
@@ -501,7 +501,7 @@ buildWeaponSections(extracted) {
       if (extracted.attunement.byClass) {
         sections += `Attunement By: ${extracted.attunement.byClass}\n`;
       } else {
-        sections += `Attunement By: blank\n`;
+        sections += `Attunement By: n/a\n`;
       }
       sections += `\n`;
     }
@@ -519,7 +519,7 @@ buildWeaponSections(extracted) {
       proficiencyMap[extracted.toolProficiency] || "proficient";
     sections += `Proficiency: ${proficiency}\n`;
 
-    sections += `Ability: ${extracted.toolAbility || "blank"}\n\n`;
+    sections += `Ability: ${extracted.toolAbility || "n/a"}\n\n`;
 
     // Usage section
     sections += `---USAGE---\n`;
@@ -553,7 +553,7 @@ buildWeaponSections(extracted) {
       if (extracted.attunement.byClass) {
         sections += `Attunement By: ${extracted.attunement.byClass}\n`;
       } else {
-        sections += `Attunement By: blank\n`;
+        sections += `Attunement By: n/a\n`;
       }
       sections += `\n`;
     }
@@ -566,14 +566,14 @@ buildWeaponSections(extracted) {
     ) {
       sections += `---CAPACITY---\n`;
       sections += `Item Count: ${
-        capacity.itemCount !== null ? capacity.itemCount : "blank"
+        capacity.itemCount !== null ? capacity.itemCount : "n/a"
       }\n`;
       sections += `Weight Capacity Value: ${
-        capacity.weightValue !== null ? capacity.weightValue : "blank"
+        capacity.weightValue !== null ? capacity.weightValue : "n/a"
       }\n`;
       sections += `Weight Capacity Units: ${capacity.weightUnits || "lb"}\n`;
       sections += `Volume Capacity Value: ${
-        capacity.volumeValue !== null ? capacity.volumeValue : "blank"
+        capacity.volumeValue !== null ? capacity.volumeValue : "n/a"
       }\n`;
 
       // Map to template format (cubicFoot vs ft)
@@ -618,7 +618,7 @@ buildWeaponSections(extracted) {
       if (extracted.attunement.byClass) {
         sections += `Attunement By: ${extracted.attunement.byClass}\n`;
       } else {
-        sections += `Attunement By: blank\n`;
+        sections += `Attunement By: n/a\n`;
       }
       sections += `\n`;
     }
@@ -639,8 +639,8 @@ buildWeaponSections(extracted) {
         sections += `Damage Type: ${ammoProps.damageType}\n`;
         sections += `Damage Replace: ${ammoProps.damageReplace}\n`;
       } else {
-        sections += `Damage Formula: blank\n`;
-        sections += `Damage Type: blank\n`;
+        sections += `Damage Formula: n/a\n`;
+        sections += `Damage Type: n/a\n`;
         sections += `Damage Replace: false\n`;
       }
       sections += `\n`;
@@ -688,7 +688,7 @@ buildWeaponSections(extracted) {
       : {};
 
     sections += `Equipment Type: ${extracted.equipmentType || "clothing"}\n`;
-    sections += `Base Equipment: ${extracted.baseEquipment || "blank"}\n\n`;
+    sections += `Base Equipment: ${extracted.baseEquipment || "n/a"}\n\n`;
 
     // Properties section - inherit stealthDisadvantage from base armor if not explicitly set
     sections += `---PROPERTIES---\n`;
@@ -706,7 +706,7 @@ buildWeaponSections(extracted) {
       if (extracted.attunement.byClass) {
         sections += `Attunement By: ${extracted.attunement.byClass}\n`;
       } else {
-        sections += `Attunement By: blank\n`;
+        sections += `Attunement By: n/a\n`;
       }
 
       // Magic Bonus
@@ -723,8 +723,8 @@ buildWeaponSections(extracted) {
 
       sections += `---ARMOR---\n`;
       sections += `Armor Class: ${armorClass}\n`;
-      sections += `Max Dex Modifier: ${maxDexModifier !== null ? maxDexModifier : "blank"}\n`;
-      sections += `Strength Requirement: ${strengthReq || "blank"}\n\n`;
+      sections += `Max Dex Modifier: ${maxDexModifier !== null ? maxDexModifier : "n/a"}\n`;
+      sections += `Strength Requirement: ${strengthReq || "n/a"}\n\n`;
     }
 
     // Proficiency section

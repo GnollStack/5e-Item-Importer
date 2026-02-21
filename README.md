@@ -147,9 +147,9 @@ Expand the sections below to copy the templates for prompts and to view example 
 ```markdown
 ===WEAPON===
 Name: [text]
-Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|n/a]
 Weapon Type: [simpleM|simpleR|martialM|martialR|natural|improv|siege]
-Base Weapon: [e.g. longsword, dagger, bow - see list below - OR blank]
+Base Weapon: [e.g. longsword, dagger, bow - see list below - OR n/a]
 
 ---INVENTORY---
 Quantity: [integer]
@@ -184,8 +184,8 @@ Versatile: [true|false]
 ---ATTUNEMENT---
 (Required only if Magical is true)
 Attunement: [none|required|optional]
-Attunement By: [text|blank]
-Magic Bonus: [integer|blank]
+Attunement By: [text|n/a]
+Magic Bonus: [integer|n/a]
 
 ---AMMUNITION---
 (Required only if Ammunition is true)
@@ -207,12 +207,12 @@ Cover: [none|half|threequarters|total]
 Hit Points Current: [integer]
 Hit Points Max: [integer]
 Hit Points Threshold: [integer]
-Health Conditions: [text|blank]
+Health Conditions: [text|n/a]
 
 ---RANGE---
-Reach: [integer|blank]
-Range Normal: [integer|blank]
-Range Long: [integer|blank]
+Reach: [integer|n/a]
+Range Normal: [integer|n/a]
+Range Long: [integer|n/a]
 Range Units: [ft|m|sq|mi]
 
 ---DAMAGE---
@@ -220,7 +220,7 @@ Damage Formula: [e.g. 2d6 + @mod]
 Damage Type: [acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder]
 
 ---MASTERY---
-Mastery: [cleave|graze|nick|push|sap|slow|topple|vex|blank]
+Mastery: [cleave|graze|nick|push|sap|slow|topple|vex|n/a]
 
 ---PROFICIENCY---
 Proficiency: [automatic|notProficient|proficient]
@@ -233,7 +233,7 @@ Uses Max: [integer]
 (Optional, repeatable. Only relevant if Uses Max > 0)
 Period: [lr|sr|day|dawn|dusk|recharge]
 Type: [recoverAll|loseAll|formula]
-Formula: [text|blank]
+Formula: [text|n/a]
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -242,7 +242,7 @@ Description:
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
-Unidentified Name: [text|blank]
+Unidentified Name: [text|n/a]
 Unidentified Description:
 [multiline HTML content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -453,13 +453,13 @@ Versatile: false
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 Magic Bonus: 2
 
 ---RANGE---
 Reach: 5
-Range Normal: blank
-Range Long: blank
+Range Normal: n/a
+Range Long: n/a
 Range Units: ft
 
 ---DAMAGE---
@@ -560,14 +560,14 @@ Versatile: false
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 Magic Bonus: 1
 
 ---AMMUNITION---
 Ammunition Type: arrow
 
 ---RANGE---
-Reach: blank
+Reach: n/a
 Range Normal: 150
 Range Long: 600
 Range Units: ft
@@ -589,7 +589,7 @@ Uses Max: 3
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -670,13 +670,13 @@ Versatile: false
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 Magic Bonus: 1
 
 ---RANGE---
 Reach: 5
-Range Normal: blank
-Range Long: blank
+Range Normal: n/a
+Range Long: n/a
 Range Units: ft
 
 ---DAMAGE---
@@ -766,13 +766,13 @@ Versatile: false
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 Magic Bonus: 1
 
 ---RANGE---
 Reach: 10
-Range Normal: blank
-Range Long: blank
+Range Normal: n/a
+Range Long: n/a
 Range Units: ft
 
 ---DAMAGE---
@@ -792,7 +792,7 @@ Uses Max: 3
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -874,7 +874,7 @@ Versatile: false
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 Magic Bonus: 1
 
 ---RANGE---
@@ -970,7 +970,7 @@ Versatile: true
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 Magic Bonus: 2
 
 ---VERSATILE DAMAGE---
@@ -979,8 +979,8 @@ Versatile Damage Type: bludgeoning
 
 ---RANGE---
 Reach: 5
-Range Normal: blank
-Range Long: blank
+Range Normal: n/a
+Range Long: n/a
 Range Units: ft
 
 ---DAMAGE---
@@ -1000,7 +1000,7 @@ Uses Max: 3
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -1086,8 +1086,8 @@ Magic Bonus: 3
 
 ---RANGE---
 Reach: 5
-Range Normal: blank
-Range Long: blank
+Range Normal: n/a
+Range Long: n/a
 Range Units: ft
 
 ---DAMAGE---
@@ -1107,7 +1107,7 @@ Uses Max: 5
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -1159,7 +1159,7 @@ Seven souls guide the blade. Seven legacies live within its edge.
 ```markdown
 ===CONSUMABLE===
 Name: [text]
-Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|n/a]
 Consumable Type: [ammo|food|poison|potion|rod|scroll|trinket|wand]
 
 ---INVENTORY---
@@ -1179,7 +1179,7 @@ Magical: [true|false]
 ---ATTUNEMENT---
 (Required only if Magical is true)
 Attunement: [none|required|optional]
-Attunement By: [text|blank]
+Attunement By: [text|n/a]
 
 ---AMMUNITION PROPERTIES---
 (Required only if Consumable Type is ammo)
@@ -1187,7 +1187,7 @@ Ammunition Type: [arrow|bolt|dart|needle|bullet|slingbullet|energycell]
 Adamantine: [true|false]
 Silvered: [true|false]
 Returning: [true|false]
-Magic Bonus: [integer|blank]
+Magic Bonus: [integer|n/a]
 Damage Formula: [e.g. 1d6 + @mod]
 Damage Type: [piercing|bludgeoning|slashing|etc]
 Damage Replace: [true|false]
@@ -1212,7 +1212,7 @@ Destroy on Empty: [true|false]
 (Optional, repeatable. Only relevant if Uses Max > 0)
 Period: [lr|sr|day|dawn|dusk|recharge]
 Type: [recoverAll|loseAll|formula]
-Formula: [text|blank]
+Formula: [text|n/a]
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -1221,7 +1221,7 @@ Description:
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
-Unidentified Name: [text|blank]
+Unidentified Name: [text|n/a]
 Unidentified Description:
 [multiline HTML content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -1262,8 +1262,8 @@ Chat Description:
 ### **Recovery Types**
 | Type | Formula | Result |
 |------|---------|--------|
-| `recoverAll` | blank | Regain all charges |
-| `loseAll` | blank | Lose all remaining charges |
+| `recoverAll` | n/a | Regain all charges |
+| `loseAll` | n/a | Lose all remaining charges |
 | `formula` | Dice (e.g., `1d6+1`) | Regain rolled amount |
 | `formula` | Number (e.g., `5`) | For recharge: regain all on d6 ≥ 5 |
 
@@ -1392,7 +1392,7 @@ Magical: true
 
 ---ATTUNEMENT---
 Attunement: none
-Attunement By: blank
+Attunement By: n/a
 
 ---USAGE---
 Uses Current: 0
@@ -1525,7 +1525,7 @@ Magical: false
 
 ---ATTUNEMENT---
 Attunement: none
-Attunement By: blank
+Attunement By: n/a
 
 ---POISON PROPERTIES---
 Poison Type: injury
@@ -1589,7 +1589,7 @@ Magical: true
 
 ---ATTUNEMENT---
 Attunement: none
-Attunement By: blank
+Attunement By: n/a
 
 ---AMMUNITION PROPERTIES---
 Ammunition Type: bolt
@@ -1658,7 +1658,7 @@ Magical: true
 
 ---ATTUNEMENT---
 Attunement: none
-Attunement By: blank
+Attunement By: n/a
 
 ---USAGE---
 Uses Current: 0
@@ -1721,7 +1721,7 @@ Magical: true
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 
 ---USAGE---
 Uses Current: 3
@@ -1731,7 +1731,7 @@ Destroy on Empty: false
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -1771,7 +1771,7 @@ Magic unravels before the Spellbreaker's will.
 ```markdown
 ===CONTAINER===
 Name: [text]
-Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|n/a]
 
 ---INVENTORY---
 Quantity: [integer]
@@ -1791,14 +1791,14 @@ Weightless Contents: [true|false]
 ---ATTUNEMENT---
 (Required only if Magical is true)
 Attunement: [none|required|optional]
-Attunement By: [text|blank]
+Attunement By: [text|n/a]
 
 ---CAPACITY---
-Item Count: [integer|blank]
-Weight Capacity Value: [number|blank]
-Weight Capacity Units: [lb|tn|kg|t|blank]
-Volume Capacity Value: [number|blank]
-Volume Capacity Units: [cubicfoot|liter|blank]
+Item Count: [integer|n/a]
+Weight Capacity Value: [number|n/a]
+Weight Capacity Units: [lb|tn|kg|t|n/a]
+Volume Capacity Value: [number|n/a]
+Volume Capacity Units: [cubicfoot|liter|n/a]
 
 ---CURRENCY CONTENTS---
 (All fields required, use 0 for empty)
@@ -1814,7 +1814,7 @@ Description:
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
-Unidentified Name: [text|blank]
+Unidentified Name: [text|n/a]
 Unidentified Description:
 [multiline HTML content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -1834,7 +1834,7 @@ Chat Description:
 ### **Capacity Rules**
 | Field | Description |
 |-------|-------------|
-| `Item Count` | Maximum number of discrete items (blank = unlimited) |
+| `Item Count` | Maximum number of discrete items (n/a = unlimited) |
 | `Weight Capacity` | Maximum weight the container can hold |
 | `Volume Capacity` | Maximum volume the container can hold |
 | `Weightless Contents` | If `true`, contents don't add to carried weight |
@@ -1951,10 +1951,10 @@ Weightless Contents: true
 
 ---ATTUNEMENT---
 Attunement: none
-Attunement By: blank
+Attunement By: n/a
 
 ---CAPACITY---
-Item Count: blank
+Item Count: n/a
 Weight Capacity Value: 250
 Weight Capacity Units: lb
 Volume Capacity Value: 32
@@ -2021,14 +2021,14 @@ Weightless Contents: false
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 
 ---CAPACITY---
 Item Count: 20
 Weight Capacity Value: 20
 Weight Capacity Units: lb
-Volume Capacity Value: blank
-Volume Capacity Units: blank
+Volume Capacity Value: n/a
+Volume Capacity Units: n/a
 
 ---CURRENCY CONTENTS---
 Platinum: 0
@@ -2091,10 +2091,10 @@ Weightless Contents: false
 
 ---ATTUNEMENT---
 Attunement: optional
-Attunement By: blank
+Attunement By: n/a
 
 ---CAPACITY---
-Item Count: blank
+Item Count: n/a
 Weight Capacity Value: 50
 Weight Capacity Units: lb
 Volume Capacity Value: 2
@@ -2168,10 +2168,10 @@ Weightless Contents: false
 
 ---ATTUNEMENT---
 Attunement: none
-Attunement By: blank
+Attunement By: n/a
 
 ---CAPACITY---
-Item Count: blank
+Item Count: n/a
 Weight Capacity Value: 40
 Weight Capacity Units: lb
 Volume Capacity Value: 3
@@ -2240,14 +2240,14 @@ Weightless Contents: true
 
 ---ATTUNEMENT---
 Attunement: none
-Attunement By: blank
+Attunement By: n/a
 
 ---CAPACITY---
-Item Count: blank
+Item Count: n/a
 Weight Capacity Value: 100
 Weight Capacity Units: lb
-Volume Capacity Value: blank
-Volume Capacity Units: blank
+Volume Capacity Value: n/a
+Volume Capacity Units: n/a
 
 ---CURRENCY CONTENTS---
 Platinum: 5
@@ -2310,10 +2310,10 @@ Weightless Contents: true
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 
 ---CAPACITY---
-Item Count: blank
+Item Count: n/a
 Weight Capacity Value: 1000
 Weight Capacity Units: lb
 Volume Capacity Value: 125
@@ -2365,9 +2365,9 @@ Handle with extreme care. Or don't. It makes for an excellent grenade.
 ```markdown
 ===EQUIPMENT===
 Name: [text]
-Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|n/a]
 Equipment Type: [light|medium|heavy|natural|shield|clothing|ring|rod|trinket|wand|wondrous|vehicle]
-Base Equipment: [e.g. plate, leather, shield - OR blank for wondrous items]
+Base Equipment: [e.g. plate, leather, shield - OR n/a for wondrous items]
 
 ---INVENTORY---
 Quantity: [integer]
@@ -2389,14 +2389,14 @@ Stealth Disadvantage: [true|false]
 ---ATTUNEMENT---
 (Required only if Magical is true)
 Attunement: [none|required|optional]
-Attunement By: [text|blank]
-Magic Bonus: [integer|blank]
+Attunement By: [text|n/a]
+Magic Bonus: [integer|n/a]
 
 ---ARMOR---
 (Required only for Armor/Shields)
 Armor Class: [integer]
-Max Dex Modifier: [integer|blank]
-Strength Requirement: [integer|blank]
+Max Dex Modifier: [integer|n/a]
+Strength Requirement: [integer|n/a]
 
 ---VEHICLE PROPERTIES---
 (Required only if Equipment Type is vehicle)
@@ -2405,9 +2405,9 @@ Cover: [none|half|threequarters|total]
 Hit Points Current: [integer]
 Hit Points Max: [integer]
 Hit Points Threshold: [integer]
-Health Conditions: [text|blank]
+Health Conditions: [text|n/a]
 Speed: [integer]
-Speed Conditions: [text|blank]
+Speed Conditions: [text|n/a]
 
 ---PROFICIENCY---
 Proficiency: [automatic|notProficient|proficient]
@@ -2420,7 +2420,7 @@ Uses Max: [integer]
 (Optional, repeatable. Only relevant if Uses Max > 0)
 Period: [lr|sr|day|dawn|dusk|recharge]
 Type: [recoverAll|loseAll|formula]
-Formula: [text|blank]
+Formula: [text|n/a]
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -2429,7 +2429,7 @@ Description:
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
-Unidentified Name: [text|blank]
+Unidentified Name: [text|n/a]
 Unidentified Description:
 [multiline HTML content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -2453,14 +2453,14 @@ Chat Description:
 | `medium` | `hide`, `chainshirt`, `scalemail`, `breastplate`, `halfplate` |
 | `heavy` | `ringmail`, `chainmail`, `splint`, `plate` |
 | `shield` | `shield` |
-| `natural` | blank (for creature natural armor) |
-| `clothing` | blank |
-| `ring` | blank |
-| `wondrous` | blank |
-| `trinket` | blank |
-| `rod` | blank |
-| `wand` | blank |
-| `vehicle` | blank |
+| `natural` | n/a (for creature natural armor) |
+| `clothing` | n/a |
+| `ring` | n/a |
+| `wondrous` | n/a |
+| `trinket` | n/a |
+| `rod` | n/a |
+| `wand` | n/a |
+| `vehicle` | n/a |
 
 ### **Armor Class Calculations**
 | Type | Base AC | Dex Modifier |
@@ -2483,8 +2483,8 @@ Chat Description:
 ### **Recovery Types**
 | Type | Formula | Result |
 |------|---------|--------|
-| `recoverAll` | blank | Regain all charges |
-| `loseAll` | blank | Lose all remaining charges |
+| `recoverAll` | n/a | Regain all charges |
+| `loseAll` | n/a | Lose all remaining charges |
 | `formula` | Dice (e.g., `1d4+1`) | Regain rolled amount |
 | `formula` | Number (e.g., `5`) | For recharge: regain all on d6 ≥ 5 |
 
@@ -2621,7 +2621,7 @@ Stealth Disadvantage: true
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 Magic Bonus: 2
 
 ---ARMOR---
@@ -2639,7 +2639,7 @@ Uses Max: 3
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -2704,13 +2704,13 @@ Stealth Disadvantage: false
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 Magic Bonus: 1
 
 ---ARMOR---
 Armor Class: 2
-Max Dex Modifier: blank
-Strength Requirement: blank
+Max Dex Modifier: n/a
+Strength Requirement: n/a
 
 ---PROFICIENCY---
 Proficiency: proficient
@@ -2722,7 +2722,7 @@ Uses Max: 3
 ---RECOVERY---
 Period: lr
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -2764,7 +2764,7 @@ Stand firm. Stand together.
 Name: Ring of Spell Echoes
 Rarity: rare
 Equipment Type: ring
-Base Equipment: blank
+Base Equipment: n/a
 
 ---INVENTORY---
 Quantity: 1
@@ -2786,12 +2786,12 @@ Stealth Disadvantage: false
 ---ATTUNEMENT---
 Attunement: required
 Attunement By: spellcaster
-Magic Bonus: blank
+Magic Bonus: n/a
 
 ---ARMOR---
-Armor Class: blank
-Max Dex Modifier: blank
-Strength Requirement: blank
+Armor Class: n/a
+Max Dex Modifier: n/a
+Strength Requirement: n/a
 
 ---PROFICIENCY---
 Proficiency: automatic
@@ -2843,7 +2843,7 @@ Every spell leaves a shadow—this ring gives it form.
 Name: Shadowweave Cloak
 Rarity: uncommon
 Equipment Type: clothing
-Base Equipment: blank
+Base Equipment: n/a
 
 ---INVENTORY---
 Quantity: 1
@@ -2864,13 +2864,13 @@ Stealth Disadvantage: false
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
-Magic Bonus: blank
+Attunement By: n/a
+Magic Bonus: n/a
 
 ---ARMOR---
-Armor Class: blank
-Max Dex Modifier: blank
-Strength Requirement: blank
+Armor Class: n/a
+Max Dex Modifier: n/a
+Strength Requirement: n/a
 
 ---PROFICIENCY---
 Proficiency: automatic
@@ -2914,7 +2914,7 @@ The darkness welcomes you as one of its own.
 Name: Stormcaller's Gauntlets
 Rarity: rare
 Equipment Type: wondrous
-Base Equipment: blank
+Base Equipment: n/a
 
 ---INVENTORY---
 Quantity: 1
@@ -2936,12 +2936,12 @@ Stealth Disadvantage: false
 ---ATTUNEMENT---
 Attunement: required
 Attunement By: spellcaster
-Magic Bonus: blank
+Magic Bonus: n/a
 
 ---ARMOR---
-Armor Class: blank
-Max Dex Modifier: blank
-Strength Requirement: blank
+Armor Class: n/a
+Max Dex Modifier: n/a
+Strength Requirement: n/a
 
 ---PROFICIENCY---
 Proficiency: automatic
@@ -2995,7 +2995,7 @@ Command the storm with a gesture.
 Name: Arcane Skiff
 Rarity: rare
 Equipment Type: vehicle
-Base Equipment: blank
+Base Equipment: n/a
 
 ---INVENTORY---
 Quantity: 1
@@ -3016,13 +3016,13 @@ Stealth Disadvantage: false
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
-Magic Bonus: blank
+Attunement By: n/a
+Magic Bonus: n/a
 
 ---ARMOR---
-Armor Class: blank
-Max Dex Modifier: blank
-Strength Requirement: blank
+Armor Class: n/a
+Max Dex Modifier: n/a
+Strength Requirement: n/a
 
 ---VEHICLE PROPERTIES---
 Vehicle Armor Class: 15
@@ -3030,7 +3030,7 @@ Cover: half
 Hit Points Current: 50
 Hit Points Max: 50
 Hit Points Threshold: 10
-Health Conditions: blank
+Health Conditions: n/a
 Speed: 60
 Speed Conditions: hover
 
@@ -3044,7 +3044,7 @@ Uses Max: 3
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -3107,13 +3107,13 @@ Stealth Disadvantage: false
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 Magic Bonus: 1
 
 ---ARMOR---
 Armor Class: 12
-Max Dex Modifier: blank
-Strength Requirement: blank
+Max Dex Modifier: n/a
+Strength Requirement: n/a
 
 ---PROFICIENCY---
 Proficiency: proficient
@@ -3159,7 +3159,7 @@ Slither free from danger.
 ```markdown
 ===LOOT===
 Name: [text]
-Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|n/a]
 Loot Type: [art|gear|gem|junk|material|resource|treasure]
 
 ---INVENTORY---
@@ -3182,7 +3182,7 @@ Description:
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
-Unidentified Name: [text|blank]
+Unidentified Name: [text|n/a]
 Unidentified Description:
 [multiline HTML content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -4330,7 +4330,7 @@ You slip through time, leaving only an afterimage where you stood.
 ```markdown
 ===TOOL===
 Name: [text]
-Rarity: [common|uncommon|rare|veryRare|legendary|artifact|blank]
+Rarity: [common|uncommon|rare|veryRare|legendary|artifact|n/a]
 Tool Type: [art|game|music|other]
 Base Tool: [e.g. smith, thief, lute, dice - see list below]
 
@@ -4347,16 +4347,16 @@ Weight Units: [lb|tn|kg|t]
 
 ---PROPERTIES---
 Magical: [true|false]
-Tool Bonus: [integer or blank]
+Tool Bonus: [integer or n/a]
 
 ---ATTUNEMENT---
 (Required only if Magical is true)
 Attunement: [none|required|optional]
-Attunement By: [text|blank]
+Attunement By: [text|n/a]
 
 ---ABILITY CHECK---
 Proficiency: [notProficient|proficient|expert]
-Ability: [str|dex|con|int|wis|cha|blank]
+Ability: [str|dex|con|int|wis|cha|n/a]
 
 ---USAGE---
 Uses Current: [integer]
@@ -4366,7 +4366,7 @@ Uses Max: [integer]
 (Optional, repeatable. Only relevant if Uses Max > 0)
 Period: [lr|sr|day|dawn|dusk|recharge]
 Type: [recoverAll|loseAll|formula]
-Formula: [text|blank]
+Formula: [text|n/a]
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -4375,7 +4375,7 @@ Description:
 ===END DESCRIPTION===
 
 ---UNIDENTIFIED DESCRIPTION---
-Unidentified Name: [text|blank]
+Unidentified Name: [text|n/a]
 Unidentified Description:
 [multiline HTML content]
 ===END UNIDENTIFIED DESCRIPTION===
@@ -4578,7 +4578,7 @@ Tool Bonus: 2
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 
 ---ABILITY CHECK---
 Proficiency: proficient
@@ -4591,7 +4591,7 @@ Uses Max: 3
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -4657,7 +4657,7 @@ Tool Bonus: 2
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 
 ---ABILITY CHECK---
 Proficiency: proficient
@@ -4670,7 +4670,7 @@ Uses Max: 3
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -4734,7 +4734,7 @@ Tool Bonus: 1
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 
 ---ABILITY CHECK---
 Proficiency: proficient
@@ -4812,7 +4812,7 @@ Tool Bonus: 2
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 
 ---ABILITY CHECK---
 Proficiency: proficient
@@ -4825,7 +4825,7 @@ Uses Max: 1
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -4894,7 +4894,7 @@ Tool Bonus: 1
 
 ---ATTUNEMENT---
 Attunement: none
-Attunement By: blank
+Attunement By: n/a
 
 ---ABILITY CHECK---
 Proficiency: proficient
@@ -4907,7 +4907,7 @@ Uses Max: 3
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -4974,7 +4974,7 @@ Tool Bonus: 2
 
 ---ATTUNEMENT---
 Attunement: required
-Attunement By: blank
+Attunement By: n/a
 
 ---ABILITY CHECK---
 Proficiency: proficient
@@ -4987,7 +4987,7 @@ Uses Max: 3
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -5054,7 +5054,7 @@ Tool Bonus: 2
 
 ---ATTUNEMENT---
 Attunement: none
-Attunement By: blank
+Attunement By: n/a
 
 ---ABILITY CHECK---
 Proficiency: proficient
@@ -5067,7 +5067,7 @@ Uses Max: 1
 ---RECOVERY---
 Period: dawn
 Type: recoverAll
-Formula: blank
+Formula: n/a
 ===END RECOVERY===
 
 ---DESCRIPTION---
@@ -5119,7 +5119,7 @@ A warm meal can heal more than just hunger.
 > Go to Module Settings and enable **"Match Icons from Compendiums"**. Note: This feature works best with standard D&D 5e item names (e.g., "Longsword", "Potion of Healing"). Im hoping to include randomized compedium images in the near future
 
 **Description is empty.**
-> If using Natural Language: Ensure there is a blank line between the stat block and the description.
+> If using Natural Language: Ensure there is a n/a line between the stat block and the description.
 > If using Strict Format: Ensure the description is between `Description:` and `===END DESCRIPTION===`.
 
 ---

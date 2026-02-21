@@ -22,22 +22,20 @@
             <label for="ii-input">
                 <i class="fas fa-paste"></i> Item Text
             </label>
-            <span class="ii-state-indicator state-empty">
-                <i class="fas fa-edit"></i> Ready
-            </span>
+            <div class="ii-input-header-right">
+                <div class="ii-template-group">
+                    <select id="ii-template-select">
+                        <option value="">-- Quick Start Template --</option>
+                        {{#each templates}}
+                        <option value="{{this.id}}">{{this.label}}</option>
+                        {{/each}}
+                    </select>
+                </div>
+                <span class="ii-state-indicator state-empty">
+                    <i class="fas fa-edit"></i> Ready
+                </span>
+            </div>
         </div>
-
-        {{!-- Hidden for now - uncomment to restore Quick Start templates
-        <div class="ii-template-group">
-            <label for="ii-template-select">Quick Start:</label>
-            <select id="ii-template-select">
-                <option value="">— Select a template —</option>
-                {{#each templates}}
-                <option value="{{this.id}}">{{this.label}}</option>
-                {{/each}}
-            </select>
-        </div>
-        --}}
 
         <textarea id="ii-input" placeholder="{{placeholder}}" spellcheck="false"></textarea>
 

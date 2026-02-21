@@ -74,7 +74,37 @@ function registerAPI() {
 }
 
 /**
+ * Add standalone Import Item button to the Items Directory footer
+ */
+function _addStandaloneButton(element) {
+    if (element.querySelector("#ii-main-button")) return;
+
+    ItemUtils.log("Adding Item Importer button to Items Directory");
+
+    const importButton = document.createElement("button");
+    importButton.id = "ii-main-button";
+    importButton.setAttribute("type", "button");
+    importButton.classList.add("ii-directory-btn");
+    importButton.innerHTML = `<i class="fas fa-file-import"></i> Import Item`;
+
+    importButton.addEventListener("click", () => {
+        ItemUtils.log("Import Item button clicked");
+        ItemWindow.renderWindow();
+    });
+
+    const footer = element.querySelector(".directory-footer");
+    if (footer) {
+        footer.appendChild(importButton);
+        ItemUtils.log("Import button added successfully");
+    } else {
+        ItemUtils.warn("Could not find directory footer to add button");
+    }
+}
+
+/**
  * Add button to Items Directory
+ * When 5e Activity Importer is active and integration is enabled, injects
+ * "Import Item" into that module's existing dropdown instead of a standalone button.
  */
 Hooks.on("renderItemDirectory", (app, html, data) => {
     // Only add button if user has permission to create items
@@ -85,36 +115,42 @@ Hooks.on("renderItemDirectory", (app, html, data) => {
     // Convert jQuery to DOM element if needed
     const element = html instanceof jQuery ? html.get(0) : html;
 
-    // Check if button already exists
-    // UPDATED ID to match namespacing convention
-    let importButton = element.querySelector("#ii-main-button");
-    if (importButton) {
+    const activityImporterActive = game.modules.get("5e-activity-importer")?.active;
+    const integrateWithActivityImporter = game.settings.get(MODULE_NAME, "integrateWithActivityImporter");
+
+    if (activityImporterActive && integrateWithActivityImporter) {
+        // Defer injection until all renderItemDirectory hooks have fired
+        setTimeout(() => {
+            const dropdown = element.querySelector("#ai-main-button-group .ai-directory-dropdown");
+            if (!dropdown) {
+                // Activity importer dropdown not found — fall back to standalone button
+                _addStandaloneButton(element);
+                return;
+            }
+
+            // Prevent duplicate injection
+            if (dropdown.querySelector(".ii-import-item-option")) return;
+
+            const importOption = document.createElement("button");
+            importOption.setAttribute("type", "button");
+            importOption.classList.add("ai-dropdown-item", "ii-import-item-option");
+            importOption.innerHTML = `<i class="fas fa-file-import"></i> Import Item`;
+            importOption.addEventListener("click", (e) => {
+                e.stopPropagation();
+                dropdown.style.display = "none";
+                ItemUtils.log("Import Item selected from Activity Importer dropdown");
+                ItemWindow.renderWindow();
+            });
+
+            // Prepend so Import Item appears at the top of the dropdown
+            dropdown.insertBefore(importOption, dropdown.firstChild);
+            ItemUtils.log("Import Item injected into Activity Importer dropdown");
+        }, 0);
         return;
     }
 
-    ItemUtils.log("Adding Item Importer button to Items Directory");
-
-    // Create the import button
-    importButton = document.createElement("button");
-    importButton.id = "ii-main-button"; // UPDATED ID
-    importButton.setAttribute("type", "button");
-    importButton.classList.add("ii-directory-btn"); // UPDATED CLASS to match CSS
-    importButton.innerHTML = `<i class="fas fa-file-import"></i> Import Item`;
-
-    // Add click handler
-    importButton.addEventListener("click", () => {
-        ItemUtils.log("Import Item button clicked");
-        ItemWindow.renderWindow();
-    });
-
-    // Add button to directory footer
-    const footer = element.querySelector(".directory-footer");
-    if (footer) {
-        footer.appendChild(importButton);
-        ItemUtils.log("Import button added successfully");
-    } else {
-        ItemUtils.warn("Could not find directory footer to add button");
-    }
+    // Standalone mode: add the normal Import Item button
+    _addStandaloneButton(element);
 });
 
 /**

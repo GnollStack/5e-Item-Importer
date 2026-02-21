@@ -5,9 +5,31 @@
 
 import { ItemUtils } from "../itemUtils.js";
 import { MODULE_NAME } from "../itemConfig.js";
-import { getParserForText } from "../strictItemParsers/strictParserDispatcher.js";
+import { getParserForText, parseAllItemsYaml } from "../strictItemParsers/strictParserDispatcher.js";
 import { ITEM_TEMPLATES } from "./itemTemplates.js";
 import * as Renderer from "./itemWindowRenderer.js";
+
+/** Valid YAML top-level item type keys */
+const YAML_ITEM_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER'];
+
+/**
+ * Detect whether text contains multiple YAML items.
+ * Checks for: multiple different top-level keys, OR --- document separators.
+ * @param {string} text
+ * @returns {boolean}
+ */
+function isYamlMultiItem(text) {
+    // Check for YAML document separators (handles same-type batching)
+    const stripped = text.replace(/^```(?:yaml|markdown)\s*\n?/i, '').replace(/\n?```\s*$/, '');
+    if (/^---\s*$/m.test(stripped)) return true;
+
+    // Check for multiple different top-level type keys
+    let count = 0;
+    for (const key of YAML_ITEM_KEYS) {
+        if (new RegExp(`^${key}:`, 'm').test(text)) count++;
+    }
+    return count > 1;
+}
 
 /**
  * Parse the item text
@@ -34,8 +56,15 @@ export function parse() {
     const itemMarkers = text.match(/^===([A-Z]+)===$/gm);
 
     if (itemMarkers && itemMarkers.length > 1) {
-        ItemUtils.log(`Batch import detected with ${itemMarkers.length} items.`);
+        ItemUtils.log(`Batch import detected with ${itemMarkers.length} items (marker-based).`);
         handleBatchParse.call(this, text);
+        return;
+    }
+
+    // Detect YAML multi-item batch (multiple top-level type keys)
+    if (isYamlMultiItem(text)) {
+        ItemUtils.log("YAML multi-item batch detected.");
+        handleYamlBatchParse.call(this, text);
         return;
     }
 
@@ -126,6 +155,45 @@ export function handleBatchParse(text) {
     ItemUtils.log("Batch parse complete", results);
 
     // Render batch summary
+    output.innerHTML = Renderer.renderBatchSummary(results, this.selectedBatchItems);
+
+    // Update state and set up handlers
+    importBtn.disabled = results.successes.length === 0;
+    this._updateParseState(results.successes.length > 0 ? "valid" : "error");
+    this._setupCollapsibleSections();
+}
+
+/**
+ * Handle YAML multi-item batch parsing.
+ * Uses the YAML parser's parseAll() to split multiple top-level keys.
+ * @this {ItemWindow}
+ * @param {string} text - Full YAML input text
+ */
+function handleYamlBatchParse(text) {
+    const output = this.element.querySelector("#ii-parse-output");
+    const importBtn = this.element.querySelector("[data-action='import']");
+
+    const allResults = parseAllItemsYaml(text);
+
+    const results = {
+        successes: allResults.filter(r => r.success && r.item),
+        failures: allResults
+            .filter(r => !r.success || !r.item)
+            .map(r => ({
+                text: "(YAML block)",
+                errors: [...(r.errors || []), ...(r.warnings || [])]
+            }))
+    };
+
+    // Store results and initialize selection
+    this.currentParseResult = results;
+    this.selectedBatchItems = new Set(
+        results.successes.map((_, index) => index)
+    );
+
+    ItemUtils.log("YAML batch parse complete", results);
+
+    // Render batch summary using the same UI as marker-based batches
     output.innerHTML = Renderer.renderBatchSummary(results, this.selectedBatchItems);
 
     // Update state and set up handlers

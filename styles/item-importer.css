@@ -422,8 +422,7 @@ body.theme-dark {
 .ii-template-group {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
+    gap: 8px;
 }
 
 .ii-template-group label {
@@ -468,6 +467,12 @@ body.theme-dark {
 
 .ii-input-header label {
     margin: 0;
+}
+
+.ii-input-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 /* ===========================================

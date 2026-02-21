@@ -165,6 +165,16 @@ export function registerSettings() {
         type: Boolean,
         default: true,
     });
+
+    // Integrate with 5e Activity Importer
+    game.settings.register(MODULE_NAME, "integrateWithActivityImporter", {
+        name: "Merge with Activity Importer Dropdown",
+        hint: "When enabled and the 5e Activity Importer module is active, the 'Import Item' button will appear as an option inside the Activity Importer's dropdown instead of as a separate button.",
+        scope: "client",
+        config: true,
+        type: Boolean,
+        default: true,
+    });
 }
 
 /**
