@@ -1,101 +1,237 @@
-# Strict_Spell_Template_32.md
+# Strict_Spell_Template_v2.md
 
 ## INSTRUCTIONS
 
 **How to use this template:**
 - Fill in every field. Use `n/a` for fields that don't apply.
-- Wrap the completed spell in a single ```` ```markdown ```` code fence.
-- Conditional sections (marked with comments) can be omitted entirely when not applicable.
+- Wrap the completed YAML in a single ```` ```yaml ```` code fence.
+- Conditional sections (marked with `#` comments) can be omitted entirely when not applicable.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
 
-**Important:** Spells use a different format than other item types. They use `===SPELL===` section headers and `---SECTION---` sub-headers instead of YAML. Spells cannot be batched with other item types in the same block.
+**Batching multiple items:**
+Combine different item types in one block by stacking top-level keys:
+```yaml
+SPELL:
+  ITEM:
+    Name: "Fireball"
+    ...
+WEAPON:
+  ITEM:
+    Name: "Staff of Fire"
+    ...
+```
+For multiple items of the **same type**, separate them with `---` (YAML document separator):
+```yaml
+SPELL:
+  ITEM:
+    Name: "Fireball"
+    ...
+---
+SPELL:
+  ITEM:
+    Name: "Lightning Bolt"
+    ...
+```
+You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
 **For LLM generation:**
-- Output ONLY the markdown code block. No commentary before or after.
+- Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
-- Booleans: `true` or `false` (lowercase).
+- Booleans: `true` or `false` (lowercase, no quotes).
 - Inapplicable fields: use the literal string `n/a`.
+- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
 
 ---
 
-```markdown
-===SPELL===
-Name: [text]
-Level: [0|1|2|3|4|5|6|7|8|9]
-School: [abj|con|div|enc|evo|ill|nec|trs]
+```yaml
+SPELL:
+  ITEM:
+    Name: "[text]"
+    Level: "[0|1|2|3|4|5|6|7|8|9]"
+    School: "[abj|con|div|enc|evo|ill|nec|trs]"
 
----COMPONENTS---
-Vocal: [true|false]
-Somatic: [true|false]
-Material: [true|false]
+  COMPONENTS:
+    Vocal: "[true|false]"
+    Somatic: "[true|false]"
+    Material: "[true|false]"
 
----MATERIALS---
-(Required only if Material is true)
-Value: [text] (e.g., "a diamond worth 50 gp")
-Cost: [integer] (The gold value, e.g. 50)
-Supply: [integer] (The numeric quantity if relevant)
-Consumed: [true|false]
+  MATERIALS:
+    # (Required only if Material is true)
+    Value: "[text]"
+    Cost: "[integer]"
+    Supply: "[integer]"
+    Consumed: "[true|false]"
 
----PREPARATION---
-Method: [atwill|innate|ritual|pact|prepared]
-Prepared: [true|false]
+  PREPARATION:
+    Method: "[atwill|innate|ritual|pact|prepared]"
+    Prepared: "[true|false]"
 
----ACTIVATION---
-Type: [action|bonus|reaction|minute|hour|day|special]
-Value: [integer]
-Condition: [text] (For reactions or special)
+  ACTIVATION:
+    Type: "[action|bonus|reaction|minute|hour|day|special]"
+    Value: "[integer]"
+    Condition: "[text|n/a]"
 
----RANGE---
-Units: [self|touch|spec|any|ft|mi|m|km]
-Value: [integer]
-Special: [text]
+  RANGE:
+    Units: "[self|touch|spec|any|ft|mi|m|km]"
+    Value: "[integer|n/a]"
 
----DURATION---
-Units: [inst|spec|turn|round|minute|hour|day|month|year|disp|dstr|perm]
-Value: [integer]
-Concentration: [true|false]
+  DURATION:
+    Units: "[inst|spec|turn|round|minute|hour|day|month|year|disp|dstr|perm]"
+    Value: "[integer|n/a]"
+    Concentration: "[true|false]"
 
----TARGETS---
-Type: [self|ally|enemy|creature|object|space|creatureOrObject|any|willing]
-Count: [integer]
-Choice: [true|false]
-Special: [text]
+  TARGETS:
+    Type: "[self|ally|enemy|creature|object|space|creatureOrObject|any|willing]"
+    Count: "[integer|n/a]"
+    Choice: "[true|false]"
+    Special: "[text|n/a]"
 
----AREA---
-(Required only if spell has an area of effect)
-Shape: [cone|cube|cylinder|radius|line|sphere|circle|square|wall]
-Size: [integer]
-Units: [ft|mi|m|km]
+  AREA:
+    # (Required only if spell has an area of effect)
+    Shape: "[cone|cube|cylinder|radius|line|sphere|circle|square|wall]"
+    Size: "[integer]"
+    Units: "[ft|mi|m|km]"
 
----USAGE---
-Uses Current: [integer]
-Uses Max: [integer]
+  USAGE:
+    Uses Current: "[integer]"
+    Uses Max: "[integer]"
 
----RECOVERY---
-(Optional, repeatable. Only relevant if Uses Max > 0)
-Period: [lr|sr|day|dawn|dusk|recharge]
-Type: [recoverAll|loseAll|formula]
-Formula: [text]
-===END RECOVERY===
+  RECOVERY:
+    # (Optional, repeatable. Only relevant if Uses Max > 0)
+    - Period: "[lr|sr|day|dawn|dusk|recharge]"
+      Type: "[recoverAll|loseAll|formula]"
+      Formula: "[text|n/a]"
 
----DESCRIPTION---
-Description:
-[multiline HTML content containing Enrichers]
-===END DESCRIPTION===
+  DESCRIPTION:
+    Description: |
+      [multiline HTML content containing Enrichers]
 
----UNIDENTIFIED DESCRIPTION---
-Unidentified Name: [text]
-Unidentified Description:
-[multiline HTML content]
-===END UNIDENTIFIED DESCRIPTION===
+  UNIDENTIFIED_DESCRIPTION:
+    Unidentified Name: "[text|n/a]"
+    Unidentified Description: |
+      [multiline HTML content]
 
----CHAT FLAVOR---
-Chat Description:
-[multiline text content]
-===END CHAT FLAVOR===
+  CHAT_FLAVOR:
+    Chat Description: |
+      [multiline text content]
 
-===END SPELL===
+  Activities:
+    # ── OMIT THIS SECTION ENTIRELY unless activities are explicitly requested ──
+    # Requires the 5e-activity-importer module to be active.
+    # If requested: array format — add any number of activities/effects.
+    # Supported types: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
+    #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
+    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD, EFFECT
+    # See the 5e-activity-importer module templates for full field reference.
 ```
+
+---
+
+## **FIELD REFERENCE**
+
+### **Spell Schools**
+| Key | School |
+|-----|--------|
+| `abj` | Abjuration |
+| `con` | Conjuration |
+| `div` | Divination |
+| `enc` | Enchantment |
+| `evo` | Evocation |
+| `ill` | Illusion |
+| `nec` | Necromancy |
+| `trs` | Transmutation |
+
+### **Preparation Methods**
+| Method | Description |
+|--------|-------------|
+| `atwill` | At Will (always available, no slot needed) |
+| `innate` | Innate (uses per day, not spell slots) |
+| `ritual` | Ritual (adds ritual property, always prepared) |
+| `pact` | Pact Magic (Warlock slot) |
+| `prepared` | Standard prepared spell |
+
+### **Activation Types**
+| Type | Description |
+|------|-------------|
+| `action` | Action |
+| `bonus` | Bonus Action |
+| `reaction` | Reaction |
+| `minute` | Minutes (use Value for count) |
+| `hour` | Hours (use Value for count) |
+| `day` | Days |
+| `special` | Special |
+
+### **Range Units**
+| Unit | Description |
+|------|-------------|
+| `self` | Self (no range value needed) |
+| `touch` | Touch |
+| `spec` | Special |
+| `any` | Unlimited / Any distance |
+| `ft` | Feet |
+| `mi` | Miles |
+| `m` | Meters |
+| `km` | Kilometers |
+
+### **Duration Units**
+| Unit | Description |
+|------|-------------|
+| `inst` | Instantaneous |
+| `spec` | Special |
+| `turn` | Turn |
+| `round` | Rounds |
+| `minute` | Minutes |
+| `hour` | Hours |
+| `day` | Days |
+| `month` | Months |
+| `year` | Years |
+| `disp` | Until dispelled |
+| `dstr` | Until dispelled or triggered |
+| `perm` | Permanent |
+
+### **Target Types**
+| Type | Description |
+|------|-------------|
+| `self` | Self |
+| `ally` | Ally |
+| `enemy` | Enemy |
+| `creature` | Any creature |
+| `object` | Object |
+| `space` | Space/point |
+| `creatureOrObject` | Creature or Object |
+| `any` | Any target |
+| `willing` | Willing creature |
+
+### **Area Shapes**
+| Shape | Description |
+|-------|-------------|
+| `cone` | Cone |
+| `cube` | Cube |
+| `cylinder` | Cylinder |
+| `radius` | Radius/burst |
+| `line` | Line |
+| `sphere` | Sphere |
+| `circle` | Circle |
+| `square` | Square |
+| `wall` | Wall |
+
+### **Recovery Periods**
+| Period | Description |
+|--------|-------------|
+| `lr` | Long Rest |
+| `sr` | Short Rest |
+| `day` | Daily (any time) |
+| `dawn` | At dawn |
+| `dusk` | At dusk |
+| `recharge` | Roll d6 at dawn; recharge on X+ |
+
+### **Recovery Types**
+| Type | Formula | Result |
+|------|---------|--------|
+| `recoverAll` | n/a | Regain all uses |
+| `loseAll` | n/a | Lose all remaining uses |
+| `formula` | Dice (e.g., `1d4+1`) | Regain rolled amount |
+| `formula` | Number (e.g., `5`) | For recharge: regain all on d6 ≥ 5 |
 
 ---
 

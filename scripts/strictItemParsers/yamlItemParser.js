@@ -152,6 +152,17 @@ const VALID_TOOL_TYPES = ['art', 'game', 'music', 'other'];
 
 const VALID_LOOT_TYPES = ['art', 'gear', 'gem', 'junk', 'material', 'resource', 'treasure'];
 
+// ─── Spell Constants ─────────────────────────────────────────────────────────
+
+const VALID_SPELL_SCHOOLS = ['abj', 'con', 'div', 'enc', 'evo', 'ill', 'nec', 'trs'];
+const VALID_SPELL_PREP_METHODS = ['atwill', 'innate', 'ritual', 'pact', 'prepared'];
+const VALID_SPELL_ACTIVATION_TYPES = ['action', 'bonus', 'reaction', 'minute', 'hour', 'day', 'special'];
+const VALID_SPELL_RANGE_UNITS = ['self', 'touch', 'spec', 'any', 'ft', 'mi', 'm', 'km'];
+const VALID_DURATION_UNITS = ['inst', 'spec', 'turn', 'round', 'minute', 'hour', 'day', 'month', 'year', 'disp', 'dstr', 'perm'];
+const VALID_TARGET_TYPES = ['self', 'ally', 'enemy', 'creature', 'object', 'space', 'creatureOrObject', 'any', 'willing'];
+const VALID_AREA_SHAPES = ['cone', 'cube', 'cylinder', 'radius', 'line', 'sphere', 'circle', 'square', 'wall'];
+const VALID_AREA_UNITS = ['ft', 'mi', 'm', 'km'];
+
 // ─── Main Parser Class ──────────────────────────────────────────────────────
 
 export class YamlItemParser {
@@ -195,7 +206,7 @@ export class YamlItemParser {
             // 3. Detect item type from top-level key
             const { type, data } = this.detectItemType(doc);
             if (!type) {
-                this.addError('Could not detect item type. Expected top-level key: WEAPON, LOOT, EQUIPMENT, CONSUMABLE, TOOL, or CONTAINER');
+                this.addError('Could not detect item type. Expected top-level key: WEAPON, LOOT, EQUIPMENT, CONSUMABLE, TOOL, CONTAINER, or SPELL');
                 return this.createResult(false, null);
             }
 
@@ -223,6 +234,9 @@ export class YamlItemParser {
                     break;
                 case 'container':
                     this.extractContainerFields(itemData, data);
+                    break;
+                case 'spell':
+                    this.extractSpellFields(itemData, data);
                     break;
             }
 
@@ -254,7 +268,7 @@ export class YamlItemParser {
         if (!text || !text.trim()) return [];
 
         const yamlText = this.stripCodeFences(text);
-        const validKeys = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER'];
+        const validKeys = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER', 'SPELL'];
 
         // Use loadAll to handle --- document separators
         let documents;
@@ -300,7 +314,7 @@ export class YamlItemParser {
                     results.push({
                         success: false,
                         item: null,
-                        errors: [`Unknown item type key "${key}". Expected: ${validKeys.join(', ')}`],
+                        errors: [`Unknown item type key "${key}". Expected: ${validKeys.join(', ')}. Note: SPELL items can be batched with other types.`],
                         warnings: []
                     });
                     continue;
@@ -336,7 +350,8 @@ export class YamlItemParser {
             'CONSUMABLE': 'consumable',
             'TOOL': 'tool',
             'LOOT': 'loot',
-            'CONTAINER': 'container'
+            'CONTAINER': 'container',
+            'SPELL': 'spell'
         };
 
         for (const [key, type] of Object.entries(typeMap)) {
@@ -1293,6 +1308,157 @@ export class YamlItemParser {
         ItemUtils.log('YamlItemParser: Container fields extracted', {
             isMagical: item.isMagical, weightlessContents: item.weightlessContents,
             currency: item.currency
+        });
+    }
+
+    // ─── SPELL ──────────────────────────────────────────────────────────────
+
+    extractSpellFields(item, data) {
+        const itemSection = data?.ITEM || {};
+
+        // Level (required, 0–9)
+        const levelRaw = asNullable(itemSection['Level']);
+        if (levelRaw === null) {
+            this.addError('Level is required but was not found');
+        } else {
+            const level = asInt(levelRaw, -1);
+            if (level < 0 || level > 9) {
+                this.addError(`Invalid Level "${levelRaw}". Must be an integer from 0 to 9.`);
+            } else {
+                item.spellLevel = level;
+            }
+        }
+
+        // School (required)
+        const schoolRaw = asString(itemSection['School'], '').toLowerCase();
+        if (!schoolRaw) {
+            this.addError('School is required but was not found');
+        } else if (!VALID_SPELL_SCHOOLS.includes(schoolRaw)) {
+            this.addError(`Invalid School "${itemSection['School']}". Must be one of: ${VALID_SPELL_SCHOOLS.join(', ')}`);
+        } else {
+            item.spellSchool = schoolRaw;
+        }
+
+        // Components
+        const comp = data?.COMPONENTS || {};
+        item.vocal = asBool(comp['Vocal'], false);
+        item.somatic = asBool(comp['Somatic'], false);
+        item.material = asBool(comp['Material'], false);
+
+        // Materials (conditional on material component)
+        if (item.material) {
+            const mat = data?.MATERIALS || {};
+            item.materialValue = asString(mat['Value'], '');
+
+            const costRaw = asNullable(mat['Cost']);
+            item.materialCost = costRaw !== null ? asInt(costRaw, 0) : null;
+
+            const supplyRaw = asNullable(mat['Supply']);
+            item.materialSupply = supplyRaw !== null ? asInt(supplyRaw, 0) : null;
+
+            item.materialConsumed = asBool(mat['Consumed'], false);
+        }
+
+        // Preparation
+        const prep = data?.PREPARATION || {};
+        const methodRaw = asString(prep['Method'], 'prepared').toLowerCase();
+        if (!VALID_SPELL_PREP_METHODS.includes(methodRaw)) {
+            this.addWarning(`Invalid Preparation Method "${prep['Method']}", defaulting to "prepared"`);
+            item.preparationMode = 'prepared';
+        } else {
+            item.preparationMode = methodRaw;
+            item.ritual = (methodRaw === 'ritual');
+        }
+        item.prepared = asBool(prep['Prepared'], false);
+
+        // Activation (required)
+        const act = data?.ACTIVATION || {};
+        const actTypeRaw = asString(act['Type'], '').toLowerCase();
+        if (!actTypeRaw) {
+            this.addError('Activation Type is required but was not found');
+        } else if (!VALID_SPELL_ACTIVATION_TYPES.includes(actTypeRaw)) {
+            this.addError(`Invalid Activation Type "${act['Type']}". Must be one of: ${VALID_SPELL_ACTIVATION_TYPES.join(', ')}`);
+        } else {
+            item.activationType = actTypeRaw;
+        }
+
+        const actValueRaw = asNullable(act['Value']);
+        item.activationValue = actValueRaw !== null ? asInt(actValueRaw, 1) : 1;
+
+        const actCondition = asNullable(act['Condition']);
+        if (actCondition) item.activationCondition = String(actCondition);
+
+        // Range
+        const rng = data?.RANGE || {};
+        const rangeUnitsRaw = asString(rng['Units'], 'ft').toLowerCase();
+        const validRangeUnits = VALID_SPELL_RANGE_UNITS.includes(rangeUnitsRaw) ? rangeUnitsRaw : 'ft';
+        if (!VALID_SPELL_RANGE_UNITS.includes(rangeUnitsRaw)) {
+            this.addWarning(`Invalid Range Units "${rng['Units']}", defaulting to "ft"`);
+        }
+        const rangeValueRaw = asNullable(rng['Value']);
+        item.range = {
+            value: rangeValueRaw !== null ? asInt(rangeValueRaw, 0) : null,
+            units: validRangeUnits
+        };
+
+        // Duration
+        const dur = data?.DURATION || {};
+        const durUnitsRaw = asString(dur['Units'], 'inst').toLowerCase();
+        const validDurUnits = VALID_DURATION_UNITS.includes(durUnitsRaw) ? durUnitsRaw : 'inst';
+        if (!VALID_DURATION_UNITS.includes(durUnitsRaw)) {
+            this.addWarning(`Invalid Duration Units "${dur['Units']}", defaulting to "inst"`);
+        }
+        const durValueRaw = asNullable(dur['Value']);
+        item.duration = {
+            value: durValueRaw !== null ? asInt(durValueRaw, 0) : null,
+            units: validDurUnits
+        };
+        item.concentration = asBool(dur['Concentration'], false);
+
+        // Targets
+        const tgt = data?.TARGETS || {};
+        const tgtTypeRaw = asNullable(tgt['Type']);
+        if (tgtTypeRaw) {
+            const tgtTypeStr = String(tgtTypeRaw).trim();
+            const matchedType = VALID_TARGET_TYPES.find(t => t.toLowerCase() === tgtTypeStr.toLowerCase());
+            if (!matchedType) {
+                this.addWarning(`Invalid Target Type "${tgtTypeRaw}". Must be one of: ${VALID_TARGET_TYPES.join(', ')}`);
+            }
+            const tgtCountRaw = asNullable(tgt['Count']);
+            const tgtSpecialRaw = asNullable(tgt['Special']);
+            item.target = {
+                type: matchedType || tgtTypeStr,
+                count: tgtCountRaw !== null ? asInt(tgtCountRaw, 0) : null,
+                choice: asBool(tgt['Choice'], false),
+                special: tgtSpecialRaw ? String(tgtSpecialRaw) : null
+            };
+        }
+
+        // Area of Effect (conditional)
+        if (data?.AREA) {
+            const area = data.AREA;
+            const shapeRaw = asString(area['Shape'], '').toLowerCase();
+            const sizeRaw = asNullable(area['Size']);
+            const areaUnitsRaw = asString(area['Units'], 'ft').toLowerCase();
+
+            if (!VALID_AREA_SHAPES.includes(shapeRaw)) {
+                this.addWarning(`Invalid Area Shape "${area['Shape']}". Must be one of: ${VALID_AREA_SHAPES.join(', ')}`);
+            } else {
+                item.area = {
+                    type: shapeRaw,
+                    size: sizeRaw !== null ? asInt(sizeRaw, 0) : null,
+                    units: VALID_AREA_UNITS.includes(areaUnitsRaw) ? areaUnitsRaw : 'ft'
+                };
+            }
+        }
+
+        // Usage and Recovery
+        this.extractUsageAndRecovery(item, data);
+
+        ItemUtils.log('YamlItemParser: Spell fields extracted', {
+            level: item.spellLevel, school: item.spellSchool,
+            vocal: item.vocal, somatic: item.somatic, material: item.material,
+            preparationMode: item.preparationMode, activationType: item.activationType
         });
     }
 
