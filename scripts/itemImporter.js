@@ -10,6 +10,7 @@ import { MODULE_NAME, MODULE_TITLE, registerSettings } from "./itemConfig.js";
 import { ItemUtils } from "./itemUtils.js";
 import { ItemWindow } from "./itemWindow.js";
 import { getParserForText } from './strictItemParsers/strictParserDispatcher.js';
+import { NaturalItemParser } from './naturalItemParser.js';
 
 /**
  * Initialize module
@@ -31,15 +32,16 @@ Hooks.on("init", () => {
  * Allows other modules or macros to use the importer programmatically
  */
 function registerAPI() {
-    // This is the code that points towards the NaturalItemParser.
-    // We keep it commented out for future use.
-    // const parse = NaturalItemParser.parseInput.bind(NaturalItemParser);
+    /** Valid YAML top-level item type keys */
+    const YAML_ITEM_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER'];
 
-    // Create a new 'parse' function that uses our strict dispatcher.
-    // This will be the function exposed by the API.
+    // Create a 'parse' function that routes to the correct parser.
+    // YAML strict templates go to YamlItemParser; everything else to NaturalItemParser.
     const parse = (text) => {
-        const parser = getParserForText(text); // Get the correct parser (e.g., Base, Weapon)
-        return parser.parse(text);             // Run the parse and return the result
+        const stripped = text.replace(/^```(?:yaml|markdown)?\s*\n?/i, '').replace(/\n?```\s*$/, '');
+        const isYaml = YAML_ITEM_KEYS.some(key => new RegExp(`^${key}:`, 'm').test(stripped));
+        const parser = isYaml ? getParserForText(text) : new NaturalItemParser();
+        return parser.parse(text);
     };
 
     game.modules.get(MODULE_NAME).api = {

@@ -13,6 +13,7 @@
 import { ItemUtils } from "./itemUtils.js";
 import { getParserForText } from "./strictItemParsers/strictParserDispatcher.js";
 import { ItemRegex } from "./itemRegex.js";
+import jsyaml from "./vendor/js-yaml.mjs";
 
 export class NaturalItemParser {
   constructor() {
@@ -312,40 +313,43 @@ export class NaturalItemParser {
     ItemUtils.log("NaturalItemParser: Building strict template...");
 
     // Compute magical status once for all template builders
-    extracted.isMagical = this.extractIsMagical(this.originalText, extracted);
+    extracted.isMagical = this.extractIsMagical(this.text, extracted);
 
     // Determine item type (defaulting to loot if unknown)
     const itemType = extracted.itemType || "loot";
-    const typeMarker = this.getTypeMarker(itemType);
+    const typeKey = this.getTypeKey(itemType);
 
-    // Build the template
-    let template = `${typeMarker}\n`;
-    template += `Name: ${extracted.name || "Unnamed Item"}\n`;
-    template += `Rarity: ${extracted.rarity || "common"}\n\n`;
+    // Build universal sections as JS object
+    const data = {};
 
-    // Description section
-    template += `---DESCRIPTION---\n`;
-    template += `Description:\n`;
-    template += `${extracted.description || "No description available."}\n`;
-    template += `===END DESCRIPTION===\n\n`;
+    data.ITEM = {
+      Name: extracted.name || "Unnamed Item",
+      Rarity: extracted.rarity || "common",
+    };
 
-    // Cost and Weight section
-    template += `---COST AND WEIGHT---\n`;
-    template += `Price Value: ${extracted.cost?.value || 0}\n`;
-    template += `Price Denomination: ${extracted.cost?.denomination || "gp"}\n`;
-    template += `Weight Value: ${extracted.weight?.value || 0}\n`;
-    template += `Weight Units: ${extracted.weight?.units || "lb"}\n\n`;
+    data.INVENTORY = {
+      Quantity: extracted.quantity || 1,
+      Identified: true,
+      Equipped: false,
+    };
 
-    // Inventory section
-    template += `---INVENTORY---\n`;
-    template += `Quantity: ${extracted.quantity || 1}\n`;
-    template += `Identified: true\n`;
-    template += `Equipped: false\n\n`;
+    data.COST_AND_WEIGHT = {
+      "Price Value": extracted.cost?.value || 0,
+      "Price Denomination": extracted.cost?.denomination || "gp",
+      "Weight Value": extracted.weight?.value || 0,
+      "Weight Units": extracted.weight?.units || "lb",
+    };
 
-    // Add type-specific sections
-    template += this.buildTypeSpecificSections(itemType, extracted);
+    data.DESCRIPTION = {
+      Description: extracted.description || "No description available.",
+    };
 
-    return template;
+    // Add type-specific sections (mutates data in-place)
+    this.buildTypeSpecificSections(itemType, extracted, data);
+
+    // Wrap in top-level type key and serialize to YAML
+    const doc = { [typeKey]: data };
+    return jsyaml.dump(doc, { lineWidth: -1 });
   }
 
   /**
@@ -354,31 +358,29 @@ export class NaturalItemParser {
    * @param {Object} extracted - Extracted data
    * @returns {string} Type-specific template sections
    */
-  buildTypeSpecificSections(itemType, extracted) {
+  buildTypeSpecificSections(itemType, extracted, data) {
     switch (itemType) {
       case "weapon":
-        return this.buildWeaponSections(extracted);
+        this.buildWeaponSections(extracted, data); break;
       case "loot":
-        return this.buildLootSections(extracted);
+        this.buildLootSections(extracted, data); break;
       case "tool":
-        return this.buildToolSections(extracted);
+        this.buildToolSections(extracted, data); break;
       case "container":
-        return this.buildContainerSections(extracted);
+        this.buildContainerSections(extracted, data); break;
       case "consumable":
-        return this.buildConsumableSections(extracted);
+        this.buildConsumableSections(extracted, data); break;
       case "equipment":
-        return this.buildEquipmentSections(extracted);
+        this.buildEquipmentSections(extracted, data); break;
       default:
-        return this.buildLootSections(extracted); // Default to loot
+        this.buildLootSections(extracted, data); break;
     }
   }
 
   /**
    * Build weapon-specific sections
    */
-buildWeaponSections(extracted) {
-    let sections = "";
-
+buildWeaponSections(extracted, data) {
     // Get base weapon data for property inheritance
     const baseData = extracted.baseWeapon
       ? NaturalItemParser.BASE_WEAPON_DATA[extracted.baseWeapon] || {}
@@ -386,176 +388,155 @@ buildWeaponSections(extracted) {
 
     // Weapon type and base - inherit from base weapon if not extracted
     const weaponType = extracted.weaponType || baseData.weaponType || "simpleM";
-    sections += `Weapon Type: ${weaponType}\n`;
-    sections += `Base Weapon: ${extracted.baseWeapon || "n/a"}\n\n`;
+    data.ITEM["Weapon Type"] = weaponType;
+    data.ITEM["Base Weapon"] = extracted.baseWeapon || "n/a";
 
     // Properties section - merge extracted properties with base weapon properties
-    sections += `---PROPERTIES---\n`;
     const props = extracted.properties || {};
     const baseProps = baseData.properties || [];
-    sections += `Adamantine: ${props.adamantine || false}\n`;
-    sections += `Ammunition: ${props.ammunition ?? baseProps.includes("ammunition")}\n`;
-    sections += `Finesse: ${props.finesse ?? baseProps.includes("finesse")}\n`;
-    sections += `Firearm: ${props.firearm || false}\n`;
-    sections += `Focus: ${props.focus || false}\n`;
-    sections += `Heavy: ${props.heavy ?? baseProps.includes("heavy")}\n`;
-    sections += `Light: ${props.light ?? baseProps.includes("light")}\n`;
-    sections += `Loading: ${props.loading ?? baseProps.includes("loading")}\n`;
-    sections += `Magical: ${extracted.isMagical}\n`;
-    sections += `Reach: ${props.reach ?? baseProps.includes("reach")}\n`;
-    sections += `Reload: ${props.reload || false}\n`;
-    sections += `Returning: ${props.returning || false}\n`;
-    sections += `Silvered: ${props.silvered || false}\n`;
-    sections += `Special: ${props.special ?? baseProps.includes("special")}\n`;
-    sections += `Thrown: ${props.thrown ?? baseProps.includes("thrown")}\n`;
-    sections += `Two-Handed: ${props.twoHanded ?? baseProps.includes("twoHanded")}\n`;
-    sections += `Versatile: ${props.versatile ?? baseProps.includes("versatile")}\n\n`;
+    data.PROPERTIES = {
+      Adamantine: props.adamantine || false,
+      Ammunition: props.ammunition ?? baseProps.includes("ammunition"),
+      Finesse: props.finesse ?? baseProps.includes("finesse"),
+      Firearm: props.firearm || false,
+      Focus: props.focus || false,
+      Heavy: props.heavy ?? baseProps.includes("heavy"),
+      Light: props.light ?? baseProps.includes("light"),
+      Loading: props.loading ?? baseProps.includes("loading"),
+      Magical: extracted.isMagical,
+      Reach: props.reach ?? baseProps.includes("reach"),
+      Reload: props.reload || false,
+      Returning: props.returning || false,
+      Silvered: props.silvered || false,
+      Special: props.special ?? baseProps.includes("special"),
+      Thrown: props.thrown ?? baseProps.includes("thrown"),
+      "Two-Handed": props.twoHanded ?? baseProps.includes("twoHanded"),
+      Versatile: props.versatile ?? baseProps.includes("versatile"),
+    };
 
     // Damage section
-    sections += `---DAMAGE---\n`;
-    sections += `Damage Formula: ${extracted.damage?.formula || baseData.damage || "1d4"}\n`;
-    sections += `Damage Type: ${extracted.damage?.type || baseData.damageType || "bludgeoning"}\n\n`;
+    data.DAMAGE = {
+      "Damage Formula": extracted.damage?.formula || baseData.damage || "1d4",
+      "Damage Type": extracted.damage?.type || baseData.damageType || "bludgeoning",
+    };
 
     // Range section
-    sections += `---RANGE---\n`;
-    sections += `Reach: ${extracted.range?.reach || 5}\n`;
-    sections += `Range Normal: ${extracted.range?.normal ?? baseData.range?.normal ?? "n/a"}\n`;
-    sections += `Range Long: ${extracted.range?.long ?? baseData.range?.long ?? "n/a"}\n`;
-    sections += `Range Units: ${extracted.range?.units || "ft"}\n\n`;
+    data.RANGE = {
+      Reach: extracted.range?.reach || 5,
+      "Range Normal": extracted.range?.normal ?? baseData.range?.normal ?? "n/a",
+      "Range Long": extracted.range?.long ?? baseData.range?.long ?? "n/a",
+      "Range Units": extracted.range?.units || "ft",
+    };
 
-// Versatile damage if applicable
-    sections += `---VERSATILE DAMAGE---\n`;
+    // Versatile damage section
     const hasVersatile = props.versatile ?? baseProps.includes("versatile");
     const versatileDamage = extracted.versatileDamage?.formula || baseData.versatile;
     if (versatileDamage || hasVersatile) {
-            sections += `Versatile Formula: ${versatileDamage}\n`;
-            sections += `Versatile Damage Type: ${
+      data.VERSATILE_DAMAGE = {
+        "Versatile Formula": versatileDamage || "n/a",
+        "Versatile Damage Type":
           extracted.versatileDamage?.type ||
           extracted.damage?.type ||
           baseData.damageType ||
-          "bludgeoning"
-        }\n\n`;
-      } else {
-        // Versatile property found but no damage specified
-        sections += `Versatile Formula: n/a\n`;
-        sections += `Versatile Damage Type: n/a\n\n`;
+          "bludgeoning",
+      };
+    } else {
+      data.VERSATILE_DAMAGE = {
+        "Versatile Formula": "n/a",
+        "Versatile Damage Type": "n/a",
+      };
     }
 
-
     // Mastery section
-    sections += `---MASTERY---\n`;
-    sections += `Mastery: ${extracted.mastery || "n/a"}\n`;
-    sections += `Proficiency: proficient\n`;
+    data.MASTERY = {
+      Mastery: extracted.mastery || "n/a",
+    };
+
+    // Proficiency section (separate from MASTERY in YAML parser)
+    data.PROFICIENCY = {
+      Proficiency: "proficient",
+    };
 
     // Attunement section (only if magical and attunement required)
     if (extracted.isMagical && extracted.attunement?.required) {
-      sections += `\n---ATTUNEMENT---\n`;
-      sections += `Attunement: required\n`;
-      if (extracted.attunement.byClass) {
-        sections += `Attunement By: ${extracted.attunement.byClass}\n`;
-      } else {
-        sections += `Attunement By: n/a\n`;
-      }
+      data.ATTUNEMENT = {
+        Attunement: "required",
+        "Attunement By": extracted.attunement.byClass || "n/a",
+      };
     }
-
-    return sections;
   }
 
   /**
    * Build loot-specific sections
    */
-  buildLootSections(extracted) {
-    let sections = "";
-
-    sections += `Loot Type: ${extracted.lootType || "gear"}\n\n`;
+  buildLootSections(extracted, data) {
+    // Add type-specific field to ITEM section
+    data.ITEM["Loot Type"] = extracted.lootType || "gear";
 
     // Properties section
-    sections += `---PROPERTIES---\n`;
-    const props = extracted.lootProperties || {};
-    sections += `Magical: ${extracted.isMagical}\n`;
-
-    return sections;
+    data.PROPERTIES = {
+      Magical: extracted.isMagical,
+    };
   }
 
   /**
    * Build tool-specific sections (stub for now)
    */
-  buildToolSections(extracted) {
-    let sections = "";
-
-    sections += `Tool Type: ${extracted.toolType || "other"}\n`;
-    sections += `Base Tool: ${extracted.baseTool || "thief"}\n\n`;
+  buildToolSections(extracted, data) {
+    // Add type-specific fields to ITEM section
+    data.ITEM["Tool Type"] = extracted.toolType || "other";
+    data.ITEM["Base Tool"] = extracted.baseTool || "thief";
 
     // Properties section
-    sections += `---PROPERTIES---\n`;
-    const props = extracted.properties || {};
-    sections += `Magical: ${extracted.isMagical}\n`;
-    sections += `Tool Bonus: ${
-      extracted.toolBonus !== null ? extracted.toolBonus : "n/a"
-    }\n\n`;
+    data.PROPERTIES = {
+      Magical: extracted.isMagical,
+      "Tool Bonus": extracted.toolBonus !== null ? extracted.toolBonus : "n/a",
+    };
 
-    // Attunement section (only if magical)
+    // Attunement section (only if magical and attunement required)
     if (extracted.isMagical && extracted.attunement?.required) {
-      sections += `---ATTUNEMENT---\n`;
-      sections += `Attunement: required\n`;
-      if (extracted.attunement.byClass) {
-        sections += `Attunement By: ${extracted.attunement.byClass}\n`;
-      } else {
-        sections += `Attunement By: n/a\n`;
-      }
-      sections += `\n`;
+      data.ATTUNEMENT = {
+        Attunement: "required",
+        "Attunement By": extracted.attunement.byClass || "n/a",
+      };
     }
 
     // Ability check section
-    sections += `---ABILITY CHECK---\n`;
-
-    // Map proficiency text to template format
     const proficiencyMap = {
       expert: "expert",
       proficient: "proficient",
       notproficient: "notProficient",
     };
-    const proficiency =
-      proficiencyMap[extracted.toolProficiency] || "proficient";
-    sections += `Proficiency: ${proficiency}\n`;
-
-    sections += `Ability: ${extracted.toolAbility || "n/a"}\n\n`;
+    data.ABILITY_CHECK = {
+      Proficiency: proficiencyMap[extracted.toolProficiency] || "proficient",
+      Ability: extracted.toolAbility || "n/a",
+    };
 
     // Usage section
-    sections += `---USAGE---\n`;
-    if (extracted.uses) {
-      sections += `Uses Current: ${extracted.uses.current || 0}\n`;
-      sections += `Uses Max: ${extracted.uses.max || 0}\n`;
-    } else {
-      sections += `Uses Current: 0\n`;
-      sections += `Uses Max: 0\n`;
-    }
-
-    return sections;
+    data.USAGE = {
+      "Uses Current": extracted.uses?.current || 0,
+      "Uses Max": extracted.uses?.max || 0,
+    };
   }
 
   /**
    * Build container-specific sections (stub for now)
    */
-  buildContainerSections(extracted) {
-    let sections = "";
+  buildContainerSections(extracted, data) {
+    const props = extracted.containerProperties || {};
 
     // Properties section
-    sections += `---PROPERTIES---\n`;
-    const props = extracted.containerProperties || {};
-    sections += `Magical: ${extracted.isMagical}\n`;
-    sections += `Weightless Contents: ${props.weightlessContents || false}\n\n`;
+    data.PROPERTIES = {
+      Magical: extracted.isMagical,
+      "Weightless Contents": props.weightlessContents || false,
+    };
 
-    // Attunement section (only if magical)
+    // Attunement section (only if magical and attunement required)
     if (extracted.isMagical && extracted.attunement?.required) {
-      sections += `---ATTUNEMENT---\n`;
-      sections += `Attunement: required\n`;
-      if (extracted.attunement.byClass) {
-        sections += `Attunement By: ${extracted.attunement.byClass}\n`;
-      } else {
-        sections += `Attunement By: n/a\n`;
-      }
-      sections += `\n`;
+      data.ATTUNEMENT = {
+        Attunement: "required",
+        "Attunement By": extracted.attunement.byClass || "n/a",
+      };
     }
 
     // Capacity section (optional - only if we found capacity data)
@@ -564,24 +545,16 @@ buildWeaponSections(extracted) {
       capacity &&
       (capacity.itemCount || capacity.weightValue || capacity.volumeValue)
     ) {
-      sections += `---CAPACITY---\n`;
-      sections += `Item Count: ${
-        capacity.itemCount !== null ? capacity.itemCount : "n/a"
-      }\n`;
-      sections += `Weight Capacity Value: ${
-        capacity.weightValue !== null ? capacity.weightValue : "n/a"
-      }\n`;
-      sections += `Weight Capacity Units: ${capacity.weightUnits || "lb"}\n`;
-      sections += `Volume Capacity Value: ${
-        capacity.volumeValue !== null ? capacity.volumeValue : "n/a"
-      }\n`;
-
-      // Map to template format (cubicFoot vs ft)
-        sections += `Volume Capacity Units: ${capacity.volumeUnits || "cubicFoot"}\n\n`;
+      data.CAPACITY = {
+        "Item Count": capacity.itemCount !== null ? capacity.itemCount : "n/a",
+        "Weight Capacity Value": capacity.weightValue !== null ? capacity.weightValue : "n/a",
+        "Weight Capacity Units": capacity.weightUnits || "lb",
+        "Volume Capacity Value": capacity.volumeValue !== null ? capacity.volumeValue : "n/a",
+        "Volume Capacity Units": capacity.volumeUnits || "cubicFoot",
+      };
     }
 
-    // Currency contents section (REQUIRED)
-    sections += `---CURRENCY CONTENTS---\n`;
+    // Currency contents section (REQUIRED by YAML parser)
     const currency = extracted.currencyContents || {
       pp: 0,
       gp: 0,
@@ -589,170 +562,148 @@ buildWeaponSections(extracted) {
       sp: 0,
       cp: 0,
     };
-    sections += `Platinum: ${currency.pp || 0}\n`;
-    sections += `Gold: ${currency.gp || 0}\n`;
-    sections += `Electrum: ${currency.ep || 0}\n`;
-    sections += `Silver: ${currency.sp || 0}\n`;
-    sections += `Copper: ${currency.cp || 0}\n`;
-
-    return sections;
+    data.CURRENCY_CONTENTS = {
+      Platinum: currency.pp || 0,
+      Gold: currency.gp || 0,
+      Electrum: currency.ep || 0,
+      Silver: currency.sp || 0,
+      Copper: currency.cp || 0,
+    };
   }
 
   /**
    * Build consumable-specific sections (stub for now)
    */
-  buildConsumableSections(extracted) {
-    let sections = "";
-
-    sections += `Consumable Type: ${extracted.consumableType || "potion"}\n\n`;
+  buildConsumableSections(extracted, data) {
+    // Add type-specific field to ITEM section
+    data.ITEM["Consumable Type"] = extracted.consumableType || "potion";
 
     // Properties section
-    sections += `---PROPERTIES---\n`;
-    const props = extracted.properties || {};
-    sections += `Magical: ${extracted.isMagical}\n\n`;
+    data.PROPERTIES = {
+      Magical: extracted.isMagical,
+    };
 
-    // Attunement section (only if magical)
+    // Attunement section (only if magical and attunement required)
     if (extracted.isMagical && extracted.attunement?.required) {
-      sections += `---ATTUNEMENT---\n`;
-      sections += `Attunement: required\n`;
-      if (extracted.attunement.byClass) {
-        sections += `Attunement By: ${extracted.attunement.byClass}\n`;
-      } else {
-        sections += `Attunement By: n/a\n`;
-      }
-      sections += `\n`;
+      data.ATTUNEMENT = {
+        Attunement: "required",
+        "Attunement By": extracted.attunement.byClass || "n/a",
+      };
     }
 
     // Ammunition properties (only if type is ammo)
     if (extracted.consumableType === "ammo") {
-      sections += `---AMMUNITION PROPERTIES---\n`;
-      sections += `Ammunition Type: ${extracted.ammunitionType || "arrow"}\n`;
-
       const ammoProps = extracted.ammunitionProperties || {};
-      sections += `Adamantine: ${ammoProps.adamantine || false}\n`;
-      sections += `Silvered: ${ammoProps.silvered || false}\n`;
-      sections += `Returning: ${ammoProps.returning || false}\n`;
-      sections += `Magic Bonus: ${ammoProps.magicBonus || 0}\n`;
-
-      if (ammoProps.damageFormula) {
-        sections += `Damage Formula: ${ammoProps.damageFormula}\n`;
-        sections += `Damage Type: ${ammoProps.damageType}\n`;
-        sections += `Damage Replace: ${ammoProps.damageReplace}\n`;
-      } else {
-        sections += `Damage Formula: n/a\n`;
-        sections += `Damage Type: n/a\n`;
-        sections += `Damage Replace: false\n`;
-      }
-      sections += `\n`;
+      data.AMMUNITION_PROPERTIES = {
+        "Ammunition Type": extracted.ammunitionType || "arrow",
+        Adamantine: ammoProps.adamantine || false,
+        Silvered: ammoProps.silvered || false,
+        Returning: ammoProps.returning || false,
+        "Magic Bonus": ammoProps.magicBonus || 0,
+        "Damage Formula": ammoProps.damageFormula || "n/a",
+        "Damage Type": ammoProps.damageType || "n/a",
+        "Damage Replace": ammoProps.damageReplace || false,
+      };
     }
 
     // Poison properties (only if type is poison)
     if (extracted.consumableType === "poison") {
-      sections += `---POISON PROPERTIES---\n`;
-      sections += `Poison Type: ${extracted.poisonType || "injury"}\n\n`;
+      data.POISON_PROPERTIES = {
+        "Poison Type": extracted.poisonType || "injury",
+      };
     }
 
     // Scroll properties (only if type is scroll)
     if (extracted.consumableType === "scroll") {
-      sections += `---SCROLL PROPERTIES---\n`;
       const scrollProps = extracted.scrollProperties || {};
-      sections += `Concentration: ${scrollProps.concentration || false}\n`;
-      sections += `Somatic: ${scrollProps.somatic || false}\n`;
-      sections += `Verbal: ${scrollProps.verbal || false}\n`;
-      sections += `Ritual: ${scrollProps.ritual || false}\n\n`;
+      data.SCROLL_PROPERTIES = {
+        Concentration: scrollProps.concentration || false,
+        Somatic: scrollProps.somatic || false,
+        Verbal: scrollProps.verbal || false,
+        Ritual: scrollProps.ritual || false,
+      };
     }
 
     // Usage section
-    sections += `---USAGE---\n`;
-    if (extracted.uses) {
-      sections += `Uses Current: ${extracted.uses.current || 0}\n`;
-      sections += `Uses Max: ${extracted.uses.max || 0}\n`;
-    } else {
-      sections += `Uses Current: 0\n`;
-      sections += `Uses Max: 0\n`;
-    }
-    sections += `Destroy on Empty: false\n`;
-
-    return sections;
+    data.USAGE = {
+      "Uses Current": extracted.uses?.current || 0,
+      "Uses Max": extracted.uses?.max || 0,
+      "Destroy on Empty": false,
+    };
   }
 
   /**
    * Build equipment-specific sections (stub for now)
    */
-  buildEquipmentSections(extracted) {
-    let sections = "";
-
+  buildEquipmentSections(extracted, data) {
     // Get base armor data for property inheritance
     const baseData = extracted.baseEquipment
       ? NaturalItemParser.BASE_ARMOR_DATA[extracted.baseEquipment] || {}
       : {};
 
-    sections += `Equipment Type: ${extracted.equipmentType || "clothing"}\n`;
-    sections += `Base Equipment: ${extracted.baseEquipment || "n/a"}\n\n`;
+    // Add type-specific fields to ITEM section
+    data.ITEM["Equipment Type"] = extracted.equipmentType || "clothing";
+    data.ITEM["Base Equipment"] = extracted.baseEquipment || "n/a";
 
     // Properties section - inherit stealthDisadvantage from base armor if not explicitly set
-    sections += `---PROPERTIES---\n`;
     const props = extracted.equipmentProperties || {};
     const stealthDisadvantage = props.stealthDisadvantage || baseData.stealthDisadvantage || false;
-    sections += `Adamantine: ${props.adamantine || false}\n`;
-    sections += `Focus: ${props.focus || false}\n`;
-    sections += `Magical: ${extracted.isMagical}\n`;
-    sections += `Stealth Disadvantage: ${stealthDisadvantage}\n\n`;
+    data.PROPERTIES = {
+      Adamantine: props.adamantine || false,
+      Focus: props.focus || false,
+      Magical: extracted.isMagical,
+      "Stealth Disadvantage": stealthDisadvantage,
+    };
 
-    // Attunement section (only if magical)
+    // Attunement section (only if magical and attunement required)
     if (extracted.isMagical && extracted.attunement?.required) {
-      sections += `---ATTUNEMENT---\n`;
-      sections += `Attunement: required\n`;
-      if (extracted.attunement.byClass) {
-        sections += `Attunement By: ${extracted.attunement.byClass}\n`;
-      } else {
-        sections += `Attunement By: n/a\n`;
-      }
-
-      // Magic Bonus
-      sections += `Magic Bonus: ${extracted.magicBonus || 0}\n\n`;
+      data.ATTUNEMENT = {
+        Attunement: "required",
+        "Attunement By": extracted.attunement.byClass || "n/a",
+        "Magic Bonus": extracted.magicBonus || 0,
+      };
     }
 
     // Armor section (for armor and shield types)
     const armorTypes = ["light", "medium", "heavy", "natural", "shield"];
     if (armorTypes.includes(extracted.equipmentType)) {
-      // Use extracted values if present, otherwise inherit from base armor
       const armorClass = extracted.armorClass ?? baseData.ac ?? 10;
       const maxDexModifier = extracted.maxDexModifier ?? baseData.maxDex;
       const strengthReq = extracted.strengthRequirement ?? baseData.strengthReq;
 
-      sections += `---ARMOR---\n`;
-      sections += `Armor Class: ${armorClass}\n`;
-      sections += `Max Dex Modifier: ${maxDexModifier !== null ? maxDexModifier : "n/a"}\n`;
-      sections += `Strength Requirement: ${strengthReq || "n/a"}\n\n`;
+      data.ARMOR = {
+        "Armor Class": armorClass,
+        "Max Dex Modifier": maxDexModifier !== null && maxDexModifier !== undefined
+          ? maxDexModifier : "n/a",
+        "Strength Requirement": strengthReq || "n/a",
+      };
     }
 
     // Proficiency section
-    sections += `---PROFICIENCY---\n`;
-    sections += `Proficiency: proficient\n\n`;
+    data.PROFICIENCY = {
+      Proficiency: "proficient",
+    };
 
     // Usage section (default to no uses)
-    sections += `---USAGE---\n`;
-    sections += `Uses Current: 0\n`;
-    sections += `Uses Max: 0\n`;
-
-    return sections;
+    data.USAGE = {
+      "Uses Current": 0,
+      "Uses Max": 0,
+    };
   }
 
   /**
    * Get the type marker for strict template
    */
-  getTypeMarker(itemType) {
-    const markers = {
-      weapon: "===WEAPON===",
-      equipment: "===EQUIPMENT===",
-      consumable: "===CONSUMABLE===",
-      tool: "===TOOL===",
-      loot: "===LOOT===",
-      container: "===CONTAINER===",
-      backpack: "===BACKPACK===",
+  getTypeKey(itemType) {
+    const keys = {
+      weapon: "WEAPON",
+      equipment: "EQUIPMENT",
+      consumable: "CONSUMABLE",
+      tool: "TOOL",
+      loot: "LOOT",
+      container: "CONTAINER",
     };
-    return markers[itemType] || "===LOOT===";
+    return keys[itemType] || "LOOT";
   }
 
   // ==========================================

@@ -6,11 +6,24 @@
 import { ItemUtils } from "../itemUtils.js";
 import { MODULE_NAME } from "../itemConfig.js";
 import { getParserForText, parseAllItemsYaml } from "../strictItemParsers/strictParserDispatcher.js";
+import { NaturalItemParser } from "../naturalItemParser.js";
 import { ITEM_TEMPLATES } from "./itemTemplates.js";
 import * as Renderer from "./itemWindowRenderer.js";
 
 /** Valid YAML top-level item type keys */
 const YAML_ITEM_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER'];
+
+/**
+ * Detect whether text looks like a YAML strict template.
+ * Checks if any valid top-level type key (e.g., WEAPON:, LOOT:) appears at the start of a line,
+ * optionally inside a code fence.
+ * @param {string} text
+ * @returns {boolean}
+ */
+function isYamlFormat(text) {
+    const stripped = text.replace(/^```(?:yaml|markdown)?\s*\n?/i, '').replace(/\n?```\s*$/, '');
+    return YAML_ITEM_KEYS.some(key => new RegExp(`^${key}:`, 'm').test(stripped));
+}
 
 /**
  * Detect whether text contains multiple YAML items.
@@ -69,7 +82,8 @@ export function parse() {
     }
 
     try {
-        const parser = getParserForText(text);
+        // Route to YAML parser or Natural Language parser based on input format
+        const parser = isYamlFormat(text) ? getParserForText(text) : new NaturalItemParser();
         const result = parser.parse(text);
 
         this.currentParseResult = result;

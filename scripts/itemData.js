@@ -3,6 +3,7 @@
  * Represents parsed item data and transforms it to Foundry V13 format
  */
 
+import jsyaml from './vendor/js-yaml.mjs';
 import { ItemUtils } from "./itemUtils.js";
 import {
   MODULE_NAME,
@@ -165,6 +166,9 @@ export class ItemData {
     this.duration = null;
     this.target = null;
     this.area = null;
+
+    // Inline activities/effects (from Activities: section in YAML)
+    this.pendingActivities = []; // Array of { key, name, rawData }
 
     // Foundry data holder
     this.#dnd5e = {};
@@ -1404,11 +1408,29 @@ export class ItemData {
 
       if (createdItem) {
         ItemUtils.log("Item created successfully", createdItem);
-        ui.notifications.info(`Created item: ${this.name}`);
+
+        // Apply inline activities/effects if present
+        let activityResults = { addedActivities: 0, addedEffects: 0, issues: [] };
+        if (this.pendingActivities.length > 0) {
+          activityResults = await this.applyActivities(createdItem);
+          for (const issue of activityResults.issues) {
+            ItemUtils.warn(`Activity/Effect issue: ${issue}`);
+          }
+        }
+
+        // Build notification
+        const parts = [`Created item: ${this.name}`];
+        if (activityResults.addedActivities > 0 || activityResults.addedEffects > 0) {
+          const actParts = [];
+          if (activityResults.addedActivities > 0) actParts.push(`${activityResults.addedActivities} activit${activityResults.addedActivities === 1 ? 'y' : 'ies'}`);
+          if (activityResults.addedEffects > 0) actParts.push(`${activityResults.addedEffects} effect${activityResults.addedEffects === 1 ? '' : 's'}`);
+          parts.push(`with ${actParts.join(' and ')}`);
+        }
+        ui.notifications.info(parts.join(' '));
 
         return {
           item: createdItem,
-          issues: [],
+          issues: activityResults.issues,
         };
       } else {
         ItemUtils.error("Item creation returned null");
@@ -1424,6 +1446,134 @@ export class ItemData {
         issues: [error.message],
       };
     }
+  }
+
+  // ─── Activity/Effect Application ──────────────────────────────────────────
+
+  /** Default icons for each activity type */
+  static ACTIVITY_DEFAULT_ICONS = {
+    attack: "systems/dnd5e/icons/svg/activity/attack.svg",
+    save: "systems/dnd5e/icons/svg/activity/save.svg",
+    damage: "systems/dnd5e/icons/svg/activity/damage.svg",
+    heal: "systems/dnd5e/icons/svg/activity/heal.svg",
+    utility: "systems/dnd5e/icons/svg/activity/utility.svg",
+    check: "systems/dnd5e/icons/svg/activity/check.svg",
+    cast: "systems/dnd5e/icons/svg/activity/cast.svg",
+    enchanting: "systems/dnd5e/icons/svg/activity/enchant.svg",
+    summon: "systems/dnd5e/icons/svg/activity/summon.svg",
+    transform: "systems/dnd5e/icons/svg/activity/transform.svg",
+    forward: "systems/dnd5e/icons/svg/activity/forward.svg",
+  };
+
+  static EFFECT_DEFAULT_ICON = "icons/svg/combat.svg";
+
+  /**
+   * Check if an icon path resolves to an actual file.
+   * If not, replace with the fallback.
+   * @param {Object} data - Activity or effect data (mutated in place)
+   * @param {string} fallback - Path to use when the current icon is missing
+   */
+  async applyIconFallback(data, fallback) {
+    if (!data) return;
+    if (data.img) {
+      try {
+        const response = await fetch(data.img, { method: "HEAD" });
+        if (response.ok) return;
+      } catch { /* fall through */ }
+    }
+    data.img = fallback;
+  }
+
+  /**
+   * Apply inline activities and effects to a created Foundry item.
+   * Dynamically imports the activity parser from the 5e-activity-importer module.
+   *
+   * @param {Object} createdItem - The created Foundry Item document
+   * @returns {Promise<Object>} { addedActivities, addedEffects, issues }
+   */
+  async applyActivities(createdItem) {
+    const issues = [];
+    let addedActivities = 0;
+    let addedEffects = 0;
+
+    // Check if activity importer is active
+    if (!game.modules.get("5e-activity-importer")?.active) {
+      issues.push("5e-activity-importer module is not active. Skipping inline activities/effects.");
+      return { addedActivities, addedEffects, issues };
+    }
+
+    // Dynamically import the activity parser
+    let parseAllBlocksYaml;
+    try {
+      const mod = await import("/modules/5e-activity-importer/scripts/activityParsers/yamlParser.js");
+      parseAllBlocksYaml = mod.parseAllBlocksYaml;
+    } catch (err) {
+      issues.push(`Could not load activity parser: ${err.message}`);
+      return { addedActivities, addedEffects, issues };
+    }
+
+    for (const pending of this.pendingActivities) {
+      try {
+        // Serialize back to YAML for the activity parser
+        const yamlText = jsyaml.dump(pending.rawData);
+        const results = parseAllBlocksYaml(yamlText);
+
+        for (const result of results) {
+          if (!result.success) {
+            issues.push(`Failed to parse ${pending.key} "${pending.name}": ${result.errors.join(', ')}`);
+            continue;
+          }
+
+          if (result.resultType === "effect") {
+            const { effectData } = result;
+            await this.applyIconFallback(effectData, ItemData.EFFECT_DEFAULT_ICON);
+            ItemUtils.log("Adding inline effect to item:", createdItem.name, effectData);
+            await createdItem.createEmbeddedDocuments("ActiveEffect", [effectData]);
+            addedEffects++;
+          } else {
+            const { activityType, activityData } = result;
+            const fallbackIcon = ItemData.ACTIVITY_DEFAULT_ICONS[activityType] ?? ItemData.ACTIVITY_DEFAULT_ICONS.utility;
+            await this.applyIconFallback(activityData, fallbackIcon);
+
+            // Handle embedded effects (APPLIED_EFFECTS within the activity)
+            const embeddedEffects = (result.embeddedEffectResults || []).filter(er => er.success && er.effectData);
+            const failedEmbedded = (result.embeddedEffectResults || []).filter(er => !er.success);
+
+            if (embeddedEffects.length > 0) {
+              ItemUtils.log(`Creating ${embeddedEffects.length} embedded effect(s) for activity...`);
+              for (const er of embeddedEffects) {
+                await this.applyIconFallback(er.effectData, ItemData.EFFECT_DEFAULT_ICON);
+              }
+              const createdEffects = await createdItem.createEmbeddedDocuments(
+                "ActiveEffect",
+                embeddedEffects.map(er => er.effectData)
+              );
+              activityData.effects = createdEffects.map(e => ({ _id: e.id }));
+              ItemUtils.log("Linked effect IDs to activity:", activityData.effects);
+            }
+
+            if (failedEmbedded.length > 0) {
+              issues.push(`${failedEmbedded.length} embedded effect(s) in ${pending.key} "${pending.name}" failed to parse and were skipped.`);
+            }
+
+            ItemUtils.log("Adding inline activity to item:", createdItem.name, activityType, activityData);
+            await createdItem.createActivity(activityType, activityData, { renderSheet: false });
+            addedActivities++;
+          }
+        }
+      } catch (err) {
+        issues.push(`Error applying ${pending.key} "${pending.name}": ${err.message}`);
+      }
+    }
+
+    if (addedActivities > 0 || addedEffects > 0) {
+      const parts = [];
+      if (addedActivities > 0) parts.push(`${addedActivities} activit${addedActivities === 1 ? 'y' : 'ies'}`);
+      if (addedEffects > 0) parts.push(`${addedEffects} effect${addedEffects === 1 ? '' : 's'}`);
+      ItemUtils.log(`Applied ${parts.join(' and ')} to ${createdItem.name}`);
+    }
+
+    return { addedActivities, addedEffects, issues };
   }
 
   /**

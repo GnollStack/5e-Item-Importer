@@ -226,6 +226,9 @@ export class YamlItemParser {
                     break;
             }
 
+            // 5b. Extract inline activities and effects
+            itemData.pendingActivities = this.extractActivities(data);
+
             // 6. Return result
             const success = this.errors.length === 0;
             ItemUtils.log(`YamlItemParser: Parsing ${success ? 'succeeded' : 'completed with errors'}`);
@@ -1291,5 +1294,55 @@ export class YamlItemParser {
             isMagical: item.isMagical, weightlessContents: item.weightlessContents,
             currency: item.currency
         });
+    }
+
+    // ─── ACTIVITIES & EFFECTS ────────────────────────────────────────────────
+
+    /**
+     * Extract inline activity and effect blocks from the Activities array.
+     * Validates structure and extracts names for preview display.
+     * Full parsing is deferred to import time (async) via the activity importer.
+     *
+     * @param {Object} data - The type-level data object (e.g., WEAPON contents)
+     * @returns {Array} Array of { key, name, rawData } objects
+     */
+    extractActivities(data) {
+        const activities = data?.Activities;
+        if (!activities || !Array.isArray(activities) || activities.length === 0) return [];
+
+        const pending = [];
+
+        for (let i = 0; i < activities.length; i++) {
+            const entry = activities[i];
+            if (!entry || typeof entry !== 'object') {
+                this.addWarning(`Activities[${i}]: entry is not an object, skipping`);
+                continue;
+            }
+
+            const keys = Object.keys(entry);
+            if (keys.length !== 1) {
+                this.addWarning(`Activities[${i}]: expected exactly one key (ACTIVITY_* or EFFECT), found ${keys.length}`);
+                continue;
+            }
+
+            const key = keys[0];
+            if (!key.startsWith('ACTIVITY_') && key !== 'EFFECT') {
+                this.addWarning(`Activities[${i}]: unknown key "${key}", expected ACTIVITY_* or EFFECT`);
+                continue;
+            }
+
+            const entryData = entry[key];
+            const name = key === 'EFFECT'
+                ? asString(entryData?.DETAILS?.Name, '(unnamed effect)')
+                : asString(entryData?.ACTIVITY?.Name, '(unnamed activity)');
+
+            pending.push({ key, name, rawData: entry });
+        }
+
+        if (pending.length > 0) {
+            ItemUtils.log(`YamlItemParser: ${pending.length} inline activity/effect block(s) found`);
+        }
+
+        return pending;
     }
 }

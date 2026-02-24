@@ -54,6 +54,7 @@ The parser looks for specific capacity phrases:
 
 ## **EXAMPLE: WEAPON (Best Result)**
 
+### Input
 ```text
 Sun Blade
 Weapon (longsword), rare (requires attunement)
@@ -66,6 +67,7 @@ This item appears to be a longsword hilt. While grasping the hilt, you can use a
 
 ## **EXAMPLE: ARMOR (Best Result)**
 
+### Input
 ```text
 Dragon Scale Mail
 Armor (scale mail), very rare (requires attunement)
@@ -77,6 +79,7 @@ Dragon scale mail is made of the scales of one kind of dragon. While wearing thi
 
 ## **EXAMPLE: CONTAINER (Best Result)**
 
+### Input
 ```text
 Bag of Holding
 Wondrous item, uncommon
@@ -88,6 +91,7 @@ The bag currently contains 50 gp and 10 sp.
 
 ## **EXAMPLE: TOOL (Best Result)**
 
+### Input
 ```text
 Thieves' Tools
 Tool, common
@@ -99,7 +103,7 @@ This set of tools includes a small file, a set of lock picks, a small mirror mou
 ---
 
 ## **HOW IT WORKS (Internal Logic)**
-1.  **Extraction:** The parser scans the text using Regex to find Stats (Cost, Weight, Damage).
+1.  **Extraction:** The parser scans the text using Regex to find Stats (Name, Type, Cost, Weight, Damage, Properties, AC, etc.).
 2.  **Stripping:** It removes lines that look like Stats to isolate the **Description**.
-3.  **Conversion:** It converts the extracted data into a **Strict Template**.
-4.  **Final Pass:** It runs the Strict Template through the specific type parser (e.g., `WeaponStrictParser`) for final validation.
+3.  **Conversion:** It builds a YAML document matching the strict template format.
+4.  **Final Pass:** It runs the generated YAML through the `YamlItemParser` for validation and item creation.

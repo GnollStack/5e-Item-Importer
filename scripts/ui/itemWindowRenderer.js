@@ -450,6 +450,42 @@ export function renderItemCard(item, result) {
     </div>`;
     }
 
+    // Activities & Effects Section
+    const pendingActs = item.pendingActivities || [];
+    if (pendingActs.length > 0) {
+        const actCount = pendingActs.filter(a => a.key.startsWith('ACTIVITY_')).length;
+        const effCount = pendingActs.filter(a => a.key === 'EFFECT').length;
+
+        html += `<div class="ii-section">
+      <div class="ii-section-header">
+        <i class="fas fa-bolt ii-section-icon"></i>
+        <span class="ii-section-title">Activities & Effects (${pendingActs.length})</span>
+        <i class="fas fa-chevron-down ii-section-toggle"></i>
+      </div>
+      <div class="ii-section-content">`;
+
+        // Check if activity importer is active (safely handle non-Foundry environments)
+        const activityImporterActive = typeof game !== 'undefined' && game.modules?.get?.("5e-activity-importer")?.active;
+        if (!activityImporterActive) {
+            html += `<div class="ii-parse-warning" style="margin-bottom: 0.5em;"><i class="fas fa-exclamation-triangle"></i> 5e-activity-importer module is not active. These will be skipped on import.</div>`;
+        }
+
+        html += `<div class="ii-properties-grid">`;
+        for (const pa of pendingActs) {
+            const typeLabel = pa.key === 'EFFECT' ? 'Effect' : pa.key.replace('ACTIVITY_', '');
+            const icon = pa.key === 'EFFECT' ? 'fa-magic' : 'fa-bolt';
+            html += `<div class="ii-prop"><span class="ii-prop-label"><i class="fas ${icon}"></i> ${typeLabel}</span><span class="ii-prop-value">${pa.name}</span></div>`;
+        }
+        html += `</div>`;
+
+        const summary = [];
+        if (actCount > 0) summary.push(`${actCount} activit${actCount === 1 ? 'y' : 'ies'}`);
+        if (effCount > 0) summary.push(`${effCount} effect${effCount === 1 ? '' : 's'}`);
+        html += `<p style="margin: 0.5em 0 0; font-size: 0.85em; opacity: 0.8;">${summary.join(' and ')} will be added on import</p>`;
+
+        html += `</div></div>`;
+    }
+
     // Issues Section
     const allIssues = [...(result.errors || []), ...(result.warnings || [])];
     if (allIssues.length > 0) {

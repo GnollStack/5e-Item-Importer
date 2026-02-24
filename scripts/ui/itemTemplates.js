@@ -254,5 +254,120 @@ LOOT:
   DESCRIPTION:
     Description: |
       A pouch containing 50 gold coins.`
+    },
+    {
+        id: "weapon-with-activities",
+        label: "Weapon with Activities",
+        text: `WEAPON:
+  ITEM:
+    Name: "Flame Tongue Longsword"
+    Rarity: rare
+    Weapon Type: martialM
+    Base Weapon: longsword
+
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+
+  COST_AND_WEIGHT:
+    Price Value: 5000
+    Price Denomination: gp
+    Weight Value: 3
+    Weight Units: lb
+
+  PROPERTIES:
+    Magical: true
+    Versatile: true
+
+  ATTUNEMENT:
+    Attunement: required
+
+  RANGE:
+    Reach: 5
+
+  DAMAGE:
+    Damage Formula: "1d8"
+    Damage Type: slashing
+
+  VERSATILE_DAMAGE:
+    Versatile Formula: "1d10"
+    Versatile Damage Type: slashing
+
+  DESCRIPTION:
+    Description: |
+      You can use a bonus action to speak this magic sword's command word, causing flames to erupt from the blade. These flames shed bright light in a 40-foot radius and dim light for an additional 40 feet. While the sword is ablaze, it deals an extra 2d6 fire damage to any target it hits. The flames last until you use a bonus action to speak the command word again or until you drop or sheathe the sword.
+
+  Activities:
+    - ACTIVITY_ATTACK:
+        ACTIVITY:
+          Name: "Flame Tongue Strike"
+          Icon: "n/a"
+
+        CHAT_FLAVOR:
+          Chat Description: |
+            A fiery slash with the Flame Tongue.
+
+        ATTACK:
+          Attack Type: "melee"
+          Attack Class: "weapon"
+
+        ACTIVATION:
+          Activation Type: "action"
+          Activation Cost: 1
+          Condition: "n/a"
+          Override Activation: false
+
+        DURATION:
+          Duration Time: "inst"
+          Concentration: false
+
+        RANGE:
+          Range: true
+          Range Units: "ft"
+          Range Value: 5
+          Special Range: "n/a"
+
+        TARGETS:
+          Target Type: "creature"
+          Target Amount: 1
+          Special Targeting: "n/a"
+          Choose Targets: false
+          Template Type: "n/a"
+
+        ATTACK_DETAILS:
+          Attack Ability: "str"
+          To Hit Bonus: "n/a"
+          Flat To Hit: false
+          Critical Threshold: "n/a"
+
+        ATTACK_DAMAGE:
+          Include Base Damage: true
+          Extra Critical Damage: "n/a"
+          DAMAGE_PARTS:
+            - Custom Damage Formula: true
+              Damage Formula: "2d6"
+              Damage Type: "fire"
+              Damage Scaling: "No Scaling"
+
+    - EFFECT:
+        DETAILS:
+          Name: "Flame Tongue Active"
+          Icon Tint Color: "n/a"
+          Effect Suspended: false
+          Apply Effect to Actor: true
+          Status Conditions: "n/a"
+          Separate Status Conditions: "n/a"
+
+        EFFECT_DESCRIPTION:
+          Effect Description: |
+            The Flame Tongue sword is ablaze, shedding bright light in a 40-foot radius.
+
+        DURATION:
+          Effect Duration (Seconds): "n/a"
+          Effect Start Time: "n/a"
+          Effect Duration (combat) Rounds: "n/a"
+          Effect Duration (combat) Turns: "n/a"
+          Effect Start (combat) Rounds: "n/a"
+          Effect Start (combat) Turns: "n/a"`
     }
 ];

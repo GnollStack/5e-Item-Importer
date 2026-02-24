@@ -39,6 +39,7 @@ You can mix both methods. Supported top-level keys: `WEAPON`, `EQUIPMENT`, `CONS
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
 - Inapplicable fields: use the literal string `n/a`.
+- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
 
 ---
 
@@ -77,31 +78,13 @@ LOOT:
       [multiline text content]
 
   Activities:
-    # (Optional) Requires the 5e-activity-importer module to be active.
-    # Array format — add as many activities/effects as needed, any type, any number.
-    # Each entry uses the full activity importer YAML format.
+    # ── OMIT THIS SECTION ENTIRELY unless activities are explicitly requested ──
+    # Requires the 5e-activity-importer module to be active.
+    # If requested: array format — add any number of activities/effects.
     # Supported types: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
     #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
     #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD, EFFECT
-    # See the 5e-activity-importer templates for full field reference.
-    #
-    # Example — Heal activity for a potion:
-    # - ACTIVITY_HEAL:
-    #     ACTIVITY:
-    #       Name: "Drink Potion"
-    #       Icon: "n/a"
-    #     HEALING:
-    #       Formula: "2d4 + 2"
-    #       Type: "healing"
-    #     ACTIVATION:
-    #       Activation Type: "action"
-    #       Activation Cost: 1
-    #     CONSUMPTION:
-    #       - Consumption Type: "itemUses"
-    #         Consumption Amount: 1
-    #
-    # All activity types and EFFECT blocks are supported.
-    # See the Strict Weapon Template for a complete field reference of all types.
+    # See the 5e-activity-importer module templates for full field reference.
 ```
 
 ---
