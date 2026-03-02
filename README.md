@@ -14,7 +14,9 @@ The **5e Item Importer** allows you to import D&D 5e items directly from text in
 
 <img width="640" height="865" alt="image" src="https://github.com/user-attachments/assets/c9d0b2ea-930d-4600-849c-200e8b4f40e6" />
 
-## See it in Action on Youtube: [5e Importer V13.2.0](https://youtu.be/THrikJq0EY4)
+## See it in Action on Youtube: 
+- [5e Importer V13.2.0](https://youtu.be/THrikJq0EY4)
+- [5e Importer V13.7.2](https://youtu.be/dyhUoiNYxmA?si=DozAjOLjFGEmcAk-)
 
 ---
 
