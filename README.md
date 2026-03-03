@@ -4,6 +4,7 @@
 ![Latest Release](https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer)
 ![alt text](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/total)
 ![alt text](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/total)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20a%20Steak-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/gnollstack)
 
 **Stop manually typing items.**  
 The **5e Item Importer** allows you to import D&D 5e items directly from text into Foundry VTT. It supports two powerful workflows:
@@ -13,7 +14,9 @@ The **5e Item Importer** allows you to import D&D 5e items directly from text in
 
 <img width="640" height="865" alt="image" src="https://github.com/user-attachments/assets/c9d0b2ea-930d-4600-849c-200e8b4f40e6" />
 
-## See it in Action on Youtube: [5e Importer V13.2.0](https://youtu.be/THrikJq0EY4)
+## See it in Action on Youtube: 
+- [5e Importer V13.2.0](https://youtu.be/THrikJq0EY4)
+- [5e Importer V13.7.2](https://youtu.be/dyhUoiNYxmA?si=DozAjOLjFGEmcAk-)
 
 ---
 
@@ -2117,6 +2120,20 @@ TOOL:
 **Description is empty.**
 > If using Natural Language: Ensure there is a n/a line between the stat block and the description.
 > If using Strict Format: Ensure the description is between `Description:` and `===END DESCRIPTION===`.
+
+---
+
+## 🥩 Support Development
+
+This module represents **many hours** of developement.
+
+**If this module enhanced your immersion, consider treating me to a steak, much better than coffee!**
+
+<a href='https://ko-fi.com/gnollstack' target='_blank'>
+<img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=3' border='0' alt='Buy Me a Steak at ko-fi.com' />
+</a>
+
+> *"Thanks for the support! It helps me maintain support for the module and puts a nice steak on the table."*
 
 ---
 
