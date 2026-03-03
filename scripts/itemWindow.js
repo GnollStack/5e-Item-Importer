@@ -17,6 +17,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     this.currentParseResult = null;
     this.parseState = "empty";
     this.selectedBatchItems = new Set();
+    this.comparisonActive = false;
   }
 
   static DEFAULT_OPTIONS = {

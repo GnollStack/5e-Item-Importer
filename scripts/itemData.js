@@ -540,7 +540,7 @@ export class ItemData {
 
     // Magic bonus (applies to attack and damage)
     if (this.magicBonus !== null && this.magicBonus !== undefined) {
-      this.setProperty("system.bonus", this.magicBonus.toString());
+      this.setProperty("system.magicalBonus", this.magicBonus);
       ItemUtils.log("Magic bonus set to", this.magicBonus);
     }
 
@@ -552,14 +552,8 @@ export class ItemData {
 
     // Uses (for limited-use magical weapons)
     if (this.uses) {
-      this.setProperty("system.uses.spent", 0);
       this.setProperty("system.uses.max", this.uses.max.toString());
-
-      // Set current value as spent
-      if (this.uses.value !== undefined) {
-        const spent = this.uses.max - this.uses.value;
-        this.setProperty("system.uses.spent", spent);
-      }
+      this.setProperty("system.uses.spent", this.uses.value ?? 0);
 
       ItemUtils.log("Weapon uses set to", this.uses);
 
@@ -618,9 +612,11 @@ export class ItemData {
 
     // Is magical?
     if (this.isMagical) {
-      const props = this.getProperty("system.properties") ?? {};
-      props.mgc = true;
-      this.setProperty("system.properties", props);
+      const props = this.getProperty("system.properties") ?? new Set();
+      const finalSet = props instanceof Set ? props : new Set();
+      finalSet.add("mgc");
+      this.setProperty("system.properties", finalSet);
+      ItemUtils.log("Magical property added to Set");
     }
   }
 
@@ -707,14 +703,8 @@ export class ItemData {
 
     // Uses (for limited-use magical items)
     if (this.uses) {
-      this.setProperty("system.uses.spent", 0);
       this.setProperty("system.uses.max", this.uses.max.toString());
-
-      // Set current value as spent
-      if (this.uses.value !== undefined) {
-        const spent = this.uses.max - this.uses.value;
-        this.setProperty("system.uses.spent", spent);
-      }
+      this.setProperty("system.uses.spent", this.uses.value ?? 0);
 
       ItemUtils.log("Equipment uses set to", this.uses);
 
@@ -805,14 +795,8 @@ export class ItemData {
 
     // Uses (for consumables, use recharge if available, otherwise uses)
     if (this.uses) {
-      this.setProperty("system.uses.spent", 0);
       this.setProperty("system.uses.max", this.uses.max.toString());
-
-      // Set current value as spent
-      if (this.uses.value !== undefined) {
-        const spent = this.uses.max - this.uses.value;
-        this.setProperty("system.uses.spent", spent);
-      }
+      this.setProperty("system.uses.spent", this.uses.value ?? 0);
 
       ItemUtils.log("Consumable uses set to", this.uses);
 
@@ -1004,14 +988,8 @@ export class ItemData {
 
     // Limited uses
     if (this.uses) {
-      this.setProperty("system.uses.spent", 0);
       this.setProperty("system.uses.max", this.uses.max.toString());
-
-      // Set current value as spent
-      if (this.uses.value !== undefined) {
-        const spent = this.uses.max - this.uses.value;
-        this.setProperty("system.uses.spent", spent);
-      }
+      this.setProperty("system.uses.spent", this.uses.value ?? 0);
 
       ItemUtils.log("Tool uses set to", this.uses);
 
@@ -1041,9 +1019,11 @@ export class ItemData {
 
     // Is magical?
     if (this.isMagical) {
-      const props = this.getProperty("system.properties") ?? {};
-      props.mgc = true;
-      this.setProperty("system.properties", props);
+      const props = this.getProperty("system.properties") ?? new Set();
+      const finalSet = props instanceof Set ? props : new Set();
+      finalSet.add("mgc");
+      this.setProperty("system.properties", finalSet);
+      ItemUtils.log("Magical property added to Set");
     }
   }
 
@@ -1087,21 +1067,20 @@ export class ItemData {
 
     // Weightless contents property
     if (this.weightlessContents) {
-      const props = this.getProperty("system.properties") ?? [];
-      if (!props.includes("weightlessContents")) {
-        props.push("weightlessContents");
-      }
-      this.setProperty("system.properties", props);
+      const props = this.getProperty("system.properties") ?? new Set();
+      const finalSet = props instanceof Set ? props : new Set();
+      finalSet.add("weightlessContents");
+      this.setProperty("system.properties", finalSet);
       ItemUtils.log("Weightless contents enabled");
     }
 
     // Is magical?
     if (this.isMagical) {
-      const props = this.getProperty("system.properties") ?? [];
-      if (!props.includes("mgc")) {
-        props.push("mgc");
-      }
-      this.setProperty("system.properties", props);
+      const props = this.getProperty("system.properties") ?? new Set();
+      const finalSet = props instanceof Set ? props : new Set();
+      finalSet.add("mgc");
+      this.setProperty("system.properties", finalSet);
+      ItemUtils.log("Magical property added to Set");
     }
 
     // Currency contents (coins stored IN the container)
@@ -1131,28 +1110,11 @@ export class ItemData {
     }
 
     if (this.isMagical) {
-      const props = this.getProperty("system.properties") ?? [];
-      if (!props.includes("mgc")) {
-        props.push("mgc");
-      }
-      ItemUtils.log("After buildLootData, checking descriptions:");
-      ItemUtils.log(
-        "  description.value:",
-        this.getProperty("system.description.value")
-      );
-      ItemUtils.log(
-        "  description.chat:",
-        this.getProperty("system.description.chat")
-      );
-      ItemUtils.log(
-        "  unidentified.description:",
-        this.getProperty("system.unidentified.description")
-      );
-      ItemUtils.log(
-        "  unidentified.name:",
-        this.getProperty("system.unidentified.name")
-      );
-      this.setProperty("system.properties", props);
+      const props = this.getProperty("system.properties") ?? new Set();
+      const finalSet = props instanceof Set ? props : new Set();
+      finalSet.add("mgc");
+      this.setProperty("system.properties", finalSet);
+      ItemUtils.log("Magical property added to Set");
     }
 
     ItemUtils.log("After all type-specific builds, final check:");
@@ -1300,14 +1262,8 @@ export class ItemData {
 
     // Uses (for limited-use spells like innate spellcasting)
     if (this.uses && this.uses.max > 0) {
-      this.setProperty("system.uses.spent", 0);
       this.setProperty("system.uses.max", this.uses.max.toString());
-
-      // Set current value as spent
-      if (this.uses.value !== undefined) {
-        const spent = this.uses.max - this.uses.value;
-        this.setProperty("system.uses.spent", spent);
-      }
+      this.setProperty("system.uses.spent", this.uses.value ?? 0);
 
       ItemUtils.log("Spell uses set to", this.uses);
 

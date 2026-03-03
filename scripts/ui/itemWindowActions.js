@@ -9,9 +9,12 @@ import { getParserForText, parseAllItemsYaml } from "../strictItemParsers/strict
 import { NaturalItemParser } from "../naturalItemParser.js";
 import { ITEM_TEMPLATES } from "./itemTemplates.js";
 import * as Renderer from "./itemWindowRenderer.js";
+import { extractExpectedItemProps, extractActualItemProps } from "./itemComparisonExtractor.js";
+import { compareProperties } from "./itemComparisonEngine.js";
+import { ItemComparisonWindow } from "./itemComparisonWindow.js";
 
 /** Valid YAML top-level item type keys */
-const YAML_ITEM_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER'];
+const YAML_ITEM_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER', 'SPELL'];
 
 /**
  * Detect whether text looks like a YAML strict template.
@@ -240,12 +243,15 @@ export async function importItems() {
     const originalText = importBtn.innerHTML;
     importBtn.disabled = true;
 
+    const compareCheckbox = this.element.querySelector("#ii-compare-checkbox");
+    const wantsComparison = compareCheckbox?.checked;
+
     // Check if this is a batch import
     if (this.currentParseResult.successes) {
         // BATCH IMPORT - Only import selected items
         const allItems = this.currentParseResult.successes;
         const selectedIndices = Array.from(this.selectedBatchItems).sort((a, b) => a - b);
-        const itemsToCreate = selectedIndices.map(idx => allItems[idx].item);
+        const itemsToCreate = selectedIndices.map(idx => allItems[idx]);
 
         const total = itemsToCreate.length;
 
@@ -260,18 +266,31 @@ export async function importItems() {
 
         let successCount = 0;
         let failCount = 0;
+        const batchComparisons = [];
 
         for (let i = 0; i < total; i++) {
-            const item = itemsToCreate[i];
+            const parseResult = itemsToCreate[i];
             importBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Importing (${i + 1}/${total})...`;
 
             try {
-                // Pass importOptions here
-                await item.createItem5e(folderId, importOptions);
+                const result = await parseResult.item.createItem5e(folderId, importOptions);
                 successCount++;
+
+                // Collect comparison data for batch
+                if (wantsComparison && result?.item) {
+                    const expectedProps = extractExpectedItemProps(parseResult);
+                    const actualProps = extractActualItemProps(result.item);
+                    const diffReport = compareProperties(expectedProps, actualProps);
+                    batchComparisons.push({
+                        label: parseResult.item.name || `Item ${i + 1}`,
+                        diffReport,
+                        expectedProps,
+                        actualProps
+                    });
+                }
             } catch (err) {
                 failCount++;
-                ui.notifications.error(`Failed to import ${item.name}: ${err.message}`);
+                ui.notifications.error(`Failed to import ${parseResult.item.name}: ${err.message}`);
             }
         }
 
@@ -282,18 +301,53 @@ export async function importItems() {
             ui.notifications.warn(`Failed to import ${failCount} item${failCount !== 1 ? 's' : ''}.`);
         }
 
+        // Show batch comparison in a separate window if requested
+        if (wantsComparison && batchComparisons.length > 0) {
+            await ItemComparisonWindow.show(batchComparisons, true);
+        }
+
     } else if (this.currentParseResult.item) {
         // SINGLE ITEM IMPORT
         ItemUtils.log("Importing single item to folder:", folderId);
         importBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Importing...`;
 
-        // Pass importOptions here
-        await this.currentParseResult.item.createItem5e(folderId, importOptions);
+        const result = await this.currentParseResult.item.createItem5e(folderId, importOptions);
+
+        // Show comparison in a separate window if requested
+        if (wantsComparison && result?.item) {
+            await showItemComparison.call(this, this.currentParseResult, result.item);
+        }
     }
 
     // Reset the form
     importBtn.innerHTML = originalText;
     reset.call(this);
+}
+
+/**
+ * Show the comparison view after importing a single item.
+ * @this {ItemWindow}
+ * @param {Object} parseResult - The parse result with .item (ItemData)
+ * @param {Object} createdItem - The created Foundry Item document
+ */
+async function showItemComparison(parseResult, createdItem) {
+    try {
+        const expectedProps = extractExpectedItemProps(parseResult);
+        const actualProps = extractActualItemProps(createdItem);
+        const diffReport = compareProperties(expectedProps, actualProps);
+
+        const comparisons = [{
+            label: parseResult.item.name || "Imported Item",
+            diffReport,
+            expectedProps,
+            actualProps
+        }];
+
+        await ItemComparisonWindow.show(comparisons);
+        ItemUtils.log("Comparison window opened", comparisons);
+    } catch (err) {
+        ItemUtils.error("Error generating comparison", err);
+    }
 }
 
 /**

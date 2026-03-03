@@ -301,7 +301,7 @@ export function getSpecialProperties(item) {
     }
 
     if (item.uses && item.uses.max) {
-        props.push({ label: "Uses", value: `${item.uses.value || item.uses.max}/${item.uses.max}` });
+        props.push({ label: "Uses", value: `${item.uses.value ?? 0}/${item.uses.max}` });
     }
 
     if (item.recovery && item.recovery.length > 0) {

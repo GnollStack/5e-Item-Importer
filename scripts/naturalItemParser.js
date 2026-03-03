@@ -514,7 +514,7 @@ buildWeaponSections(extracted, data) {
 
     // Usage section
     data.USAGE = {
-      "Uses Current": extracted.uses?.current || 0,
+      "Uses Spent": extracted.uses?.current || 0,
       "Uses Max": extracted.uses?.max || 0,
     };
   }
@@ -626,7 +626,7 @@ buildWeaponSections(extracted, data) {
 
     // Usage section
     data.USAGE = {
-      "Uses Current": extracted.uses?.current || 0,
+      "Uses Spent": extracted.uses?.current || 0,
       "Uses Max": extracted.uses?.max || 0,
       "Destroy on Empty": false,
     };
@@ -686,7 +686,7 @@ buildWeaponSections(extracted, data) {
 
     // Usage section (default to no uses)
     data.USAGE = {
-      "Uses Current": 0,
+      "Uses Spent": 0,
       "Uses Max": 0,
     };
   }

@@ -92,15 +92,16 @@ CONSUMABLE:
     Ritual: "[true|false]"
 
   USAGE:
-    Uses Current: "[integer]"
-    Uses Max: "[integer]"
+    Uses Spent: "[integer|n/a]"
+    Uses Max: "[integer|n/a]"
     Destroy on Empty: "[true|false]"
 
-  RECOVERY:
-    # (Optional, repeatable. Only relevant if Uses Max > 0)
-    - Period: "[lr|sr|day|dawn|dusk|recharge]"
-      Type: "[recoverAll|loseAll|formula]"
-      Formula: "[text|n/a]"
+  RECOVERY: []
+    # Optional, repeatable. Use [] when there is no recovery.
+    # If Uses Max > 0, replace [] with one or more entries:
+    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
+    #   Type: "[recoverAll|loseAll|formula]"
+    #   Formula: "[text|n/a]"
 
   DESCRIPTION:
     Description: |
@@ -115,13 +116,22 @@ CONSUMABLE:
     Chat Description: |
       [multiline text content]
 
-  Activities:
-    # ── OMIT THIS SECTION ENTIRELY unless activities are explicitly requested ──
+  effects:
+    # ── OMIT THIS SECTION ENTIRELY unless passive effects are needed ──
+    # Passive Active Effects applied to the actor when item is consumed/equipped.
+    # These are NOT activities — they are always-on mechanical modifications.
     # Requires the 5e-activity-importer module to be active.
-    # If requested: array format — add any number of activities/effects.
-    # Supported types: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
+    # This MUST be a YAML array. Each entry follows the EFFECT template format.
+    # See the MIDI Effect Template for full field reference.
+
+  Activities:
+    # ── OMIT THIS SECTION ENTIRELY unless extra activities are needed ──
+    # Requires the 5e-activity-importer module to be active.
+    # IMPORTANT: This MUST be a YAML array (each entry starts with a dash "-").
+    # Each entry has exactly ONE top-level key: ACTIVITY_*
+    # Supported keys: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
     #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
-    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD, EFFECT
+    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD
     # See the 5e-activity-importer module templates for full field reference.
 ```
 

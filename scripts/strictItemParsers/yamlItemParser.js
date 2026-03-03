@@ -471,7 +471,7 @@ export class YamlItemParser {
      */
     extractAttunement(item, data, isMagical) {
         if (!isMagical) {
-            item.attunement = false;
+            item.attunement = '';
             item.attunementRequirement = null;
             return;
         }
@@ -484,7 +484,7 @@ export class YamlItemParser {
             this.addWarning(`Invalid Attunement value "${attunementVal}". Defaulting to "none".`);
         }
 
-        item.attunement = (attunementVal === 'required' || attunementVal === 'optional');
+        item.attunement = (attunementVal === 'required' || attunementVal === 'optional') ? attunementVal : '';
         item.attunementRequirement = asNullable(att['Attunement By']) ? asString(att['Attunement By']) : null;
 
         const magicBonusRaw = asNullable(att['Magic Bonus']);
@@ -537,21 +537,26 @@ export class YamlItemParser {
      */
     extractUsageAndRecovery(item, data, options = {}) {
         const usage = data?.USAGE || {};
-        const usesCurrent = asInt(usage['Uses Current'], 0);
         const usesMax = asInt(usage['Uses Max'], 0);
+        // Accept 'Uses Spent' (preferred) or 'Uses Current' (legacy fallback)
+        const usesSpentRaw = usage['Uses Spent'] ?? usage['Uses Current'];
+        // Blank/null defaults to 0 (item starts fresh/full)
+        const usesSpent = (usesSpentRaw === null || usesSpentRaw === undefined)
+            ? 0
+            : asInt(usesSpentRaw, 0);
 
         if (options.hasDestroyOnEmpty) {
             item.autoDestroy = asBool(usage['Destroy on Empty'], false);
         }
 
         if (usesMax > 0) {
-            item.uses = { value: usesCurrent, max: usesMax };
+            item.uses = { value: usesSpent, max: usesMax };
 
             // Validate
-            if (usesCurrent < 0) this.addWarning('Uses Current cannot be negative');
+            if (usesSpent < 0) this.addWarning('Uses Spent cannot be negative');
             if (usesMax < 0) this.addError('Uses Max cannot be negative');
-            if (usesCurrent > usesMax) {
-                this.addWarning(`Uses Current (${usesCurrent}) exceeds Uses Max (${usesMax})`);
+            if (usesSpent > usesMax) {
+                this.addWarning(`Uses Spent (${usesSpent}) exceeds Uses Max (${usesMax})`);
             }
 
             // Recovery
@@ -1197,7 +1202,7 @@ export class YamlItemParser {
         item.isMagical = asBool(props['Magical'], false);
 
         // Loot items do NOT have attunement
-        item.attunement = false;
+        item.attunement = '';
         item.attunementRequirement = null;
 
         ItemUtils.log('YamlItemParser: Loot fields extracted', {
@@ -1465,16 +1470,39 @@ export class YamlItemParser {
     // ─── ACTIVITIES & EFFECTS ────────────────────────────────────────────────
 
     /**
-     * Extract inline activity and effect blocks from the Activities array.
+     * Extract inline activity and effect blocks from Activities and effects sections.
      * Validates structure and extracts names for preview display.
      * Full parsing is deferred to import time (async) via the activity importer.
+     *
+     * Supports two separate sections:
+     *   - Activities: array of ACTIVITY_* entries (activities with optional APPLIED_EFFECTS)
+     *   - effects: array of standalone Active Effect definitions (passive item effects)
      *
      * @param {Object} data - The type-level data object (e.g., WEAPON contents)
      * @returns {Array} Array of { key, name, rawData } objects
      */
     extractActivities(data) {
-        const activities = data?.Activities;
-        if (!activities || !Array.isArray(activities) || activities.length === 0) return [];
+        let activities = data?.Activities;
+
+        // ── Normalize: dict → array ──
+        // LLMs sometimes produce { ACTIVITY_HEAL: {...} } instead of [{ ACTIVITY_HEAL: {...} }]
+        if (activities && typeof activities === 'object' && !Array.isArray(activities)) {
+            this.addWarning('Activities should be a YAML array (use "- ACTIVITY_*:" with dashes). Auto-converting from dict.');
+            activities = Object.entries(activities).map(([k, v]) => ({ [k]: v }));
+        }
+
+        if (!activities || !Array.isArray(activities)) activities = [];
+
+        // ── Standalone effects: section (passive item effects) ──
+        // Supports case variations: effects, Effects, EFFECTS
+        const standaloneEffects = data?.effects ?? data?.Effects ?? data?.EFFECTS;
+        if (standaloneEffects && Array.isArray(standaloneEffects)) {
+            for (const eff of standaloneEffects) {
+                activities.push({ EFFECT: eff });
+            }
+        }
+
+        if (activities.length === 0) return [];
 
         const pending = [];
 

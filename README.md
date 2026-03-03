@@ -286,7 +286,7 @@ WEAPON:
     Proficiency: "[automatic|notProficient|proficient]"
 
   USAGE:
-    Uses Current: "[integer]"
+    Uses Spent: "[integer]"
     Uses Max: "[integer]"
 
   RECOVERY:
@@ -573,7 +573,7 @@ CONSUMABLE:
     Ritual: "[true|false]"
 
   USAGE:
-    Uses Current: "[integer]"
+    Uses Spent: "[integer]"
     Uses Max: "[integer]"
     Destroy on Empty: "[true|false]"
 
@@ -1056,7 +1056,7 @@ EQUIPMENT:
     Proficiency: "[automatic|notProficient|proficient]"
 
   USAGE:
-    Uses Current: "[integer]"
+    Uses Spent: "[integer]"
     Uses Max: "[integer]"
 
   RECOVERY:
@@ -1558,7 +1558,7 @@ SPELL:
     Units: "[ft|mi|m|km]"
 
   USAGE:
-    Uses Current: "[integer]"
+    Uses Spent: "[integer]"
     Uses Max: "[integer]"
 
   RECOVERY:
@@ -1906,7 +1906,7 @@ TOOL:
     Ability: "[str|dex|con|int|wis|cha|n/a]"
 
   USAGE:
-    Uses Current: "[integer]"
+    Uses Spent: "[integer]"
     Uses Max: "[integer]"
 
   RECOVERY:

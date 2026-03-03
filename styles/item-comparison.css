@@ -1,0 +1,279 @@
+/* ==========================================
+ * 5e Item Importer - Comparison View Styles
+ * ========================================== */
+
+/* Comparison Window Body */
+.ii-comparison-window-body {
+    padding: 12px;
+    overflow-y: auto;
+    height: 100%;
+    /* Provide CSS variables for the comparison window context */
+    --ii-bg: #f8f9fa;
+    --ii-border: #dee2e6;
+    --ii-text: #212529;
+    --ii-primary: #3f88c5;
+    --ii-success: #2d8f51;
+    --ii-warning: #f6ae2d;
+    --ii-error: #e63946;
+}
+
+/* Comparison View Container */
+.ii-comparison-view {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Summary Banner */
+.ii-comparison-summary {
+    display: flex;
+    gap: 14px;
+    padding: 10px 14px;
+    background: var(--ii-bg);
+    border: 1px solid var(--ii-border);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    flex-wrap: wrap;
+}
+
+.ii-comparison-stat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ii-comparison-stat.match {
+    color: var(--ii-success);
+}
+
+.ii-comparison-stat.mismatch {
+    color: var(--ii-error);
+}
+
+.ii-comparison-stat.missing {
+    color: var(--ii-warning);
+}
+
+.ii-comparison-stat.extra {
+    color: var(--ii-primary);
+}
+
+.ii-comparison-stat.all-good {
+    color: var(--ii-success);
+    font-size: 14px;
+}
+
+/* Block label for multi-comparison */
+.ii-comparison-block-label {
+    padding: 6px 10px;
+    background: var(--ii-bg);
+    border: 1px solid var(--ii-border);
+    border-radius: 4px;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+/* Issue List */
+.ii-comparison-issues {
+    border: 1px solid var(--ii-error);
+    border-radius: 6px;
+    padding: 10px;
+    background: rgba(230, 57, 70, 0.05);
+}
+
+.ii-comparison-issues-header {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--ii-error);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ii-comparison-issue {
+    display: grid;
+    grid-template-columns: minmax(100px, auto) 1fr auto 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ii-comparison-issue:last-child {
+    border-bottom: none;
+}
+
+.ii-comparison-issue-label {
+    font-weight: 600;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.ii-comparison-issue-expected {
+    color: var(--ii-error);
+    text-decoration: line-through;
+    word-break: break-word;
+}
+
+.ii-comparison-issue-arrow {
+    color: var(--ii-border);
+    font-size: 10px;
+}
+
+.ii-comparison-issue-actual {
+    color: var(--ii-success);
+    font-weight: 500;
+    word-break: break-word;
+}
+
+.ii-comparison-missing-value {
+    font-style: italic;
+    opacity: 0.6;
+    text-decoration: none !important;
+}
+
+/* Side-by-side columns */
+.ii-comparison-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.ii-comparison-col h4 {
+    font-size: 12px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ii-comparison-col.expected h4 {
+    background: rgba(63, 136, 197, 0.12);
+    color: var(--ii-primary);
+}
+
+.ii-comparison-col.actual h4 {
+    background: rgba(45, 143, 81, 0.12);
+    color: var(--ii-success);
+}
+
+/* Comparison Card */
+.ii-comparison-card {
+    border: 1px solid var(--ii-border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--ii-bg);
+}
+
+/* Diff row highlighting */
+.ii-comparison-card .ii-section-row.mismatch {
+    background: rgba(230, 57, 70, 0.10);
+    border-left: 3px solid var(--ii-error);
+}
+
+.ii-comparison-card .ii-section-row.missing {
+    background: rgba(246, 174, 45, 0.10);
+    border-left: 3px solid var(--ii-warning);
+}
+
+.ii-comparison-card .ii-section-row.extra {
+    background: rgba(63, 136, 197, 0.10);
+    border-left: 3px solid var(--ii-primary);
+}
+
+/* Actions */
+.ii-comparison-actions {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0;
+}
+
+.ii-comparison-actions .ii-btn-reset {
+    padding: 6px 20px;
+    border-radius: 4px;
+    border: 1px solid var(--ii-border);
+    background: var(--ii-bg);
+    color: var(--ii-text);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ii-comparison-actions .ii-btn-reset:hover {
+    border-color: var(--ii-primary);
+    color: var(--ii-primary);
+}
+
+/* Batch comparison styles */
+.ii-comparison-batch-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ii-comparison-batch-item {
+    border: 1px solid var(--ii-border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    background: var(--ii-bg);
+}
+
+.ii-comparison-batch-item.has-issues {
+    border-color: var(--ii-error);
+}
+
+.ii-comparison-batch-item.all-match {
+    border-color: var(--ii-success);
+}
+
+.ii-comparison-batch-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.ii-comparison-batch-item.has-issues .ii-comparison-batch-item-header i {
+    color: var(--ii-error);
+}
+
+.ii-comparison-batch-item.all-match .ii-comparison-batch-item-header i {
+    color: var(--ii-success);
+}
+
+.ii-comparison-batch-item-name {
+    font-weight: 600;
+    flex: 1;
+}
+
+.ii-comparison-batch-item-stats {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.ii-comparison-batch-item-issues {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--ii-border);
+    font-size: 12px;
+}
+
+.ii-comparison-issue-compact {
+    padding: 2px 0;
+}
+
+.ii-comparison-issue-compact span {
+    font-weight: 600;
+}
+
+.ii-comparison-issue-compact del {
+    color: var(--ii-error);
+}
