@@ -2,8 +2,8 @@
 
 ![Foundry v13](https://img.shields.io/badge/Foundry-v13-informational)
 ![Latest Release](https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer)
-![alt text](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/total)
-![alt text](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/total)
+![Total Downloads](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/total)
+![Latest Downloads](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/total)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20a%20Steak-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/gnollstack)
 
 **Stop manually typing items.**  
