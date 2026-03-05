@@ -72,7 +72,7 @@ TOOL:
     Attunement By: "[text|n/a]"
 
   ABILITY_CHECK:
-    Proficiency: "[notProficient|proficient|expert]"
+    Proficient: "[Automatic|0|0.5|1|2]"
     Ability: "[str|dex|con|int|wis|cha|n/a]"
 
   USAGE:
@@ -160,6 +160,15 @@ TOOL:
 | `navg` | Navigator's Tools |
 | `pois` | Poisoner's Kit |
 | `thief` | Thieves' Tools |
+
+### **Proficiency**
+| Value | Meaning |
+|-------|---------|
+| `Automatic` | Game auto-detects proficiency from the character (default) |
+| `0` | Not proficient |
+| `0.5` | Half proficiency |
+| `1` | Proficient |
+| `2` | Expertise (double proficiency) |
 
 ### **Recovery Periods**
 | Period | Description |

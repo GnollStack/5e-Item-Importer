@@ -92,7 +92,7 @@ EQUIPMENT:
     Speed Conditions: "[text|n/a]"
 
   PROFICIENCY:
-    Proficiency: "[automatic|notProficient|proficient]"
+    Proficient: "[Automatic|0|1]"
 
   USAGE:
     Uses Spent: "[integer|n/a]"
@@ -164,6 +164,13 @@ EQUIPMENT:
 | Medium | 12-15 | Max +2 Dex |
 | Heavy | 14-18 | No Dex |
 | Shield | +2 | N/A (added to base) |
+
+### **Proficiency**
+| Value | Meaning |
+|-------|---------|
+| `Automatic` | Game auto-detects proficiency from the character (default) |
+| `0` | Not proficient |
+| `1` | Proficient |
 
 ### **Recovery Periods**
 | Period | Description |

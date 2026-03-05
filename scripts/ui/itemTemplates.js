@@ -127,7 +127,7 @@ export const ITEM_TEMPLATES = [
     Magical: false
 
   ABILITY_CHECK:
-    Proficiency: proficient
+    Proficient: Automatic
     Ability: dex
 
   DESCRIPTION:

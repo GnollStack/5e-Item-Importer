@@ -123,7 +123,7 @@ WEAPON:
     Mastery: "[cleave|graze|nick|push|sap|slow|topple|vex|n/a]"
 
   PROFICIENCY:
-    Proficiency: "[automatic|notProficient|proficient]"
+    Proficient: "[Automatic|0|1]"
 
   USAGE:
     Uses Spent: "[integer|n/a]"
@@ -228,6 +228,13 @@ WEAPON:
 | `slow` | Reduce target's speed by 10 ft until your next turn |
 | `topple` | Target must make Con save or fall prone |
 | `vex` | Advantage on next attack against same target |
+
+### **Proficiency**
+| Value | Meaning |
+|-------|---------|
+| `Automatic` | Game auto-detects proficiency from the character (default) |
+| `0` | Not proficient |
+| `1` | Proficient |
 
 ### **Recovery Periods**
 | Period | Description |

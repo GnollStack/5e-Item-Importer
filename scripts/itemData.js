@@ -63,7 +63,7 @@ export class ItemData {
     this.attackBonus = null;
     this.mastery = null; // 2024 weapon mastery
     this.reloadAmount = null; // Reload property value
-    this.proficient = 1; // Proficiency level (0=not proficient, 1=proficient)
+    this.proficient = null; // Proficiency level (null=automatic, 0=not proficient, 1=proficient)
 
     // Siege Weapon Properties
     this.siegeArmorClass = null;
@@ -1014,8 +1014,11 @@ export class ItemData {
       }
     }
 
-    // Default proficiency
-    this.setProperty("system.proficient", 1);
+    // Proficiency
+    if (this.proficient !== null && this.proficient !== undefined) {
+      this.setProperty("system.proficient", this.proficient);
+      ItemUtils.log("Proficiency set to", this.proficient);
+    }
 
     // Is magical?
     if (this.isMagical) {

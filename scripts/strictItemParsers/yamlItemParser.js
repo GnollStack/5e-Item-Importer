@@ -795,9 +795,9 @@ export class YamlItemParser {
 
         // Proficiency
         const profSection = data?.PROFICIENCY || {};
-        const profRaw = asString(profSection['Proficiency'], 'proficient').toLowerCase();
-        const weaponProfMap = { 'automatic': 0, 'notproficient': 0, 'proficient': 1 };
-        item.proficient = weaponProfMap[profRaw] !== undefined ? weaponProfMap[profRaw] : 1;
+        const profRaw = String(asString(profSection['Proficient'], 'Automatic')).trim().toLowerCase();
+        const weaponProfMap = { 'automatic': null, '0': 0, '1': 1 };
+        item.proficient = weaponProfMap[profRaw] !== undefined ? weaponProfMap[profRaw] : null;
 
         // Siege Properties (conditional)
         if (item.weaponType === 'siege') {
@@ -957,9 +957,9 @@ export class YamlItemParser {
 
         // Proficiency
         const profSection = data?.PROFICIENCY || {};
-        const profRaw = asString(profSection['Proficiency'], 'proficient').toLowerCase();
-        const equipProfMap = { 'automatic': -1, 'notproficient': 0, 'proficient': 1 };
-        item.proficient = equipProfMap[profRaw] !== undefined ? equipProfMap[profRaw] : 1;
+        const profRaw = String(asString(profSection['Proficient'], 'Automatic')).trim().toLowerCase();
+        const equipProfMap = { 'automatic': null, '0': 0, '1': 1 };
+        item.proficient = equipProfMap[profRaw] !== undefined ? equipProfMap[profRaw] : null;
 
         // Usage and Recovery
         this.extractUsageAndRecovery(item, data);
@@ -1140,13 +1140,13 @@ export class YamlItemParser {
 
         // Ability Check section
         const abilityCheck = data?.ABILITY_CHECK || {};
-        const profRaw = asString(abilityCheck['Proficiency'], 'proficient').toLowerCase();
-        const toolProfMap = { 'notproficient': 0, 'proficient': 1, 'expert': 2 };
+        const profRaw = String(asString(abilityCheck['Proficient'], 'Automatic')).trim().toLowerCase();
+        const toolProfMap = { 'automatic': null, '0': 0, '0.5': 0.5, '1': 1, '2': 2 };
         if (toolProfMap.hasOwnProperty(profRaw)) {
             item.proficient = toolProfMap[profRaw];
         } else {
-            this.addWarning(`Invalid Proficiency "${profRaw}". Defaulting to 0 (not proficient).`);
-            item.proficient = 0;
+            this.addWarning(`Invalid Proficient "${profRaw}". Defaulting to Automatic.`);
+            item.proficient = null;
         }
 
         const abilityRaw = asNullable(abilityCheck['Ability']);

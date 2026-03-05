@@ -454,7 +454,7 @@ buildWeaponSections(extracted, data) {
 
     // Proficiency section (separate from MASTERY in YAML parser)
     data.PROFICIENCY = {
-      Proficiency: "proficient",
+      Proficient: "Automatic",
     };
 
     // Attunement section (only if magical and attunement required)
@@ -503,12 +503,12 @@ buildWeaponSections(extracted, data) {
 
     // Ability check section
     const proficiencyMap = {
-      expert: "expert",
-      proficient: "proficient",
-      notproficient: "notProficient",
+      expert: "2",
+      proficient: "1",
+      notproficient: "0",
     };
     data.ABILITY_CHECK = {
-      Proficiency: proficiencyMap[extracted.toolProficiency] || "proficient",
+      Proficient: proficiencyMap[extracted.toolProficiency] || "Automatic",
       Ability: extracted.toolAbility || "n/a",
     };
 
@@ -681,7 +681,7 @@ buildWeaponSections(extracted, data) {
 
     // Proficiency section
     data.PROFICIENCY = {
-      Proficiency: "proficient",
+      Proficient: "Automatic",
     };
 
     // Usage section (default to no uses)

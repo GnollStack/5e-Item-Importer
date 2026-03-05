@@ -286,7 +286,7 @@ WEAPON:
     Mastery: "[cleave|graze|nick|push|sap|slow|topple|vex|n/a]"
 
   PROFICIENCY:
-    Proficiency: "[automatic|notProficient|proficient]"
+    Proficient: "[Automatic|0|1]"
 
   USAGE:
     Uses Spent: "[integer]"
@@ -1056,7 +1056,7 @@ EQUIPMENT:
     Speed Conditions: "[text|n/a]"
 
   PROFICIENCY:
-    Proficiency: "[automatic|notProficient|proficient]"
+    Proficient: "[Automatic|0|1]"
 
   USAGE:
     Uses Spent: "[integer]"
@@ -1905,7 +1905,7 @@ TOOL:
     Attunement By: "[text|n/a]"
 
   ABILITY_CHECK:
-    Proficiency: "[notProficient|proficient|expert]"
+    Proficient: "[Automatic|0|0.5|1|2]"
     Ability: "[str|dex|con|int|wis|cha|n/a]"
 
   USAGE:
