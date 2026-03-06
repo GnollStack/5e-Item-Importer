@@ -49,6 +49,42 @@ const SPELL_SCHOOLS = {
     nec: "Necromancy", trs: "Transmutation"
 };
 
+/**
+ * Format a recovery entry for display.
+ * @param {{period: string, type?: string, formula?: string}} r
+ * @returns {string}
+ */
+function formatRecovery(r) {
+    let text = r.period || "unknown";
+    if (r.type && r.formula) {
+        text += ` (${r.type}: ${r.formula})`;
+    } else if (r.type) {
+        text += ` (${r.type})`;
+    }
+    return text;
+}
+
+/**
+ * Strip HTML tags from a string for clean comparison display.
+ * Normalizes unicode whitespace, special dashes, and collapses all whitespace.
+ * @param {*} val
+ * @returns {string}
+ */
+function stripHtmlForComparison(val) {
+    if (val === null || val === undefined) return "";
+    return String(val)
+        .replace(/<[^>]+>/g, "")          // Strip HTML tags
+        .replace(/&amp;/g, "&")           // Decode common HTML entities
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\u00A0/g, " ")          // Non-breaking space → space
+        .replace(/[\u200B-\u200D\uFEFF]/g, "") // Zero-width characters
+        .replace(/\s+/g, " ")             // Collapse all whitespace
+        .trim();
+}
+
 // ==========================================
 // Extract from ItemData (parse result) — Expected side
 // ==========================================
@@ -73,10 +109,10 @@ export function extractExpectedItemProps(parseResult) {
     }
 
     // Quick Stats
-    if (item.cost > 0) {
-        const costDisplay = item.costDisplay || item.cost;
+    const costValue = item.costDisplay ?? item.cost;
+    if (costValue > 0) {
         const denom = item.costDenomination || "gp";
-        props.push({ section: "Quick Stats", label: "Cost", value: `${costDisplay} ${denom}` });
+        props.push({ section: "Quick Stats", label: "Cost", value: `${costValue} ${denom}` });
     }
     if (item.weight > 0) {
         const unitDisplay = item.weightUnits === "lb" ? "lb." : item.weightUnits;
@@ -85,6 +121,12 @@ export function extractExpectedItemProps(parseResult) {
     if (item.quantity > 1) {
         props.push({ section: "Quick Stats", label: "Quantity", value: String(item.quantity) });
     }
+
+    // Inventory
+    props.push({ section: "Inventory", label: "Identified", value: item.identified === false ? "No" : "Yes" });
+    const profLabel = item.proficient === null || item.proficient === undefined ? "Automatic"
+        : item.proficient === 0 ? "Not Proficient" : "Proficient";
+    props.push({ section: "Inventory", label: "Proficient", value: profLabel });
 
     // Basic Properties (type-specific)
     if (item.type === "weapon" && item.weaponType) {
@@ -123,12 +165,12 @@ export function extractExpectedItemProps(parseResult) {
     if (item.versatileDamage?.formula) {
         props.push({ section: "Combat Statistics", label: "Versatile", value: item.versatileDamage.formula });
     }
-    if (item.range) {
+    if (item.range && (item.range.value || item.range.long)) {
         let rangeText = "";
         if (item.range.value) rangeText = `${item.range.value}`;
         if (item.range.long) rangeText += `/${item.range.long}`;
         if (item.range.units) rangeText += ` ${item.range.units}`;
-        if (rangeText) props.push({ section: "Combat Statistics", label: "Range", value: rangeText.trim() });
+        if (rangeText.trim()) props.push({ section: "Combat Statistics", label: "Range", value: rangeText.trim() });
     }
     if (item.reach) {
         props.push({ section: "Combat Statistics", label: "Reach", value: `${item.reach} ft.` });
@@ -157,14 +199,16 @@ export function extractExpectedItemProps(parseResult) {
         props.push({ section: "Special Properties", label: "Properties", value: [...item.properties].sort().join(", ") });
     }
     if (item.uses?.max) {
-        props.push({ section: "Special Properties", label: "Uses", value: `${item.uses.value ?? 0}/${item.uses.max}` });
+        const spent = item.uses.value ?? 0;
+        props.push({ section: "Special Properties", label: "Uses", value: `${item.uses.max - spent}/${item.uses.max}` });
     }
     if (item.recovery?.length > 0) {
-        const recoveryText = item.recovery.map(r => r.period).join(", ");
+        const recoveryText = item.recovery.map(r => formatRecovery(r)).join(", ");
         props.push({ section: "Special Properties", label: "Recovery", value: recoveryText });
     }
-    if (item.attunementRequirement) {
-        props.push({ section: "Special Properties", label: "Attunement Req", value: item.attunementRequirement });
+    if (item.attunement && item.attunement !== "none" && item.attunement !== "") {
+        const attValue = item.attunement.charAt(0).toUpperCase() + item.attunement.slice(1);
+        props.push({ section: "Special Properties", label: "Attunement Req", value: attValue });
     }
     if (item.mastery) {
         props.push({ section: "Special Properties", label: "Mastery", value: item.mastery });
@@ -181,6 +225,20 @@ export function extractExpectedItemProps(parseResult) {
         props.push({ section: "Special Properties", label: "Volume Capacity", value: `${item.volumeCapacity} ${unit}` });
     }
     if (item.weightlessContents) props.push({ section: "Special Properties", label: "Weightless Contents", value: "Yes" });
+
+    // Descriptions
+    if (item.description) {
+        props.push({ section: "Description", label: "Description", value: stripHtmlForComparison(item.description) });
+    }
+    if (item.chatDescription) {
+        props.push({ section: "Description", label: "Chat Description", value: stripHtmlForComparison(item.chatDescription) });
+    }
+    if (item.unidentifiedName) {
+        props.push({ section: "Description", label: "Unidentified Name", value: item.unidentifiedName });
+    }
+    if (item.unidentifiedDescription) {
+        props.push({ section: "Description", label: "Unidentified Description", value: stripHtmlForComparison(item.unidentifiedDescription) });
+    }
 
     return props;
 }
@@ -257,6 +315,12 @@ export function extractActualItemProps(foundryItem) {
         props.push({ section: "Quick Stats", label: "Quantity", value: String(sys.quantity) });
     }
 
+    // Inventory
+    props.push({ section: "Inventory", label: "Identified", value: sys.identified === false ? "No" : "Yes" });
+    const profLabel = sys.proficient === null || sys.proficient === undefined ? "Automatic"
+        : sys.proficient === 0 ? "Not Proficient" : "Proficient";
+    props.push({ section: "Inventory", label: "Proficient", value: profLabel });
+
     // Basic Properties (type-specific)
     const itemType = foundryItem.type;
     if (itemType === "weapon" && sys.type?.value) {
@@ -289,6 +353,20 @@ export function extractActualItemProps(foundryItem) {
 
     // Special Properties
     extractActualSpecialProps(foundryItem, props);
+
+    // Descriptions
+    if (sys.description?.value) {
+        props.push({ section: "Description", label: "Description", value: stripHtmlForComparison(sys.description.value) });
+    }
+    if (sys.description?.chat) {
+        props.push({ section: "Description", label: "Chat Description", value: stripHtmlForComparison(sys.description.chat) });
+    }
+    if (sys.unidentified?.name) {
+        props.push({ section: "Description", label: "Unidentified Name", value: sys.unidentified.name });
+    }
+    if (sys.unidentified?.description) {
+        props.push({ section: "Description", label: "Unidentified Description", value: stripHtmlForComparison(sys.unidentified.description) });
+    }
 
     return props;
 }
@@ -330,14 +408,16 @@ function extractActualCombatProps(foundryItem, props) {
         if (formula) props.push({ section: "Combat Statistics", label: "Versatile", value: formula });
     }
 
-    // Range
-    if (sys.range) {
+    // Range and Reach (separate rows, matching expected side)
+    if (sys.range && (sys.range.value || sys.range.long)) {
         let rangeText = "";
         if (sys.range.value) rangeText = `${sys.range.value}`;
         if (sys.range.long) rangeText += `/${sys.range.long}`;
         if (sys.range.units) rangeText += ` ${sys.range.units}`;
-        if (sys.range.reach) rangeText = `${sys.range.reach} ft.`; // Reach overrides for melee
         if (rangeText.trim()) props.push({ section: "Combat Statistics", label: "Range", value: rangeText.trim() });
+    }
+    if (sys.range?.reach) {
+        props.push({ section: "Combat Statistics", label: "Reach", value: `${sys.range.reach} ft.` });
     }
 
     // Magic bonus
@@ -417,13 +497,14 @@ function extractActualSpecialProps(foundryItem, props) {
 
     // Recovery
     if (sys.uses?.recovery?.length > 0) {
-        const recoveryText = sys.uses.recovery.map(r => r.period).join(", ");
+        const recoveryText = sys.uses.recovery.map(r => formatRecovery(r)).join(", ");
         props.push({ section: "Special Properties", label: "Recovery", value: recoveryText });
     }
 
     // Attunement requirement
-    if (sys.attunement === "required") {
-        props.push({ section: "Special Properties", label: "Attunement Req", value: "Required" });
+    if (sys.attunement && sys.attunement !== "none" && sys.attunement !== "") {
+        const attValue = sys.attunement.charAt(0).toUpperCase() + sys.attunement.slice(1);
+        props.push({ section: "Special Properties", label: "Attunement Req", value: attValue });
     }
 
     // Mastery

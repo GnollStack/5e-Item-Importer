@@ -76,6 +76,9 @@ TOOL:
     Ability: "[str|dex|con|int|wis|cha|n/a]"
 
   USAGE:
+    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
+    # Uses Max = total number of charges the item can hold.
+    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
     Uses Spent: "[integer|n/a]"
     Uses Max: "[integer|n/a]"
 

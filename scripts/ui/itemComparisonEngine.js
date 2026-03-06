@@ -10,8 +10,17 @@
  */
 function stripHtml(val) {
     if (val === null || val === undefined) return "";
-    const str = String(val);
-    return str.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+    return String(val)
+        .replace(/<[^>]+>/g, "")          // Strip HTML tags
+        .replace(/&amp;/g, "&")           // Decode common HTML entities
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\u00A0/g, " ")          // Non-breaking space → space
+        .replace(/[\u200B-\u200D\uFEFF]/g, "") // Zero-width characters
+        .replace(/\s+/g, " ")             // Collapse all whitespace
+        .trim();
 }
 
 /**

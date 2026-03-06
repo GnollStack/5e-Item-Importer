@@ -187,6 +187,11 @@
     border-left: 3px solid var(--ii-primary);
 }
 
+/* Description section - constrain long text */
+.ii-comparison-card .ii-section-row .ii-row-value {
+    word-break: break-word;
+}
+
 /* Actions */
 .ii-comparison-actions {
     display: flex;

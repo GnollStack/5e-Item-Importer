@@ -289,6 +289,7 @@ WEAPON:
     Proficient: "[Automatic|0|1]"
 
   USAGE:
+    # Uses Spent = number of charges ALREADY CONSUMED (0 = all charges available)
     Uses Spent: "[integer]"
     Uses Max: "[integer]"
 
@@ -576,6 +577,7 @@ CONSUMABLE:
     Ritual: "[true|false]"
 
   USAGE:
+    # Uses Spent = number of charges ALREADY CONSUMED (0 = all charges available)
     Uses Spent: "[integer]"
     Uses Max: "[integer]"
     Destroy on Empty: "[true|false]"
@@ -1059,6 +1061,7 @@ EQUIPMENT:
     Proficient: "[Automatic|0|1]"
 
   USAGE:
+    # Uses Spent = number of charges ALREADY CONSUMED (0 = all charges available)
     Uses Spent: "[integer]"
     Uses Max: "[integer]"
 
@@ -1561,6 +1564,7 @@ SPELL:
     Units: "[ft|mi|m|km]"
 
   USAGE:
+    # Uses Spent = number of charges ALREADY CONSUMED (0 = all charges available)
     Uses Spent: "[integer]"
     Uses Max: "[integer]"
 
@@ -1909,6 +1913,7 @@ TOOL:
     Ability: "[str|dex|con|int|wis|cha|n/a]"
 
   USAGE:
+    # Uses Spent = number of charges ALREADY CONSUMED (0 = all charges available)
     Uses Spent: "[integer]"
     Uses Max: "[integer]"
 
