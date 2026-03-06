@@ -2149,7 +2149,7 @@ This module is licensed under the **GnollStack Proprietary EULA**.
 It is **Free for Personal Use**, meaning you can use it in your home games, stream it, or modify it for your own table without restriction.
 
 However, **Commercial Redistribution is Strictly Prohibited.**
-You may **NOT** sell this module, bundle it within paid content (such as Patreon maps or adventures), or host it as a commercial service without prior written consent.
+You may **NOTE** sell this module, bundle it within paid content (such as Patreon maps or adventures), or host it as a commercial service without prior written consent.
 
 ### Commercial Licensing
 I am open to partnerships! If you are a map maker, adventure writer, or developer who wishes to use this module commercially, please contact me. I offer commercial licenses for:
