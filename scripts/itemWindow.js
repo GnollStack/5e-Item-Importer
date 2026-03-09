@@ -59,6 +59,16 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
+  /** Clean up timers and singleton reference on close */
+  async close(options) {
+    if (this.parseTimeout) {
+      clearTimeout(this.parseTimeout);
+      this.parseTimeout = null;
+    }
+    ItemWindow.instance = null;
+    return super.close(options);
+  }
+
   /** Prepare context data for rendering */
   _prepareContext(options) {
     return {

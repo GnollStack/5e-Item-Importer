@@ -3,6 +3,11 @@
  * Handles all HTML generation for the item window
  */
 
+import { ItemUtils } from "../itemUtils.js";
+
+/** Shorthand for HTML escaping */
+const esc = (str) => ItemUtils.escapeHtml(str);
+
 /**
  * Type icons mapping
  */
@@ -384,9 +389,9 @@ export function renderItemCard(item, result) {
 
     // Card Header
     html += `<div class="ii-card-header">`;
-    html += `<div class="ii-card-icon"><img src="${itemIcon}" alt="${item.name}"></div>`;
+    html += `<div class="ii-card-icon"><img src="${esc(itemIcon)}" alt="${esc(item.name)}"></div>`;
     html += `<div class="ii-card-title-block">`;
-    html += `<h3 class="ii-card-name">${item.name}</h3>`;
+    html += `<h3 class="ii-card-name">${esc(item.name)}</h3>`;
     html += `<div class="ii-card-subtitle">`;
     html += `<span class="ii-card-type-badge type-${item.type}"><i class="fas ${typeIcon}"></i> ${formatType(item.type)}</span>`;
     html += `<span class="ii-card-rarity rarity-${item.rarity}">${formatRarity(item.rarity)}</span>`;
@@ -445,7 +450,7 @@ export function renderItemCard(item, result) {
         <i class="fas fa-chevron-down ii-section-toggle"></i>
       </div>
       <div class="ii-section-content">
-        <div class="ii-description-text">${cleanDesc}${cleanDesc.length < item.description.replace(/<[^>]+>/g, "").length ? "..." : ""}</div>
+        <div class="ii-description-text">${esc(cleanDesc)}${cleanDesc.length < item.description.replace(/<[^>]+>/g, "").length ? "..." : ""}</div>
       </div>
     </div>`;
     }
@@ -474,7 +479,7 @@ export function renderItemCard(item, result) {
         for (const pa of pendingActs) {
             const typeLabel = pa.key === 'EFFECT' ? 'Effect' : pa.key.replace('ACTIVITY_', '');
             const icon = pa.key === 'EFFECT' ? 'fa-magic' : 'fa-bolt';
-            html += `<div class="ii-prop"><span class="ii-prop-label"><i class="fas ${icon}"></i> ${typeLabel}</span><span class="ii-prop-value">${pa.name}</span></div>`;
+            html += `<div class="ii-prop"><span class="ii-prop-label"><i class="fas ${icon}"></i> ${esc(typeLabel)}</span><span class="ii-prop-value">${esc(pa.name)}</span></div>`;
         }
         html += `</div>`;
 
@@ -497,7 +502,7 @@ export function renderItemCard(item, result) {
       </div>
       <div class="ii-section-content">
         <ul class="ii-issues-list">
-          ${allIssues.map(issue => `<li>${issue}</li>`).join("")}
+          ${allIssues.map(issue => `<li>${esc(issue)}</li>`).join("")}
         </ul>
       </div>
     </div>`;
@@ -570,7 +575,7 @@ export function renderBatchSummary(results, selectedItems) {
           <img src="${icon}" alt="">
         </div>
         <div class="ii-batch-item-info">
-          <div class="ii-batch-item-name">${res.item.name}</div>
+          <div class="ii-batch-item-name">${esc(res.item.name)}</div>
           <div class="ii-batch-item-type">${formatType(res.item.type)} • ${formatRarity(res.item.rarity)}</div>
         </div>
       </div>`;
@@ -592,7 +597,7 @@ export function renderBatchSummary(results, selectedItems) {
 
         results.failures.forEach(fail => {
             const firstLine = fail.text.split("\n")[0].trim().substring(0, 40);
-            html += `<li><strong>"${firstLine}..."</strong><br>${fail.errors.join(", ")}</li>`;
+            html += `<li><strong>"${esc(firstLine)}..."</strong><br>${esc(fail.errors.join(", "))}</li>`;
         });
 
         html += `</ul></div></div>`;

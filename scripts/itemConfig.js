@@ -6,6 +6,14 @@
 export const MODULE_NAME = "5e-item-importer";
 export const MODULE_TITLE = "5e Item Importer";
 
+/** Valid YAML top-level item type keys for strict parser detection */
+export const YAML_ITEM_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER', 'SPELL'];
+
+/** Pre-compiled regexes for YAML key detection (avoids re-compilation per parse) */
+export const YAML_KEY_REGEXES = Object.fromEntries(
+    YAML_ITEM_KEYS.map(key => [key, new RegExp(`^${key}:`, 'm')])
+);
+
 /**
  * Register all module settings
  */
@@ -174,6 +182,15 @@ export function registerSettings() {
         config: true,
         type: Boolean,
         default: true,
+    });
+
+    // Track if welcome message has been shown (internal)
+    game.settings.register(MODULE_NAME, "hasShownWelcome", {
+        name: "Has Shown Welcome",
+        scope: "client",
+        config: false,
+        type: Boolean,
+        default: false
     });
 }
 
@@ -520,11 +537,10 @@ export class PerformanceMonitor {
  * Feature flags for experimental features
  */
 export const FeatureFlags = {
-    BATCH_IMPORT: false,          // Allow importing multiple items at once
     EXPORT_TO_TEXT: false,        // Export items back to text format
-    TEMPLATE_SYSTEM: false,       // Save and reuse item templates
-    AI_SUGGESTIONS: false,        // AI-powered parsing suggestions
-    CUSTOM_PROPERTIES: false      // Support for custom item properties
+    TEMPLATE_SYSTEM: false,       // Planned: Save and reuse item templates
+    AI_SUGGESTIONS: false,        // Planned: AI-powered parsing suggestions
+    CUSTOM_PROPERTIES: false      // Planned: Support for custom item properties
 };
 
 /**

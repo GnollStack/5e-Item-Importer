@@ -6,7 +6,7 @@
  * (like from PDFs, websites, or homebrew documents) into Foundry VTT.
  */
 
-import { MODULE_NAME, MODULE_TITLE, registerSettings } from "./itemConfig.js";
+import { MODULE_NAME, MODULE_TITLE, registerSettings, YAML_ITEM_KEYS, YAML_KEY_REGEXES, isFeatureEnabled } from "./itemConfig.js";
 import { ItemUtils } from "./itemUtils.js";
 import { ItemWindow } from "./itemWindow.js";
 import { getParserForText } from './strictItemParsers/strictParserDispatcher.js';
@@ -32,16 +32,18 @@ Hooks.on("init", () => {
  * Allows other modules or macros to use the importer programmatically
  */
 function registerAPI() {
-    /** Valid YAML top-level item type keys */
-    const YAML_ITEM_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER'];
-
     // Create a 'parse' function that routes to the correct parser.
     // YAML strict templates go to YamlItemParser; everything else to NaturalItemParser.
     const parse = (text) => {
-        const stripped = text.replace(/^```(?:yaml|markdown)?\s*\n?/i, '').replace(/\n?```\s*$/, '');
-        const isYaml = YAML_ITEM_KEYS.some(key => new RegExp(`^${key}:`, 'm').test(stripped));
-        const parser = isYaml ? getParserForText(text) : new NaturalItemParser();
-        return parser.parse(text);
+        try {
+            const stripped = text.replace(/^```(?:yaml|markdown)?\s*\n?/i, '').replace(/\n?```\s*$/, '');
+            const isYaml = YAML_ITEM_KEYS.some(key => YAML_KEY_REGEXES[key].test(stripped));
+            const parser = isYaml ? getParserForText(text) : new NaturalItemParser();
+            return parser.parse(text);
+        } catch (error) {
+            ItemUtils.error("API parse error", error);
+            return { success: false, item: null, errors: [error.message], warnings: [] };
+        }
     };
 
     game.modules.get(MODULE_NAME).api = {
@@ -51,8 +53,13 @@ function registerAPI() {
         // Programmatic import now uses our new strict 'parse' function
         parse: parse,
         import: async (text, folderId) => {
-            const result = parse(text);
-            return result?.item ? await result.item.createItem5e(folderId) : null;
+            try {
+                const result = parse(text);
+                return result?.item ? await result.item.createItem5e(folderId) : null;
+            } catch (error) {
+                ItemUtils.error("API import error", error);
+                return null;
+            }
         },
 
         // Open the import window
@@ -228,33 +235,24 @@ function showWelcomeMessage() {
     });
 }
 
-// Register settings to track if welcome was shown
-Hooks.once("init", () => {
-    game.settings.register(MODULE_NAME, "hasShownWelcome", {
-        name: "Has Shown Welcome",
-        scope: "client",
-        config: false,
-        type: Boolean,
-        default: false
-    });
-});
-
 /**
- * Add context menu option to items
+ * Add context menu option to items (gated behind feature flag)
  */
-Hooks.on("getItemDirectoryEntryContext", (html, contextOptions) => {
-    contextOptions.push({
-        name: "Export to Text",
-        icon: '<i class="fas fa-file-export"></i>',
-        condition: () => true,
-        callback: (li) => {
-            const item = game.items.get(li.data("documentId"));
-            if (item) {
-                exportItemToText(item);
+if (isFeatureEnabled('EXPORT_TO_TEXT')) {
+    Hooks.on("getItemDirectoryEntryContext", (html, contextOptions) => {
+        contextOptions.push({
+            name: "Export to Text",
+            icon: '<i class="fas fa-file-export"></i>',
+            condition: () => true,
+            callback: (li) => {
+                const item = game.items.get(li.data("documentId"));
+                if (item) {
+                    exportItemToText(item);
+                }
             }
-        }
+        });
     });
-});
+}
 
 /**
  * Export item to text format (future feature)
@@ -263,8 +261,6 @@ function exportItemToText(item) {
     ItemUtils.log("Exporting item to text", item);
     ui.notifications.info(`${MODULE_TITLE} | Export feature coming soon!`);
 
-    // Future implementation will convert Foundry item back to text format
-    // For now, just show the item data
     if (game.settings.get(MODULE_NAME, "debug")) {
         console.log("Item data:", item.toObject());
     }

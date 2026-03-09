@@ -4,7 +4,7 @@
  */
 
 import { ItemUtils } from "../itemUtils.js";
-import { MODULE_NAME } from "../itemConfig.js";
+import { MODULE_NAME, YAML_ITEM_KEYS, YAML_KEY_REGEXES } from "../itemConfig.js";
 import { getParserForText, parseAllItemsYaml } from "../strictItemParsers/strictParserDispatcher.js";
 import { NaturalItemParser } from "../naturalItemParser.js";
 import { ITEM_TEMPLATES } from "./itemTemplates.js";
@@ -13,8 +13,8 @@ import { extractExpectedItemProps, extractActualItemProps } from "./itemComparis
 import { compareProperties } from "./itemComparisonEngine.js";
 import { ItemComparisonWindow } from "./itemComparisonWindow.js";
 
-/** Valid YAML top-level item type keys */
-const YAML_ITEM_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER', 'SPELL'];
+/** Shorthand for HTML escaping */
+const esc = (str) => ItemUtils.escapeHtml(str);
 
 /**
  * Detect whether text looks like a YAML strict template.
@@ -25,7 +25,7 @@ const YAML_ITEM_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CO
  */
 function isYamlFormat(text) {
     const stripped = text.replace(/^```(?:yaml|markdown)?\s*\n?/i, '').replace(/\n?```\s*$/, '');
-    return YAML_ITEM_KEYS.some(key => new RegExp(`^${key}:`, 'm').test(stripped));
+    return YAML_ITEM_KEYS.some(key => YAML_KEY_REGEXES[key].test(stripped));
 }
 
 /**
@@ -42,7 +42,7 @@ function isYamlMultiItem(text) {
     // Check for multiple different top-level type keys
     let count = 0;
     for (const key of YAML_ITEM_KEYS) {
-        if (new RegExp(`^${key}:`, 'm').test(text)) count++;
+        if (YAML_KEY_REGEXES[key].test(text)) count++;
     }
     return count > 1;
 }
@@ -55,6 +55,7 @@ export function parse() {
     const input = this.element.querySelector("#ii-input");
     const output = this.element.querySelector("#ii-parse-output");
     const importBtn = this.element.querySelector("[data-action='import']");
+    if (!input || !output || !importBtn) return;
 
     const text = input.value.trim();
 
@@ -95,7 +96,7 @@ export function parse() {
             const allErrors = [...(result.errors || []), ...(result.warnings || [])];
             output.innerHTML = `<div class="ii-parse-error">
         <p><strong>⚠️ Parse Failed</strong></p>
-        <ul>${allErrors.map((i) => `<li>${i}</li>`).join("")}</ul>
+        <ul>${allErrors.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
       </div>`;
             importBtn.disabled = true;
             this._updateParseState("error");
@@ -118,7 +119,7 @@ export function parse() {
         ItemUtils.error("Parse error", error);
         output.innerHTML = `<div class="ii-parse-error">
       <p><strong>❌ Error</strong></p>
-      <p>${error.message}</p>
+      <p>${esc(error.message)}</p>
     </div>`;
         importBtn.disabled = true;
         this.currentParseResult = null;
@@ -134,6 +135,7 @@ export function parse() {
 export function handleBatchParse(text) {
     const output = this.element.querySelector("#ii-parse-output");
     const importBtn = this.element.querySelector("[data-action='import']");
+    if (!output || !importBtn) return;
 
     // Split the text before each delimiter
     const itemChunks = text
@@ -189,6 +191,7 @@ export function handleBatchParse(text) {
 function handleYamlBatchParse(text) {
     const output = this.element.querySelector("#ii-parse-output");
     const importBtn = this.element.querySelector("[data-action='import']");
+    if (!output || !importBtn) return;
 
     const allResults = parseAllItemsYaml(text);
 
@@ -311,11 +314,16 @@ export async function importItems() {
         ItemUtils.log("Importing single item to folder:", folderId);
         importBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Importing...`;
 
-        const result = await this.currentParseResult.item.createItem5e(folderId, importOptions);
+        try {
+            const result = await this.currentParseResult.item.createItem5e(folderId, importOptions);
 
-        // Show comparison in a separate window if requested
-        if (wantsComparison && result?.item) {
-            await showItemComparison.call(this, this.currentParseResult, result.item);
+            // Show comparison in a separate window if requested
+            if (wantsComparison && result?.item) {
+                await showItemComparison.call(this, this.currentParseResult, result.item);
+            }
+        } catch (err) {
+            ItemUtils.error("Import failed", err);
+            ui.notifications.error(`Failed to import: ${err.message}`);
         }
     }
 
