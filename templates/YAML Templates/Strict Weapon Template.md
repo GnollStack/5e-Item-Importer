@@ -32,14 +32,15 @@ WEAPON:
     Name: "Dagger of Venom"
     ...
 ```
-You can mix both methods. Supported top-level keys: `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
+You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
 **For LLM generation:**
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable fields: use the literal string `n/a`.
-- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
+- Inapplicable scalar fields: use the literal string `n/a`.
+- **Omit conditional sections entirely** (e.g., ATTUNEMENT, AMMUNITION, RELOAD) when their condition is not met — do NOT fill them with `n/a` values.
+- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
 
 ---
 

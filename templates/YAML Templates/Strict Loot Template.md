@@ -32,14 +32,14 @@ LOOT:
     Name: "Gold Idol"
     ...
 ```
-You can mix both methods. Supported top-level keys: `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
+You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
 **For LLM generation:**
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable fields: use the literal string `n/a`.
-- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
+- Inapplicable scalar fields: use the literal string `n/a`.
+- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
 
 ---
 
@@ -48,7 +48,7 @@ LOOT:
   ITEM:
     Name: "[text]"
     Rarity: "[common|uncommon|rare|veryRare|legendary|artifact|n/a]"
-    Loot Type: "[art|gear|gem|junk|material|resource|treasure]"
+    Loot Type: "[art|gear|gem|junk|material|resource|trade|treasure]"
 
   INVENTORY:
     Quantity: "[integer]"
@@ -109,6 +109,7 @@ LOOT:
 | `junk` | Worthless or near-worthless items | Broken pottery, rusty nails |
 | `material` | Crafting components | Monster parts, rare metals |
 | `resource` | Consumable crafting resources | Ingots, lumber, cloth bolts |
+| `trade` | Trade goods with mercantile value | Silk, spices, livestock |
 | `treasure` | Coins, trade bars, valuables | Gold bars, ancient coins |
 
 ### **Common Gem Values (5e Standard)**

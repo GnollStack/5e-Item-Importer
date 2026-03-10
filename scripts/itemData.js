@@ -49,6 +49,7 @@ export class ItemData {
     this.uses = null; // { value, max } - for tools and other items
     this.recovery = null; // Array of { period, type, formula } for use recovery
     this.quantity = 1;
+    this.equipped = false; // Whether item starts equipped
     this.magicBonus = 0;
 
     // Weapon Properties
@@ -121,6 +122,7 @@ export class ItemData {
     // Spell Properties
     this.spellLevel = 0;
     this.spellSchool = null;
+    this.spellAbility = null; // Override spellcasting ability (str|dex|con|int|wis|cha)
 
     // Components
     this.vocal = false;
@@ -144,28 +146,12 @@ export class ItemData {
     this.target = null; // { type, count, choice, special }
 
     // Area of Effect
-    this.area = null; // { type, size, units }
+    this.area = null; // { type, size, units, count, width, height, contiguous }
 
     // Activation
     this.activationType = null; // action, bonus, reaction, special
     this.saveDC = null; // DC for saving throw
     this.saveAbility = null; // Ability for saving throw
-
-    // Spell Properties
-    this.spellLevel = 0;
-    this.spellSchool = null;
-    this.vocal = false;
-    this.somatic = false;
-    this.material = false;
-    this.materialValue = '';
-    this.materialCost = null;
-    this.materialSupply = null;
-    this.materialConsumed = false;
-    this.preparationMode = 'prepared';
-    this.prepared = false;
-    this.duration = null;
-    this.target = null;
-    this.area = null;
 
     // Inline activities/effects (from Activities: section in YAML)
     this.pendingActivities = []; // Array of { key, name, rawData }
@@ -275,6 +261,13 @@ export class ItemData {
         break;
     }
 
+    // Equipped state (weapon, equipment, consumable, tool only — not loot/container/spell)
+    const equippableTypes = ["weapon", "equipment", "consumable", "tool"];
+    if (equippableTypes.includes(this.type) && this.equipped) {
+      this.setProperty("system.equipped", true);
+      ItemUtils.log("Equipped set to true");
+    }
+
     // Attunement - Uses the string directly ("required", "optional", or "")
     if (this.attunement === "none") {
       this.setProperty("system.attunement", "");
@@ -369,6 +362,28 @@ export class ItemData {
     }
 
     ItemUtils.log("Foundry data built", this.#dnd5e);
+  }
+
+  /**
+   * Apply uses and recovery data to the Foundry item (shared across all item types).
+   * @param {string} [logLabel] - Label for debug logging
+   */
+  #applyUsesData(logLabel = "uses") {
+    if (!this.uses) return;
+
+    this.setProperty("system.uses.max", this.uses.max.toString());
+    this.setProperty("system.uses.spent", this.uses.value ?? 0);
+    ItemUtils.log(`${logLabel} uses set to`, this.uses);
+
+    if (this.recovery && this.recovery.length > 0) {
+      const recoveryArray = this.recovery.map((rec) => {
+        const config = { period: rec.period, type: rec.type };
+        if (rec.type === "formula" && rec.formula) config.formula = rec.formula;
+        return config;
+      });
+      this.setProperty("system.uses.recovery", recoveryArray);
+      ItemUtils.log(`${logLabel} recovery set to`, recoveryArray);
+    }
   }
 
   /**
@@ -551,32 +566,7 @@ export class ItemData {
     }
 
     // Uses (for limited-use magical weapons)
-    if (this.uses) {
-      this.setProperty("system.uses.max", this.uses.max.toString());
-      this.setProperty("system.uses.spent", this.uses.value ?? 0);
-
-      ItemUtils.log("Weapon uses set to", this.uses);
-
-      // Set recovery configurations
-      if (this.recovery && this.recovery.length > 0) {
-        const recoveryArray = this.recovery.map((rec) => {
-          const recoveryConfig = {
-            period: rec.period,
-            type: rec.type,
-          };
-
-          // Add formula if type is formula
-          if (rec.type === "formula" && rec.formula) {
-            recoveryConfig.formula = rec.formula;
-          }
-
-          return recoveryConfig;
-        });
-
-        this.setProperty("system.uses.recovery", recoveryArray);
-        ItemUtils.log("Weapon recovery set to", recoveryArray);
-      }
-    }
+    this.#applyUsesData("Weapon");
 
     // Siege weapon properties
     if (this.weaponType === "siege") {
@@ -702,32 +692,7 @@ export class ItemData {
     }
 
     // Uses (for limited-use magical items)
-    if (this.uses) {
-      this.setProperty("system.uses.max", this.uses.max.toString());
-      this.setProperty("system.uses.spent", this.uses.value ?? 0);
-
-      ItemUtils.log("Equipment uses set to", this.uses);
-
-      // Set recovery configurations
-      if (this.recovery && this.recovery.length > 0) {
-        const recoveryArray = this.recovery.map((rec) => {
-          const recoveryConfig = {
-            period: rec.period,
-            type: rec.type,
-          };
-
-          // Add formula if type is formula
-          if (rec.type === "formula" && rec.formula) {
-            recoveryConfig.formula = rec.formula;
-          }
-
-          return recoveryConfig;
-        });
-
-        this.setProperty("system.uses.recovery", recoveryArray);
-        ItemUtils.log("Equipment recovery set to", recoveryArray);
-      }
-    }
+    this.#applyUsesData("Equipment");
 
     // Vehicle properties
     if (this.armorType === "vehicle") {
@@ -794,32 +759,7 @@ export class ItemData {
     }
 
     // Uses (for consumables, use recharge if available, otherwise uses)
-    if (this.uses) {
-      this.setProperty("system.uses.max", this.uses.max.toString());
-      this.setProperty("system.uses.spent", this.uses.value ?? 0);
-
-      ItemUtils.log("Consumable uses set to", this.uses);
-
-      // Set recovery configurations
-      if (this.recovery && this.recovery.length > 0) {
-        const recoveryArray = this.recovery.map((rec) => {
-          const recoveryConfig = {
-            period: rec.period,
-            type: rec.type,
-          };
-
-          // Add formula if type is formula
-          if (rec.type === "formula" && rec.formula) {
-            recoveryConfig.formula = rec.formula;
-          }
-
-          return recoveryConfig;
-        });
-
-        this.setProperty("system.uses.recovery", recoveryArray);
-        ItemUtils.log("Consumable recovery set to", recoveryArray);
-      }
-    }
+    this.#applyUsesData("Consumable");
 
     // Poison subtype
     if (this.consumableType === "poison" && this.poisonType) {
@@ -987,32 +927,7 @@ export class ItemData {
     }
 
     // Limited uses
-    if (this.uses) {
-      this.setProperty("system.uses.max", this.uses.max.toString());
-      this.setProperty("system.uses.spent", this.uses.value ?? 0);
-
-      ItemUtils.log("Tool uses set to", this.uses);
-
-      // Set recovery configurations
-      if (this.recovery && this.recovery.length > 0) {
-        const recoveryArray = this.recovery.map((rec) => {
-          const recoveryConfig = {
-            period: rec.period,
-            type: rec.type,
-          };
-
-          // Add formula if type is formula
-          if (rec.type === "formula" && rec.formula) {
-            recoveryConfig.formula = rec.formula;
-          }
-
-          return recoveryConfig;
-        });
-
-        this.setProperty("system.uses.recovery", recoveryArray);
-        ItemUtils.log("Tool recovery set to", recoveryArray);
-      }
-    }
+    this.#applyUsesData("Tool");
 
     // Proficiency
     if (this.proficient !== null && this.proficient !== undefined) {
@@ -1140,6 +1055,12 @@ export class ItemData {
       ItemUtils.log("Spell school set to", this.spellSchool);
     }
 
+    // Spellcasting ability override
+    if (this.spellAbility) {
+      this.setProperty("system.ability", this.spellAbility);
+      ItemUtils.log("Spell ability override set to", this.spellAbility);
+    }
+
     // Build properties Set for components and special properties
     const props = new Set();
 
@@ -1260,36 +1181,23 @@ export class ItemData {
       if (this.area.units) {
         this.setProperty("system.target.template.units", this.area.units);
       }
+      if (this.area.count !== null && this.area.count !== undefined) {
+        this.setProperty("system.target.template.count", this.area.count.toString());
+      }
+      if (this.area.width !== null && this.area.width !== undefined) {
+        this.setProperty("system.target.template.width", this.area.width.toString());
+      }
+      if (this.area.height !== null && this.area.height !== undefined) {
+        this.setProperty("system.target.template.height", this.area.height.toString());
+      }
+      if (this.area.contiguous !== undefined) {
+        this.setProperty("system.target.template.contiguous", this.area.contiguous);
+      }
       ItemUtils.log("Area template set", this.area);
     }
 
     // Uses (for limited-use spells like innate spellcasting)
-    if (this.uses && this.uses.max > 0) {
-      this.setProperty("system.uses.max", this.uses.max.toString());
-      this.setProperty("system.uses.spent", this.uses.value ?? 0);
-
-      ItemUtils.log("Spell uses set to", this.uses);
-
-      // Set recovery configurations
-      if (this.recovery && this.recovery.length > 0) {
-        const recoveryArray = this.recovery.map((rec) => {
-          const recoveryConfig = {
-            period: rec.period,
-            type: rec.type,
-          };
-
-          // Add formula if type is formula
-          if (rec.type === "formula" && rec.formula) {
-            recoveryConfig.formula = rec.formula;
-          }
-
-          return recoveryConfig;
-        });
-
-        this.setProperty("system.uses.recovery", recoveryArray);
-        ItemUtils.log("Spell recovery set to", recoveryArray);
-      }
-    }
+    this.#applyUsesData("Spell");
 
     ItemUtils.log("Spell data build complete");
   }

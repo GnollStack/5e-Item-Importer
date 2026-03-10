@@ -150,7 +150,7 @@ const VALID_TOOL_TYPES = ['art', 'game', 'music', 'other'];
 
 // ─── Loot Constants ─────────────────────────────────────────────────────────
 
-const VALID_LOOT_TYPES = ['art', 'gear', 'gem', 'junk', 'material', 'resource', 'treasure'];
+const VALID_LOOT_TYPES = ['art', 'gear', 'gem', 'junk', 'material', 'resource', 'trade', 'treasure'];
 
 // ─── Spell Constants ─────────────────────────────────────────────────────────
 
@@ -410,8 +410,7 @@ export class YamlItemParser {
         const inv = data?.INVENTORY || {};
         itemData.quantity = asInt(inv['Quantity'], 1);
         itemData.identified = asBool(inv['Identified'], true);
-        // equipped is stored but used by specific parsers
-        const equipped = asBool(inv['Equipped'], false);
+        itemData.equipped = asBool(inv['Equipped'], false);
 
         // Cost and Weight
         const cw = data?.COST_AND_WEIGHT || {};
@@ -876,7 +875,7 @@ export class YamlItemParser {
         item.isMagical = magical;
         item.properties = [];
         if (adamantine) item.properties.push('ada');
-        if (focus) item.properties.push('fcs');
+        if (focus) item.properties.push('foc');
         if (magical) item.properties.push('mgc');
         if (stealthDisadvantage) {
             item.properties.push('stealthDisadvantage');
@@ -1344,6 +1343,18 @@ export class YamlItemParser {
             item.spellSchool = schoolRaw;
         }
 
+        // Spellcasting ability override (optional)
+        const abilityRaw = asNullable(itemSection['Ability']);
+        if (abilityRaw) {
+            const VALID_ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+            const abilityStr = String(abilityRaw).trim().toLowerCase();
+            if (VALID_ABILITIES.includes(abilityStr)) {
+                item.spellAbility = abilityStr;
+            } else {
+                this.addWarning(`Invalid Ability override "${abilityRaw}". Must be one of: ${VALID_ABILITIES.join(', ')}`);
+            }
+        }
+
         // Components
         const comp = data?.COMPONENTS || {};
         item.vocal = asBool(comp['Vocal'], false);
@@ -1449,10 +1460,19 @@ export class YamlItemParser {
             if (!VALID_AREA_SHAPES.includes(shapeRaw)) {
                 this.addWarning(`Invalid Area Shape "${area['Shape']}". Must be one of: ${VALID_AREA_SHAPES.join(', ')}`);
             } else {
+                const countRaw = asNullable(area['Count']);
+                const widthRaw = asNullable(area['Width']);
+                const heightRaw = asNullable(area['Height']);
+                const contiguousRaw = asNullable(area['Contiguous']);
+
                 item.area = {
                     type: shapeRaw,
                     size: sizeRaw !== null ? asInt(sizeRaw, 0) : null,
-                    units: VALID_AREA_UNITS.includes(areaUnitsRaw) ? areaUnitsRaw : 'ft'
+                    units: VALID_AREA_UNITS.includes(areaUnitsRaw) ? areaUnitsRaw : 'ft',
+                    count: countRaw !== null ? asInt(countRaw, 0) : null,
+                    width: widthRaw !== null ? asInt(widthRaw, 0) : null,
+                    height: heightRaw !== null ? asInt(heightRaw, 0) : null,
+                    contiguous: contiguousRaw !== null ? asBool(contiguousRaw, false) : undefined
                 };
             }
         }

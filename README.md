@@ -195,14 +195,15 @@ WEAPON:
     Name: "Dagger of Venom"
     ...
 ```
-You can mix both methods. Supported top-level keys: `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
+You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
 **For LLM generation:**
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable fields: use the literal string `n/a`.
-- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
+- Inapplicable scalar fields: use the literal string `n/a`.
+- **Omit conditional sections entirely** (e.g., ATTUNEMENT, AMMUNITION, RELOAD) when their condition is not met — do NOT fill them with `n/a` values.
+- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
 
 ---
 
@@ -289,15 +290,18 @@ WEAPON:
     Proficient: "[Automatic|0|1]"
 
   USAGE:
-    # Uses Spent = number of charges ALREADY CONSUMED (0 = all charges available)
-    Uses Spent: "[integer]"
-    Uses Max: "[integer]"
+    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
+    # Uses Max = total number of charges the item can hold.
+    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
+    Uses Spent: "[integer|n/a]"
+    Uses Max: "[integer|n/a]"
 
-  RECOVERY:
-    # (Optional, repeatable. Only relevant if Uses Max > 0)
-    - Period: "[lr|sr|day|dawn|dusk|recharge]"
-      Type: "[recoverAll|loseAll|formula]"
-      Formula: "[text|n/a]"
+  RECOVERY: []
+    # Optional, repeatable. Use [] when there is no recovery.
+    # If Uses Max > 0, replace [] with one or more entries:
+    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
+    #   Type: "[recoverAll|loseAll|formula]"
+    #   Formula: "[text|n/a]"
 
   DESCRIPTION:
     Description: |
@@ -312,13 +316,22 @@ WEAPON:
     Chat Description: |
       [multiline text content]
 
-  Activities:
-    # ── OMIT THIS SECTION ENTIRELY unless activities are explicitly requested ──
+  effects:
+    # ── OMIT THIS SECTION ENTIRELY unless passive effects are needed ──
+    # Passive Active Effects applied to the actor when item is equipped.
+    # These are NOT activities — they are always-on mechanical modifications.
     # Requires the 5e-activity-importer module to be active.
-    # If requested: array format — add any number of activities/effects.
-    # Supported types: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
+    # This MUST be a YAML array. Each entry follows the EFFECT template format.
+    # See the MIDI Effect Template for full field reference.
+
+  Activities:
+    # ── OMIT THIS SECTION ENTIRELY unless extra activities are needed ──
+    # Requires the 5e-activity-importer module to be active.
+    # IMPORTANT: This MUST be a YAML array (each entry starts with a dash "-").
+    # Each entry has exactly ONE top-level key: ACTIVITY_*
+    # Supported keys: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
     #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
-    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD, EFFECT
+    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD
     # See the 5e-activity-importer module templates for full field reference.
 ```
 
@@ -517,14 +530,15 @@ CONSUMABLE:
     Name: "Potion of Greater Healing"
     ...
 ```
-You can mix both methods. Supported top-level keys: `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
+You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
 **For LLM generation:**
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable fields: use the literal string `n/a`.
-- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
+- Inapplicable scalar fields: use the literal string `n/a`.
+- **Omit conditional sections entirely** (e.g., ATTUNEMENT, AMMUNITION_PROPERTIES, POISON_PROPERTIES) when their condition is not met — do NOT fill them with `n/a` values.
+- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
 
 ---
 
@@ -577,16 +591,19 @@ CONSUMABLE:
     Ritual: "[true|false]"
 
   USAGE:
-    # Uses Spent = number of charges ALREADY CONSUMED (0 = all charges available)
-    Uses Spent: "[integer]"
-    Uses Max: "[integer]"
+    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
+    # Uses Max = total number of charges the item can hold.
+    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
+    Uses Spent: "[integer|n/a]"
+    Uses Max: "[integer|n/a]"
     Destroy on Empty: "[true|false]"
 
-  RECOVERY:
-    # (Optional, repeatable. Only relevant if Uses Max > 0)
-    - Period: "[lr|sr|day|dawn|dusk|recharge]"
-      Type: "[recoverAll|loseAll|formula]"
-      Formula: "[text|n/a]"
+  RECOVERY: []
+    # Optional, repeatable. Use [] when there is no recovery.
+    # If Uses Max > 0, replace [] with one or more entries:
+    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
+    #   Type: "[recoverAll|loseAll|formula]"
+    #   Formula: "[text|n/a]"
 
   DESCRIPTION:
     Description: |
@@ -601,13 +618,22 @@ CONSUMABLE:
     Chat Description: |
       [multiline text content]
 
-  Activities:
-    # ── OMIT THIS SECTION ENTIRELY unless activities are explicitly requested ──
+  effects:
+    # ── OMIT THIS SECTION ENTIRELY unless passive effects are needed ──
+    # Passive Active Effects applied to the actor when item is equipped.
+    # These are NOT activities — they are always-on mechanical modifications.
     # Requires the 5e-activity-importer module to be active.
-    # If requested: array format — add any number of activities/effects.
-    # Supported types: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
+    # This MUST be a YAML array. Each entry follows the EFFECT template format.
+    # See the MIDI Effect Template for full field reference.
+
+  Activities:
+    # ── OMIT THIS SECTION ENTIRELY unless extra activities are needed ──
+    # Requires the 5e-activity-importer module to be active.
+    # IMPORTANT: This MUST be a YAML array (each entry starts with a dash "-").
+    # Each entry has exactly ONE top-level key: ACTIVITY_*
+    # Supported keys: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
     #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
-    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD, EFFECT
+    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD
     # See the 5e-activity-importer module templates for full field reference.
 ```
 
@@ -783,14 +809,15 @@ CONTAINER:
     Name: "Handy Haversack"
     ...
 ```
-You can mix both methods. Supported top-level keys: `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
+You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
 **For LLM generation:**
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable fields: use the literal string `n/a`.
-- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
+- Inapplicable scalar fields: use the literal string `n/a`.
+- **Omit conditional sections entirely** (e.g., ATTUNEMENT) when their condition is not met — do NOT fill them with `n/a` values.
+- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
 
 ---
 
@@ -847,14 +874,23 @@ CONTAINER:
   CHAT_FLAVOR:
     Chat Description: |
       [multiline text content]
-      
-  Activities:
-    # ── OMIT THIS SECTION ENTIRELY unless activities are explicitly requested ──
+
+  effects:
+    # ── OMIT THIS SECTION ENTIRELY unless passive effects are needed ──
+    # Passive Active Effects applied to the actor when item is equipped.
+    # These are NOT activities — they are always-on mechanical modifications.
     # Requires the 5e-activity-importer module to be active.
-    # If requested: array format — add any number of activities/effects.
-    # Supported types: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
+    # This MUST be a YAML array. Each entry follows the EFFECT template format.
+    # See the MIDI Effect Template for full field reference.
+
+  Activities:
+    # ── OMIT THIS SECTION ENTIRELY unless extra activities are needed ──
+    # Requires the 5e-activity-importer module to be active.
+    # IMPORTANT: This MUST be a YAML array (each entry starts with a dash "-").
+    # Each entry has exactly ONE top-level key: ACTIVITY_*
+    # Supported keys: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
     #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
-    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD, EFFECT
+    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD
     # See the 5e-activity-importer module templates for full field reference.
 ```
 
@@ -998,14 +1034,15 @@ EQUIPMENT:
     Name: "Cloak of Protection"
     ...
 ```
-You can mix both methods. Supported top-level keys: `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
+You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
 **For LLM generation:**
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable fields: use the literal string `n/a`.
-- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
+- Inapplicable scalar fields: use the literal string `n/a`.
+- **Omit conditional sections entirely** (e.g., ATTUNEMENT, ARMOR, VEHICLE_PROPERTIES) when their condition is not met — do NOT fill them with `n/a` values.
+- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
 
 ---
 
@@ -1061,15 +1098,18 @@ EQUIPMENT:
     Proficient: "[Automatic|0|1]"
 
   USAGE:
-    # Uses Spent = number of charges ALREADY CONSUMED (0 = all charges available)
-    Uses Spent: "[integer]"
-    Uses Max: "[integer]"
+    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
+    # Uses Max = total number of charges the item can hold.
+    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
+    Uses Spent: "[integer|n/a]"
+    Uses Max: "[integer|n/a]"
 
-  RECOVERY:
-    # (Optional, repeatable. Only relevant if Uses Max > 0)
-    - Period: "[lr|sr|day|dawn|dusk|recharge]"
-      Type: "[recoverAll|loseAll|formula]"
-      Formula: "[text|n/a]"
+  RECOVERY: []
+    # Optional, repeatable. Use [] when there is no recovery.
+    # If Uses Max > 0, replace [] with one or more entries:
+    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
+    #   Type: "[recoverAll|loseAll|formula]"
+    #   Formula: "[text|n/a]"
 
   DESCRIPTION:
     Description: |
@@ -1084,13 +1124,22 @@ EQUIPMENT:
     Chat Description: |
       [multiline text content]
 
-  Activities:
-    # ── OMIT THIS SECTION ENTIRELY unless activities are explicitly requested ──
+  effects:
+    # ── OMIT THIS SECTION ENTIRELY unless passive effects are needed ──
+    # Passive Active Effects applied to the actor when item is equipped.
+    # These are NOT activities — they are always-on mechanical modifications.
     # Requires the 5e-activity-importer module to be active.
-    # If requested: array format — add any number of activities/effects.
-    # Supported types: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
+    # This MUST be a YAML array. Each entry follows the EFFECT template format.
+    # See the MIDI Effect Template for full field reference.
+
+  Activities:
+    # ── OMIT THIS SECTION ENTIRELY unless extra activities are needed ──
+    # Requires the 5e-activity-importer module to be active.
+    # IMPORTANT: This MUST be a YAML array (each entry starts with a dash "-").
+    # Each entry has exactly ONE top-level key: ACTIVITY_*
+    # Supported keys: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
     #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
-    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD, EFFECT
+    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD
     # See the 5e-activity-importer module templates for full field reference.
 ```
 
@@ -1285,14 +1334,14 @@ LOOT:
     Name: "Gold Idol"
     ...
 ```
-You can mix both methods. Supported top-level keys: `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
+You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
 **For LLM generation:**
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable fields: use the literal string `n/a`.
-- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
+- Inapplicable scalar fields: use the literal string `n/a`.
+- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
 
 ---
 
@@ -1301,7 +1350,7 @@ LOOT:
   ITEM:
     Name: "[text]"
     Rarity: "[common|uncommon|rare|veryRare|legendary|artifact|n/a]"
-    Loot Type: "[art|gear|gem|junk|material|resource|treasure]"
+    Loot Type: "[art|gear|gem|junk|material|resource|trade|treasure]"
 
   INVENTORY:
     Quantity: "[integer]"
@@ -1330,13 +1379,22 @@ LOOT:
     Chat Description: |
       [multiline text content]
 
-  Activities:
-    # ── OMIT THIS SECTION ENTIRELY unless activities are explicitly requested ──
+  effects:
+    # ── OMIT THIS SECTION ENTIRELY unless passive effects are needed ──
+    # Passive Active Effects applied to the actor when item is equipped.
+    # These are NOT activities — they are always-on mechanical modifications.
     # Requires the 5e-activity-importer module to be active.
-    # If requested: array format — add any number of activities/effects.
-    # Supported types: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
+    # This MUST be a YAML array. Each entry follows the EFFECT template format.
+    # See the MIDI Effect Template for full field reference.
+
+  Activities:
+    # ── OMIT THIS SECTION ENTIRELY unless extra activities are needed ──
+    # Requires the 5e-activity-importer module to be active.
+    # IMPORTANT: This MUST be a YAML array (each entry starts with a dash "-").
+    # Each entry has exactly ONE top-level key: ACTIVITY_*
+    # Supported keys: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
     #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
-    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD, EFFECT
+    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD
     # See the 5e-activity-importer module templates for full field reference.
 ```
 
@@ -1353,6 +1411,7 @@ LOOT:
 | `junk` | Worthless or near-worthless items | Broken pottery, rusty nails |
 | `material` | Crafting components | Monster parts, rare metals |
 | `resource` | Consumable crafting resources | Ingots, lumber, cloth bolts |
+| `trade` | Trade goods with mercantile value | Silk, spices, livestock |
 | `treasure` | Coins, trade bars, valuables | Gold bars, ancient coins |
 
 ### **Common Gem Values (5e Standard)**
@@ -1509,8 +1568,9 @@ You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMEN
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable fields: use the literal string `n/a`.
-- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
+- Inapplicable scalar fields: use the literal string `n/a`.
+- **Omit conditional sections entirely** (e.g., MATERIALS, AREA) when their condition is not met — do NOT fill them with `n/a` values.
+- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
 
 ---
 
@@ -1520,6 +1580,7 @@ SPELL:
     Name: "[text]"
     Level: "[0|1|2|3|4|5|6|7|8|9]"
     School: "[abj|con|div|enc|evo|ill|nec|trs]"
+    Ability: "[str|dex|con|int|wis|cha|n/a]"
 
   COMPONENTS:
     Vocal: "[true|false]"
@@ -1562,17 +1623,24 @@ SPELL:
     Shape: "[cone|cube|cylinder|radius|line|sphere|circle|square|wall]"
     Size: "[integer]"
     Units: "[ft|mi|m|km]"
+    Count: "[integer|n/a]"
+    Width: "[integer|n/a]"
+    Height: "[integer|n/a]"
+    Contiguous: "[true|false|n/a]"
 
   USAGE:
-    # Uses Spent = number of charges ALREADY CONSUMED (0 = all charges available)
-    Uses Spent: "[integer]"
-    Uses Max: "[integer]"
+    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
+    # Uses Max = total number of charges the item can hold.
+    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
+    Uses Spent: "[integer|n/a]"
+    Uses Max: "[integer|n/a]"
 
-  RECOVERY:
-    # (Optional, repeatable. Only relevant if Uses Max > 0)
-    - Period: "[lr|sr|day|dawn|dusk|recharge]"
-      Type: "[recoverAll|loseAll|formula]"
-      Formula: "[text|n/a]"
+  RECOVERY: []
+    # Optional, repeatable. Use [] when there is no recovery.
+    # If Uses Max > 0, replace [] with one or more entries:
+    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
+    #   Type: "[recoverAll|loseAll|formula]"
+    #   Formula: "[text|n/a]"
 
   DESCRIPTION:
     Description: |
@@ -1587,19 +1655,43 @@ SPELL:
     Chat Description: |
       [multiline text content]
 
-  Activities:
-    # ── OMIT THIS SECTION ENTIRELY unless activities are explicitly requested ──
+  effects:
+    # ── OMIT THIS SECTION ENTIRELY unless passive effects are needed ──
+    # Passive Active Effects applied to the actor.
+    # These are NOT activities — they are always-on mechanical modifications.
     # Requires the 5e-activity-importer module to be active.
-    # If requested: array format — add any number of activities/effects.
-    # Supported types: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
+    # This MUST be a YAML array. Each entry follows the EFFECT template format.
+    # See the MIDI Effect Template for full field reference.
+
+  Activities:
+    # ── OMIT THIS SECTION ENTIRELY unless extra activities are needed ──
+    # Requires the 5e-activity-importer module to be active.
+    # IMPORTANT: This MUST be a YAML array (each entry starts with a dash "-").
+    # Each entry has exactly ONE top-level key: ACTIVITY_*
+    # Supported keys: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
     #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
-    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD, EFFECT
+    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD
     # See the 5e-activity-importer module templates for full field reference.
 ```
 
 ---
 
 ## **FIELD REFERENCE**
+
+### **Spellcasting Ability Override**
+Use `Ability` in the `ITEM` section to override the class spellcasting ability for this specific spell. Useful for racial or feat-granted spells that use a fixed ability (e.g., `cha` for Tiefling spells, `int` for Eldritch Knight spells). Set to `n/a` to use the class default.
+
+| Value | Ability |
+|-------|---------|
+| `str` | Strength |
+| `dex` | Dexterity |
+| `con` | Constitution |
+| `int` | Intelligence |
+| `wis` | Wisdom |
+| `cha` | Charisma |
+| `n/a` | Use class default |
+
+---
 
 ### **Spell Schools**
 | Key | School |
@@ -1686,6 +1778,16 @@ SPELL:
 | `circle` | Circle |
 | `square` | Square |
 | `wall` | Wall |
+
+### **Area Advanced Fields**
+| Field | Description | Example |
+|-------|-------------|---------|
+| `Count` | Number of separate template areas | *Conjure Animals* (multiple zones) |
+| `Width` | Width of the area (for line/wall shapes) | *Wall of Fire* width |
+| `Height` | Height of the area (for cylinder/wall shapes) | *Cloudkill* height |
+| `Contiguous` | Whether multiple templates must be adjacent | `true` or `false` |
+
+These fields are optional and only needed for spells with unusual area geometry. Most spells only need `Shape`, `Size`, and `Units`.
 
 ### **Recovery Periods**
 | Period | Description |
@@ -1869,14 +1971,15 @@ TOOL:
     Name: "Herbalism Kit"
     ...
 ```
-You can mix both methods. Supported top-level keys: `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
+You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
 **For LLM generation:**
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable fields: use the literal string `n/a`.
-- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
+- Inapplicable scalar fields: use the literal string `n/a`.
+- **Omit conditional sections entirely** (e.g., ATTUNEMENT) when their condition is not met — do NOT fill them with `n/a` values.
+- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
 
 ---
 
@@ -1913,15 +2016,18 @@ TOOL:
     Ability: "[str|dex|con|int|wis|cha|n/a]"
 
   USAGE:
-    # Uses Spent = number of charges ALREADY CONSUMED (0 = all charges available)
-    Uses Spent: "[integer]"
-    Uses Max: "[integer]"
+    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
+    # Uses Max = total number of charges the item can hold.
+    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
+    Uses Spent: "[integer|n/a]"
+    Uses Max: "[integer|n/a]"
 
-  RECOVERY:
-    # (Optional, repeatable. Only relevant if Uses Max > 0)
-    - Period: "[lr|sr|day|dawn|dusk|recharge]"
-      Type: "[recoverAll|loseAll|formula]"
-      Formula: "[text|n/a]"
+  RECOVERY: []
+    # Optional, repeatable. Use [] when there is no recovery.
+    # If Uses Max > 0, replace [] with one or more entries:
+    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
+    #   Type: "[recoverAll|loseAll|formula]"
+    #   Formula: "[text|n/a]"
 
   DESCRIPTION:
     Description: |
@@ -1936,13 +2042,22 @@ TOOL:
     Chat Description: |
       [multiline text content]
 
-  Activities:
-    # ── OMIT THIS SECTION ENTIRELY unless activities are explicitly requested ──
+  effects:
+    # ── OMIT THIS SECTION ENTIRELY unless passive effects are needed ──
+    # Passive Active Effects applied to the actor when item is equipped.
+    # These are NOT activities — they are always-on mechanical modifications.
     # Requires the 5e-activity-importer module to be active.
-    # If requested: array format — add any number of activities/effects.
-    # Supported types: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
+    # This MUST be a YAML array. Each entry follows the EFFECT template format.
+    # See the MIDI Effect Template for full field reference.
+
+  Activities:
+    # ── OMIT THIS SECTION ENTIRELY unless extra activities are needed ──
+    # Requires the 5e-activity-importer module to be active.
+    # IMPORTANT: This MUST be a YAML array (each entry starts with a dash "-").
+    # Each entry has exactly ONE top-level key: ACTIVITY_*
+    # Supported keys: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
     #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
-    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD, EFFECT
+    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD
     # See the 5e-activity-importer module templates for full field reference.
 ```
 

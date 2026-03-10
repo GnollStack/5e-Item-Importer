@@ -38,8 +38,9 @@ You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMEN
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable fields: use the literal string `n/a`.
-- **Omit the `Activities` section entirely** unless the user explicitly requests activities.
+- Inapplicable scalar fields: use the literal string `n/a`.
+- **Omit conditional sections entirely** (e.g., MATERIALS, AREA) when their condition is not met — do NOT fill them with `n/a` values.
+- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
 
 ---
 
@@ -49,6 +50,7 @@ SPELL:
     Name: "[text]"
     Level: "[0|1|2|3|4|5|6|7|8|9]"
     School: "[abj|con|div|enc|evo|ill|nec|trs]"
+    Ability: "[str|dex|con|int|wis|cha|n/a]"
 
   COMPONENTS:
     Vocal: "[true|false]"
@@ -91,6 +93,10 @@ SPELL:
     Shape: "[cone|cube|cylinder|radius|line|sphere|circle|square|wall]"
     Size: "[integer]"
     Units: "[ft|mi|m|km]"
+    Count: "[integer|n/a]"
+    Width: "[integer|n/a]"
+    Height: "[integer|n/a]"
+    Contiguous: "[true|false|n/a]"
 
   USAGE:
     # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
@@ -141,6 +147,21 @@ SPELL:
 ---
 
 ## **FIELD REFERENCE**
+
+### **Spellcasting Ability Override**
+Use `Ability` in the `ITEM` section to override the class spellcasting ability for this specific spell. Useful for racial or feat-granted spells that use a fixed ability (e.g., `cha` for Tiefling spells, `int` for Eldritch Knight spells). Set to `n/a` to use the class default.
+
+| Value | Ability |
+|-------|---------|
+| `str` | Strength |
+| `dex` | Dexterity |
+| `con` | Constitution |
+| `int` | Intelligence |
+| `wis` | Wisdom |
+| `cha` | Charisma |
+| `n/a` | Use class default |
+
+---
 
 ### **Spell Schools**
 | Key | School |
@@ -227,6 +248,16 @@ SPELL:
 | `circle` | Circle |
 | `square` | Square |
 | `wall` | Wall |
+
+### **Area Advanced Fields**
+| Field | Description | Example |
+|-------|-------------|---------|
+| `Count` | Number of separate template areas | *Conjure Animals* (multiple zones) |
+| `Width` | Width of the area (for line/wall shapes) | *Wall of Fire* width |
+| `Height` | Height of the area (for cylinder/wall shapes) | *Cloudkill* height |
+| `Contiguous` | Whether multiple templates must be adjacent | `true` or `false` |
+
+These fields are optional and only needed for spells with unusual area geometry. Most spells only need `Shape`, `Size`, and `Units`.
 
 ### **Recovery Periods**
 | Period | Description |
