@@ -3,6 +3,10 @@
  * Renders the side-by-side comparison view for imported items.
  */
 
+import { ItemUtils } from "../itemUtils.js";
+
+const esc = (str) => ItemUtils.escapeHtml(str);
+
 /**
  * Render the full comparison view for one or more item comparisons.
  * @param {Array<Object>} comparisons - Array of comparison objects:
@@ -25,7 +29,6 @@ export function renderComparisonView(comparisons) {
         totalExtra += comp.diffReport.extra.length;
     }
 
-    // Summary Banner
     html += `<div class="ii-comparison-summary">`;
     html += `<div class="ii-comparison-stat match"><i class="fas fa-check-circle"></i> ${totalMatches} Matched</div>`;
     if (totalMismatches > 0) {
@@ -42,15 +45,13 @@ export function renderComparisonView(comparisons) {
     }
     html += `</div>`;
 
-    // Render each comparison
     for (const comp of comparisons) {
         if (comparisons.length > 1) {
-            html += `<div class="ii-comparison-block-label"><strong>${comp.label}</strong></div>`;
+            html += `<div class="ii-comparison-block-label"><strong>${esc(comp.label)}</strong></div>`;
         }
         html += renderSingleComparison(comp);
     }
 
-    // Close button
     html += `<div class="ii-comparison-actions">
         <button type="button" class="ii-btn-reset" data-action="closeComparison">
             <i class="fas fa-times"></i> Close Comparison
@@ -70,7 +71,6 @@ export function renderComparisonView(comparisons) {
 export function renderBatchComparisonSummary(comparisons) {
     let html = `<div class="ii-comparison-view">`;
 
-    // Aggregate stats
     let totalMatches = 0;
     let totalMismatches = 0;
     let totalMissing = 0;
@@ -81,7 +81,6 @@ export function renderBatchComparisonSummary(comparisons) {
         totalMissing += comp.diffReport.missing.length;
     }
 
-    // Summary Banner
     html += `<div class="ii-comparison-summary">`;
     html += `<div class="ii-comparison-stat match"><i class="fas fa-check-circle"></i> ${totalMatches} Matched</div>`;
     if (totalMismatches > 0) {
@@ -95,7 +94,6 @@ export function renderBatchComparisonSummary(comparisons) {
     }
     html += `</div>`;
 
-    // Per-item summary cards
     html += `<div class="ii-comparison-batch-list">`;
     for (const comp of comparisons) {
         const dr = comp.diffReport;
@@ -106,7 +104,7 @@ export function renderBatchComparisonSummary(comparisons) {
         html += `<div class="ii-comparison-batch-item ${statusClass}">
             <div class="ii-comparison-batch-item-header">
                 <i class="fas ${statusIcon}"></i>
-                <span class="ii-comparison-batch-item-name">${comp.label}</span>
+                <span class="ii-comparison-batch-item-name">${esc(comp.label)}</span>
                 <span class="ii-comparison-batch-item-stats">
                     ${dr.matches} match${dr.matches !== 1 ? "es" : ""}${hasIssues ? `, ${dr.mismatches.length + dr.missing.length} issue${dr.mismatches.length + dr.missing.length !== 1 ? "s" : ""}` : ""}
                 </span>
@@ -116,12 +114,12 @@ export function renderBatchComparisonSummary(comparisons) {
             html += `<div class="ii-comparison-batch-item-issues">`;
             for (const m of dr.mismatches) {
                 html += `<div class="ii-comparison-issue-compact">
-                    <span>${m.label}:</span> <del>${stripHtml(m.expected)}</del> → ${stripHtml(m.actual)}
+                    <span>${esc(m.label)}:</span> <del>${esc(stripHtml(m.expected))}</del> &rarr; ${esc(stripHtml(m.actual))}
                 </div>`;
             }
             for (const m of dr.missing) {
                 html += `<div class="ii-comparison-issue-compact">
-                    <span>${m.label}:</span> ${stripHtml(m.expected)} → <em>(not found)</em>
+                    <span>${esc(m.label)}:</span> ${esc(stripHtml(m.expected))} &rarr; <em>(not found)</em>
                 </div>`;
             }
             html += `</div>`;
@@ -131,7 +129,6 @@ export function renderBatchComparisonSummary(comparisons) {
     }
     html += `</div>`;
 
-    // Close button
     html += `<div class="ii-comparison-actions">
         <button type="button" class="ii-btn-reset" data-action="closeComparison">
             <i class="fas fa-times"></i> Close Comparison
@@ -148,7 +145,6 @@ export function renderBatchComparisonSummary(comparisons) {
 function renderSingleComparison({ diffReport, expectedProps, actualProps }) {
     let html = "";
 
-    // Mismatch details
     const issues = [...diffReport.mismatches, ...diffReport.missing, ...diffReport.extra];
     if (issues.length > 0) {
         html += `<div class="ii-comparison-issues">`;
@@ -156,35 +152,33 @@ function renderSingleComparison({ diffReport, expectedProps, actualProps }) {
 
         for (const m of diffReport.mismatches) {
             html += `<div class="ii-comparison-issue">
-                <span class="ii-comparison-issue-label">${m.section} &rsaquo; ${m.label}</span>
-                <span class="ii-comparison-issue-expected">${stripHtml(m.expected)}</span>
+                <span class="ii-comparison-issue-label">${esc(m.section)} &rsaquo; ${esc(m.label)}</span>
+                <span class="ii-comparison-issue-expected">${esc(stripHtml(m.expected))}</span>
                 <span class="ii-comparison-issue-arrow"><i class="fas fa-arrow-right"></i></span>
-                <span class="ii-comparison-issue-actual">${stripHtml(m.actual)}</span>
+                <span class="ii-comparison-issue-actual">${esc(stripHtml(m.actual))}</span>
             </div>`;
         }
         for (const m of diffReport.missing) {
             html += `<div class="ii-comparison-issue">
-                <span class="ii-comparison-issue-label">${m.section} &rsaquo; ${m.label}</span>
-                <span class="ii-comparison-issue-expected">${stripHtml(m.expected)}</span>
+                <span class="ii-comparison-issue-label">${esc(m.section)} &rsaquo; ${esc(m.label)}</span>
+                <span class="ii-comparison-issue-expected">${esc(stripHtml(m.expected))}</span>
                 <span class="ii-comparison-issue-arrow"><i class="fas fa-arrow-right"></i></span>
                 <span class="ii-comparison-issue-actual ii-comparison-missing-value">(not found)</span>
             </div>`;
         }
         for (const m of diffReport.extra) {
             html += `<div class="ii-comparison-issue">
-                <span class="ii-comparison-issue-label">${m.section} &rsaquo; ${m.label}</span>
+                <span class="ii-comparison-issue-label">${esc(m.section)} &rsaquo; ${esc(m.label)}</span>
                 <span class="ii-comparison-issue-expected ii-comparison-missing-value">(not in template)</span>
                 <span class="ii-comparison-issue-arrow"><i class="fas fa-arrow-right"></i></span>
-                <span class="ii-comparison-issue-actual">${stripHtml(m.actual)}</span>
+                <span class="ii-comparison-issue-actual">${esc(stripHtml(m.actual))}</span>
             </div>`;
         }
         html += `</div>`;
     }
 
-    // Build diff map
     const diffMap = buildDiffMap(diffReport);
 
-    // Side-by-side columns
     html += `<div class="ii-comparison-columns">`;
     html += `<div class="ii-comparison-col expected">
         <h4><i class="fas fa-file-alt"></i> Expected (Template)</h4>
@@ -231,7 +225,7 @@ function renderPropertyCard(properties, prefix, diffMap) {
 
         html += `<div class="${prefix}-section">
             <div class="${prefix}-section-header">
-                <span class="${prefix}-section-title">${sectionName}</span>
+                <span class="${prefix}-section-title">${esc(sectionName)}</span>
             </div>
             <div class="${prefix}-section-content">`;
 
@@ -239,8 +233,8 @@ function renderPropertyCard(properties, prefix, diffMap) {
             const key = `${prop.section}|${prop.label}`;
             const diffClass = diffMap?.get(key) ? ` ${diffMap.get(key)}` : "";
             html += `<div class="${prefix}-section-row${diffClass}">
-                <span class="${prefix}-row-label">${prop.label}</span>
-                <span class="${prefix}-row-value">${prop.value}</span>
+                <span class="${prefix}-row-label">${esc(prop.label)}</span>
+                <span class="${prefix}-row-value">${esc(prop.value)}</span>
             </div>`;
         }
 

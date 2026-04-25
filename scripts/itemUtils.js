@@ -480,8 +480,8 @@ export class ItemUtils {
          * Parse currency from text (e.g., "50 gp", "10 sp")
          * Returns the total value in copper AND the best denomination to display
          * @param {string} text - Text containing currency
-         * @returns {Object|null} { 
-         *   copperValue: number (total in copper), 
+         * @returns {Object|null} {
+         *   copperValue: number (total in copper),
          *   displayValue: number (amount in best denomination),
          *   displayDenomination: string (pp, gp, sp, ep, cp)
          * }
@@ -765,7 +765,7 @@ export class ItemUtils {
             errors.push("Item price cannot be negative");
         }
 
-        if (itemData.system?.weight && itemData.system.weight < 0) {
+        if (itemData.system?.weight?.value < 0) {
             errors.push("Item weight cannot be negative");
         }
 

@@ -41,6 +41,16 @@ export function registerSettings() {
         default: false,
     });
 
+    // Show YAML Normalization Warnings - Surface auto-fix diagnostics
+    game.settings.register(MODULE_NAME, "showNormalizationWarnings", {
+        name: "Show YAML Normalization Warnings",
+        hint: "When enabled, warnings appear whenever the parser auto-fixes common YAML mistakes (smart quotes, leading tabs, missing space after colon, BOM). Useful for debugging template or LLM-prompt issues. Off by default since fix-ups are silent and safe.",
+        scope: "client",
+        config: true,
+        type: Boolean,
+        default: false,
+    });
+
     // Auto-parse - Automatically parse text as user types
     game.settings.register(MODULE_NAME, "autoParse", {
         name: "Auto-Parse on Input",
@@ -89,8 +99,7 @@ export function registerSettings() {
             "weapon": "Weapon",
             "equipment": "Equipment/Armor",
             "tool": "Tool",
-            "container": "Container",
-            "backpack": "Backpack"
+            "container": "Container"
         },
         default: "loot"
     });
@@ -231,7 +240,6 @@ export const ItemTypes = {
     TOOL: "tool",
     LOOT: "loot",
     CONTAINER: "container",
-    BACKPACK: "backpack",
     SPELL: "spell",
     FEAT: "feat",
     CLASS: "class",
@@ -310,23 +318,23 @@ export const BaseTools = {
     THIEVES: "thief",
 
     // Artisan's Tools (type: "art")
-    ALCHEMIST: "alch",
-    BREWER: "brew",
-    CALLIGRAPHER: "calli",
-    CARPENTER: "carp",
-    CARTOGRAPHER: "carta",
-    COBBLER: "cob",
+    ALCHEMIST: "alchemist",
+    BREWER: "brewer",
+    CALLIGRAPHER: "calligrapher",
+    CARPENTER: "carpenter",
+    CARTOGRAPHER: "cartographer",
+    COBBLER: "cobbler",
     COOK: "cook",
-    GLASSBLOWER: "glass",
-    JEWELER: "jewel",
-    LEATHERWORKER: "leath",
-    MASON: "maso",
-    PAINTER: "paint",
-    POTTER: "pott",
+    GLASSBLOWER: "glassblower",
+    JEWELER: "jeweler",
+    LEATHERWORKER: "leatherworker",
+    MASON: "mason",
+    PAINTER: "painter",
+    POTTER: "potter",
     SMITH: "smith",
-    TINKER: "tink",
-    WEAVER: "weav",
-    WOODCARVER: "wood",
+    TINKER: "tinker",
+    WEAVER: "weaver",
+    WOODCARVER: "woodcarver",
 
     // Gaming Sets (type: "game")
     DICE: "dice",
@@ -359,20 +367,37 @@ export const BaseToolToType = {
     "thief": "",
 
     // Artisan tools
+    "alchemist": "art",
+    "brewer": "art",
+    "calligrapher": "art",
+    "carpenter": "art",
+    "cartographer": "art",
+    "cobbler": "art",
+    "cook": "art",
+    "glassblower": "art",
+    "jeweler": "art",
+    "leatherworker": "art",
+    "mason": "art",
+    "painter": "art",
+    "potter": "art",
+    "smith": "art",
+    "tinker": "art",
+    "weaver": "art",
+    "woodcarver": "art",
+
+    // Legacy artisan IDs remain supported for backwards compatibility
     "alch": "art",
     "brew": "art",
     "calli": "art",
     "carp": "art",
     "carta": "art",
     "cob": "art",
-    "cook": "art",
     "glass": "art",
     "jewel": "art",
     "leath": "art",
     "maso": "art",
     "paint": "art",
     "pott": "art",
-    "smith": "art",
     "tink": "art",
     "weav": "art",
     "wood": "art",

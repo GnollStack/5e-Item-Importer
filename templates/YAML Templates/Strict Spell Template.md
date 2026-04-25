@@ -3,34 +3,34 @@
 ## INSTRUCTIONS
 
 **How to use this template:**
-- Fill in every field. Use `n/a` for fields that don't apply.
+- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
 - Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Conditional sections (marked with `#` comments) can be omitted entirely when not applicable.
+- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
 
 **Batching multiple items:**
 Combine different item types in one block by stacking top-level keys:
-```yaml
+```text
 SPELL:
   ITEM:
     Name: "Fireball"
-    ...
+    # additional fields omitted in this batching example
 WEAPON:
   ITEM:
     Name: "Staff of Fire"
-    ...
+    # additional fields omitted in this batching example
 ```
 For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```yaml
+```text
 SPELL:
   ITEM:
     Name: "Fireball"
-    ...
+    # additional fields omitted in this batching example
 ---
 SPELL:
   ITEM:
     Name: "Lightning Bolt"
-    ...
+    # additional fields omitted in this batching example
 ```
 You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
@@ -38,9 +38,28 @@ You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMEN
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable scalar fields: use the literal string `n/a`.
-- **Omit conditional sections entirely** (e.g., MATERIALS, AREA) when their condition is not met — do NOT fill them with `n/a` values.
+- Required scalar fields that do not apply: use the literal string `n/a`.
+- **Omit conditional sections entirely** (e.g., MATERIALS, AREA) when their condition is not met. Do not fill omitted sections with `n/a` values.
 - **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
+- Do not include template comments (`# ...`) in the final YAML output.
+- Do not omit individual fields from required sections just because their value is `n/a`.
+- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
+- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
+
+**YAML Syntax Rules (do not violate):**
+- Every key needs a SPACE after the colon: `KEY: value`, never `KEY:value`. js-yaml will reject the file with a confusing "multiline key" error otherwise.
+- Empty arrays are written `KEY: []` and empty mappings `KEY: {}` — both with the space.
+- Indentation is exactly 2 spaces per level. No tabs. No 4-space jumps.
+
+**Default assumptions when source text is silent:**
+- Ability: `n/a` unless the spell uses a fixed ability override.
+- Preparation Method: `spell`; Prepared: `true` unless explicitly at-will, innate, ritual-only, or pact magic.
+- Activation Condition: `n/a` unless a trigger or special condition is stated.
+- Duration Concentration: `false` unless concentration is explicitly required.
+- Uses Spent: `0`; Uses Max: `n/a` unless the spell item tracks limited uses outside normal spell slots.
+- RECOVERY: `[]` when no limited-use recovery applies.
+- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
+- Chat Description: `n/a` unless special chat flavor is needed.
 
 ---
 
@@ -65,7 +84,7 @@ SPELL:
     Consumed: "[true|false]"
 
   PREPARATION:
-    Method: "[atwill|innate|ritual|pact|prepared]"
+    Method: "[atwill|innate|ritual|pact|spell]"
     Prepared: "[true|false]"
 
   ACTIVATION:
@@ -105,12 +124,12 @@ SPELL:
     Uses Spent: "[integer|n/a]"
     Uses Max: "[integer|n/a]"
 
+  # Optional, repeatable. Use [] when there is no recovery.
+  # If Uses Max > 0, replace [] with a list of entries shaped like:
+  #   - Period: "[lr|sr|day|dawn|dusk|recharge]"
+  #     Type: "[recoverAll|loseAll|formula]"
+  #     Formula: "[text|n/a]"
   RECOVERY: []
-    # Optional, repeatable. Use [] when there is no recovery.
-    # If Uses Max > 0, replace [] with one or more entries:
-    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
-    #   Type: "[recoverAll|loseAll|formula]"
-    #   Formula: "[text|n/a]"
 
   DESCRIPTION:
     Description: |
@@ -125,23 +144,24 @@ SPELL:
     Chat Description: |
       [multiline text content]
 
+```
+
+## OPTIONAL ADVANCED SECTIONS
+
+Do not include `effects:` or `Activities:` in normal output. Add them only when the user explicitly asks for passive Active Effects or extra activities beyond the base item behavior.
+
+When requested, append them after `CHAT_FLAVOR`:
+
+```yaml
   effects:
-    # ── OMIT THIS SECTION ENTIRELY unless passive effects are needed ──
-    # Passive Active Effects applied to the actor.
-    # These are NOT activities — they are always-on mechanical modifications.
+    # Passive Active Effects applied to the actor when the item is equipped, attuned, or otherwise active.
     # Requires the 5e-activity-importer module to be active.
-    # This MUST be a YAML array. Each entry follows the EFFECT template format.
-    # See the MIDI Effect Template for full field reference.
+    # Must be a YAML array. Each entry follows the EFFECT template format.
 
   Activities:
-    # ── OMIT THIS SECTION ENTIRELY unless extra activities are needed ──
+    # Extra activities only. Most base item behavior is generated by the dnd5e system.
     # Requires the 5e-activity-importer module to be active.
-    # IMPORTANT: This MUST be a YAML array (each entry starts with a dash "-").
-    # Each entry has exactly ONE top-level key: ACTIVITY_*
-    # Supported keys: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
-    #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
-    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD
-    # See the 5e-activity-importer module templates for full field reference.
+    # Must be a YAML array. Each entry starts with a dash and has one ACTIVITY_* key.
 ```
 
 ---
@@ -182,7 +202,9 @@ Use `Ability` in the `ITEM` section to override the class spellcasting ability f
 | `innate` | Innate (uses per day, not spell slots) |
 | `ritual` | Ritual (adds ritual property, always prepared) |
 | `pact` | Pact Magic (Warlock slot) |
-| `prepared` | Standard prepared spell |
+| `spell` | Standard spellbook/prepared spell |
+
+Legacy `prepared` is still accepted for backward compatibility, but new templates should use `spell`.
 
 ### **Activation Types**
 | Type | Description |

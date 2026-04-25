@@ -3,34 +3,34 @@
 ## INSTRUCTIONS
 
 **How to use this template:**
-- Fill in every field. Use `n/a` for fields that don't apply.
+- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
 - Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Conditional sections (marked with `#` comments) can be omitted entirely when not applicable.
+- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
 
 **Batching multiple items:**
 Combine different item types in one block by stacking top-level keys:
-```yaml
+```text
 CONSUMABLE:
   ITEM:
     Name: "Potion of Healing"
-    ...
+    # additional fields omitted in this batching example
 WEAPON:
   ITEM:
     Name: "Longsword +1"
-    ...
+    # additional fields omitted in this batching example
 ```
 For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```yaml
+```text
 CONSUMABLE:
   ITEM:
     Name: "Potion of Healing"
-    ...
+    # additional fields omitted in this batching example
 ---
 CONSUMABLE:
   ITEM:
     Name: "Potion of Greater Healing"
-    ...
+    # additional fields omitted in this batching example
 ```
 You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
@@ -38,9 +38,32 @@ You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMEN
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable scalar fields: use the literal string `n/a`.
-- **Omit conditional sections entirely** (e.g., ATTUNEMENT, AMMUNITION_PROPERTIES, POISON_PROPERTIES) when their condition is not met — do NOT fill them with `n/a` values.
+- Required scalar fields that do not apply: use the literal string `n/a`.
+- **Omit conditional sections entirely** (e.g., ATTUNEMENT, AMMUNITION_PROPERTIES, POISON_PROPERTIES) when their condition is not met. Do not fill omitted sections with `n/a` values.
 - **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
+- Do not include template comments (`# ...`) in the final YAML output.
+- Do not omit individual fields from required sections just because their value is `n/a`.
+- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
+- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
+
+**YAML Syntax Rules (do not violate):**
+- Every key needs a SPACE after the colon: `KEY: value`, never `KEY:value`. js-yaml will reject the file with a confusing "multiline key" error otherwise.
+- Empty arrays are written `KEY: []` and empty mappings `KEY: {}` — both with the space.
+- Indentation is exactly 2 spaces per level. No tabs. No 4-space jumps.
+
+**Default assumptions when source text is silent:**
+- Quantity: `1`
+- Identified: `true`
+- Equipped: `false`
+- Rarity: `n/a` for mundane or unspecified consumables.
+- Price Value: `0`; Price Denomination: `gp`
+- Weight Value: `0` when negligible or not listed; Weight Units: `lb`
+- Magical: `false` unless the consumable is explicitly magical.
+- Potions, food, poison, and ammunition: Uses Spent: `0`, Uses Max: `0`, Destroy on Empty: `false`.
+- Wands, rods, and charged trinkets: Uses Spent: `0`; Uses Max should match the listed maximum charges.
+- RECOVERY: `[]` when no charge recovery applies.
+- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
+- Chat Description: `n/a` unless special chat flavor is needed.
 
 ---
 
@@ -60,7 +83,7 @@ CONSUMABLE:
     Price Value: "[number]"
     Price Denomination: "[pp|gp|ep|sp|cp]"
     Weight Value: "[number]"
-    Weight Units: "[lb|tn|kg|t]"
+    Weight Units: "[lb|tn|kg|Mg]"
 
   PROPERTIES:
     Magical: "[true|false]"
@@ -100,12 +123,12 @@ CONSUMABLE:
     Uses Max: "[integer|n/a]"
     Destroy on Empty: "[true|false]"
 
+  # Optional, repeatable. Use [] when there is no recovery.
+  # If Uses Max > 0, replace [] with a list of entries shaped like:
+  #   - Period: "[lr|sr|day|dawn|dusk|recharge]"
+  #     Type: "[recoverAll|loseAll|formula]"
+  #     Formula: "[text|n/a]"
   RECOVERY: []
-    # Optional, repeatable. Use [] when there is no recovery.
-    # If Uses Max > 0, replace [] with one or more entries:
-    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
-    #   Type: "[recoverAll|loseAll|formula]"
-    #   Formula: "[text|n/a]"
 
   DESCRIPTION:
     Description: |
@@ -120,23 +143,24 @@ CONSUMABLE:
     Chat Description: |
       [multiline text content]
 
+```
+
+## OPTIONAL ADVANCED SECTIONS
+
+Do not include `effects:` or `Activities:` in normal output. Add them only when the user explicitly asks for passive Active Effects or extra activities beyond the base item behavior.
+
+When requested, append them after `CHAT_FLAVOR`:
+
+```yaml
   effects:
-    # ── OMIT THIS SECTION ENTIRELY unless passive effects are needed ──
-    # Passive Active Effects applied to the actor when item is consumed/equipped.
-    # These are NOT activities — they are always-on mechanical modifications.
+    # Passive Active Effects applied to the actor when the item is equipped, attuned, or otherwise active.
     # Requires the 5e-activity-importer module to be active.
-    # This MUST be a YAML array. Each entry follows the EFFECT template format.
-    # See the MIDI Effect Template for full field reference.
+    # Must be a YAML array. Each entry follows the EFFECT template format.
 
   Activities:
-    # ── OMIT THIS SECTION ENTIRELY unless extra activities are needed ──
+    # Extra activities only. Most base item behavior is generated by the dnd5e system.
     # Requires the 5e-activity-importer module to be active.
-    # IMPORTANT: This MUST be a YAML array (each entry starts with a dash "-").
-    # Each entry has exactly ONE top-level key: ACTIVITY_*
-    # Supported keys: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
-    #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
-    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD
-    # See the 5e-activity-importer module templates for full field reference.
+    # Must be a YAML array. Each entry starts with a dash and has one ACTIVITY_* key.
 ```
 
 ---

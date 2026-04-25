@@ -3,34 +3,34 @@
 ## INSTRUCTIONS
 
 **How to use this template:**
-- Fill in every field. Use `n/a` for fields that don't apply.
+- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
 - Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Conditional sections (marked with `#` comments) can be omitted entirely when not applicable.
+- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
 
 **Batching multiple items:**
 Combine different item types in one block by stacking top-level keys:
-```yaml
+```text
 CONTAINER:
   ITEM:
     Name: "Bag of Holding"
-    ...
+    # additional fields omitted in this batching example
 WEAPON:
   ITEM:
     Name: "Longsword +1"
-    ...
+    # additional fields omitted in this batching example
 ```
 For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```yaml
+```text
 CONTAINER:
   ITEM:
     Name: "Bag of Holding"
-    ...
+    # additional fields omitted in this batching example
 ---
 CONTAINER:
   ITEM:
     Name: "Handy Haversack"
-    ...
+    # additional fields omitted in this batching example
 ```
 You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
 
@@ -38,9 +38,31 @@ You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMEN
 - Output ONLY the yaml code block. No commentary before or after.
 - Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
 - Booleans: `true` or `false` (lowercase, no quotes).
-- Inapplicable scalar fields: use the literal string `n/a`.
-- **Omit conditional sections entirely** (e.g., ATTUNEMENT) when their condition is not met — do NOT fill them with `n/a` values.
+- Required scalar fields that do not apply: use the literal string `n/a`.
+- **Omit conditional sections entirely** (e.g., ATTUNEMENT) when their condition is not met. Do not fill omitted sections with `n/a` values.
 - **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
+- Do not include template comments (`# ...`) in the final YAML output.
+- Do not omit individual fields from required sections just because their value is `n/a`.
+- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
+- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
+
+**YAML Syntax Rules (do not violate):**
+- Every key needs a SPACE after the colon: `KEY: value`, never `KEY:value`. js-yaml will reject the file with a confusing "multiline key" error otherwise.
+- Empty arrays are written `KEY: []` and empty mappings `KEY: {}` — both with the space.
+- Indentation is exactly 2 spaces per level. No tabs. No 4-space jumps.
+
+**Default assumptions when source text is silent:**
+- Quantity: `1`
+- Identified: `true`
+- Equipped: `false`
+- Rarity: `n/a` for mundane or unspecified containers.
+- Price Value: `0`; Price Denomination: `gp`
+- Weight Value: `0` when negligible or not listed; Weight Units: `lb`
+- Magical: `false`; Weightless Contents: `false` unless explicitly extradimensional or weightless.
+- Capacity fields: use `n/a` when unlimited, unknown, or not relevant.
+- Omit CURRENCY_CONTENTS unless the container starts with coins inside it.
+- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
+- Chat Description: `n/a` unless special chat flavor is needed.
 
 ---
 
@@ -59,7 +81,7 @@ CONTAINER:
     Price Value: "[number]"
     Price Denomination: "[pp|gp|ep|sp|cp]"
     Weight Value: "[number]"
-    Weight Units: "[lb|tn|kg|t]"
+    Weight Units: "[lb|tn|kg|Mg]"
 
   PROPERTIES:
     Magical: "[true|false]"
@@ -73,12 +95,13 @@ CONTAINER:
   CAPACITY:
     Item Count: "[integer|n/a]"
     Weight Capacity Value: "[number|n/a]"
-    Weight Capacity Units: "[lb|tn|kg|t|n/a]"
+    Weight Capacity Units: "[lb|tn|kg|Mg|n/a]"
     Volume Capacity Value: "[number|n/a]"
-    Volume Capacity Units: "[cubicfoot|liter|n/a]"
+    Volume Capacity Units: "[cubicFoot|liter|n/a]"
 
   CURRENCY_CONTENTS:
-    # (All fields required, use 0 for empty)
+    # Optional. Omit this entire section if the container holds no coins.
+    # If included, all fields are required; use 0 for empty denominations.
     Platinum: "[integer]"
     Gold: "[integer]"
     Electrum: "[integer]"
@@ -98,23 +121,24 @@ CONTAINER:
     Chat Description: |
       [multiline text content]
       
+```
+
+## OPTIONAL ADVANCED SECTIONS
+
+Do not include `effects:` or `Activities:` in normal output. Add them only when the user explicitly asks for passive Active Effects or extra activities beyond the base item behavior.
+
+When requested, append them after `CHAT_FLAVOR`:
+
+```yaml
   effects:
-    # ── OMIT THIS SECTION ENTIRELY unless passive effects are needed ──
-    # Passive Active Effects applied to the actor when item is equipped.
-    # These are NOT activities — they are always-on mechanical modifications.
+    # Passive Active Effects applied to the actor when the item is equipped, attuned, or otherwise active.
     # Requires the 5e-activity-importer module to be active.
-    # This MUST be a YAML array. Each entry follows the EFFECT template format.
-    # See the MIDI Effect Template for full field reference.
+    # Must be a YAML array. Each entry follows the EFFECT template format.
 
   Activities:
-    # ── OMIT THIS SECTION ENTIRELY unless extra activities are needed ──
+    # Extra activities only. Most base item behavior is generated by the dnd5e system.
     # Requires the 5e-activity-importer module to be active.
-    # IMPORTANT: This MUST be a YAML array (each entry starts with a dash "-").
-    # Each entry has exactly ONE top-level key: ACTIVITY_*
-    # Supported keys: ACTIVITY_ATTACK, ACTIVITY_SAVE, ACTIVITY_DAMAGE, ACTIVITY_HEAL,
-    #   ACTIVITY_CHECK, ACTIVITY_UTILITY, ACTIVITY_CAST, ACTIVITY_ENCHANTING,
-    #   ACTIVITY_SUMMON, ACTIVITY_TRANSFORM, ACTIVITY_FORWARD
-    # See the 5e-activity-importer module templates for full field reference.
+    # Must be a YAML array. Each entry starts with a dash and has one ACTIVITY_* key.
 ```
 
 ---
@@ -132,7 +156,7 @@ CONTAINER:
 ### **Volume Units**
 | Value | Description |
 |-------|-------------|
-| `cubicfoot` | Cubic feet (do NOT use `ft^3` or `cu ft`) |
+| `cubicFoot` | Cubic feet (do NOT use `ft^3` or `cu ft`) |
 | `liter` | Liters |
 
 ### **Common Container Capacities**

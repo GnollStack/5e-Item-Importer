@@ -136,7 +136,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     // Auto-parse on input
     input.addEventListener("input", () => {
       this._updateParseState("empty");
-      
+
       if (game.settings.get(MODULE_NAME, "autoParse")) {
         const delay = game.settings.get(MODULE_NAME, "autoParseDelay");
 
@@ -379,7 +379,9 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     rootOption.className = "ii-folder-option";
     rootOption.dataset.folderId = "";
     rootOption.dataset.searchText = "none root level";
-    rootOption.innerHTML = '<i class="fas fa-home"></i> None (Root Level)';
+    const rootIcon = document.createElement("i");
+    rootIcon.className = "fas fa-home";
+    rootOption.append(rootIcon, document.createTextNode(" None (Root Level)"));
     container.appendChild(rootOption);
 
     // Get all Item folders
@@ -435,16 +437,28 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
       // Only add toggle arrow if folder has children
       if (hasChildren) {
-        folderHeader.innerHTML = `
-          <i class="fas fa-chevron-down ii-folder-toggle"></i>
-          <i class="fas fa-folder ii-folder-icon" data-open-icon="fa-folder-open" data-closed-icon="fa-folder"></i>
-          <span class="ii-folder-name">${folderData.folder.name}</span>
-        `;
+        const toggle = document.createElement("i");
+        toggle.className = "fas fa-chevron-down ii-folder-toggle";
+
+        const icon = document.createElement("i");
+        icon.className = "fas fa-folder ii-folder-icon";
+        icon.dataset.openIcon = "fa-folder-open";
+        icon.dataset.closedIcon = "fa-folder";
+
+        const name = document.createElement("span");
+        name.className = "ii-folder-name";
+        name.textContent = folderData.folder.name;
+
+        folderHeader.append(toggle, icon, name);
       } else {
-        folderHeader.innerHTML = `
-          <i class="fas fa-folder ii-folder-icon ii-folder-leaf-icon"></i>
-          <span class="ii-folder-name">${folderData.folder.name}</span>
-        `;
+        const icon = document.createElement("i");
+        icon.className = "fas fa-folder ii-folder-icon ii-folder-leaf-icon";
+
+        const name = document.createElement("span");
+        name.className = "ii-folder-name";
+        name.textContent = folderData.folder.name;
+
+        folderHeader.append(icon, name);
       }
 
       // Only create contents container if there are children
@@ -479,7 +493,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     this.parseState = state;
     const inputGroup = this.element.querySelector(".ii-input-group");
     const stateIndicator = this.element.querySelector(".ii-state-indicator");
-    
+
     if (inputGroup) {
       inputGroup.classList.remove("state-empty", "state-parsing", "state-valid", "state-error");
       inputGroup.classList.add(`state-${state}`);
@@ -519,7 +533,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     if (importBtn) {
       const hasSelection = this.selectedBatchItems.size > 0;
       importBtn.disabled = !hasSelection;
-      
+
       if (hasSelection) {
         importBtn.classList.add("has-selection");
         importBtn.dataset.count = this.selectedBatchItems.size;
@@ -532,10 +546,17 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** Set up click handlers for collapsible sections and batch items */
   _setupCollapsibleSections() {
-    // Collapsible headers
+    // Collapsible headers (item importer sections)
     this.element.querySelectorAll(".ii-section-header").forEach(header => {
       header.addEventListener("click", () => {
         header.closest(".ii-section").classList.toggle("collapsed");
+      });
+    });
+
+    // Collapsible headers (activity importer sections embedded in item preview)
+    this.element.querySelectorAll(".ai-section-header").forEach(header => {
+      header.addEventListener("click", () => {
+        header.closest(".ai-section").classList.toggle("collapsed");
       });
     });
 
@@ -544,13 +565,13 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       checkbox.addEventListener("click", (e) => {
         e.stopPropagation();
         const index = parseInt(checkbox.dataset.index);
-        
+
         if (checkbox.checked) {
           this.selectedBatchItems.add(index);
         } else {
           this.selectedBatchItems.delete(index);
         }
-        
+
         this._updateBatchSelection();
       });
     });
@@ -559,15 +580,15 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     this.element.querySelectorAll(".ii-batch-item.selectable").forEach(item => {
       item.addEventListener("click", (e) => {
         if (e.target.classList.contains("ii-batch-checkbox")) return;
-        
+
         const index = parseInt(item.dataset.index);
-        
+
         if (this.selectedBatchItems.has(index)) {
           this.selectedBatchItems.delete(index);
         } else {
           this.selectedBatchItems.add(index);
         }
-        
+
         this._updateBatchSelection();
       });
     });

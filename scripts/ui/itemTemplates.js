@@ -108,10 +108,10 @@ export const ITEM_TEMPLATES = [
         label: "Tool",
         text: `TOOL:
   ITEM:
-    Name: "Thieves' Tools"
+    Name: "Alchemist's Supplies"
     Rarity: common
     Tool Type: art
-    Base Tool: thief
+    Base Tool: alchemist
 
   INVENTORY:
     Quantity: 1
@@ -128,11 +128,11 @@ export const ITEM_TEMPLATES = [
 
   ABILITY_CHECK:
     Proficient: Automatic
-    Ability: dex
+    Ability: int
 
   DESCRIPTION:
     Description: |
-      This set of tools includes a small file, a set of lock picks, a small mirror mounted on a metal handle, a set of narrow-bladed scissors, and a pair of pliers.`
+      This set of alchemist's supplies includes glass beakers, a metal frame, a stirring rod, a mortar and pestle, and common alchemical ingredients.`
     },
     {
         id: "container",
@@ -162,6 +162,8 @@ export const ITEM_TEMPLATES = [
   CAPACITY:
     Weight Capacity Value: 500
     Weight Capacity Units: lb
+    Volume Capacity Value: 64
+    Volume Capacity Units: cubicFoot
 
   DESCRIPTION:
     Description: |

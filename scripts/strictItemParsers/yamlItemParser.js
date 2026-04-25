@@ -3,6 +3,7 @@
 import jsyaml from '../vendor/js-yaml.mjs';
 import { ItemData } from '../itemData.js';
 import { ItemUtils } from '../itemUtils.js';
+import { MODULE_NAME } from '../itemConfig.js';
 
 // ─── Helper Utilities ───────────────────────────────────────────────────────
 
@@ -38,6 +39,108 @@ function asString(val, fallback = '') {
     return str || fallback;
 }
 
+// Multi-pass tolerance layer for common LLM/paste mistakes. js-yaml is strict
+// and tends to fail several lines past the real problem; these passes silently
+// fix the most common emission errors before parsing.
+//
+// Passes (in order, order matters):
+//   bom           - strip leading U+FEFF (whole-file)
+//   smartQuotes   - “” → ", ‘’ → ' on each non-block-scalar line
+//   leadingTabs   - tabs at start of a line → 2 spaces each
+//   keyColonSpace - `KEY:value` → `KEY: value`
+//
+// Per-line passes track block-scalar regions (`|`, `>`) so HTML descriptions
+// and freeform multi-line content are never modified.
+const KEY_NO_SPACE_RE = /^(\s*-?\s*)([A-Za-z_](?:[A-Za-z0-9_\- ]*[A-Za-z0-9_\-])?):(\S)/;
+const BLOCK_SCALAR_OPENER_RE = /:\s*[|>][\d+\-]*\s*(?:#.*)?$/;
+const SMART_QUOTE_RE = /[‘’“”]/;
+const LEADING_TABS_RE = /^\t+/;
+const BOM = '﻿';
+
+function normalizeYamlForLlm(text) {
+    const fixes = [];
+    if (!text) return { text, fixes };
+
+    let working = text;
+    if (working.charCodeAt(0) === 0xFEFF) {
+        working = working.slice(1);
+        fixes.push({ kind: 'bom', lineNo: 1, snippet: '' });
+    }
+
+    const lines = working.split('\n');
+    let blockScalarIndent = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        const lineNo = i + 1;
+        const original = line;
+
+        const indentMatch = line.match(/^[ \t]*\S/);
+        const indent = indentMatch ? indentMatch[0].length - 1 : -1;
+
+        if (blockScalarIndent >= 0) {
+            if (indent === -1 || indent > blockScalarIndent) continue;
+            blockScalarIndent = -1;
+        }
+
+        if (SMART_QUOTE_RE.test(line)) {
+            line = line.replace(/[‘’]/g, "'").replace(/[“”]/g, '"');
+            fixes.push({ kind: 'smartQuotes', lineNo, snippet: original.trim() });
+        }
+
+        const tabMatch = line.match(LEADING_TABS_RE);
+        if (tabMatch) {
+            line = '  '.repeat(tabMatch[0].length) + line.slice(tabMatch[0].length);
+            fixes.push({ kind: 'leadingTabs', lineNo, snippet: original.trim() });
+        }
+
+        const colonMatch = line.match(KEY_NO_SPACE_RE);
+        if (colonMatch) {
+            line = line.replace(KEY_NO_SPACE_RE, '$1$2: $3');
+            fixes.push({ kind: 'keyColonSpace', lineNo, snippet: original.trim() });
+        }
+
+        lines[i] = line;
+
+        if (BLOCK_SCALAR_OPENER_RE.test(line)) {
+            blockScalarIndent = indent >= 0 ? indent : 0;
+        }
+    }
+
+    return { text: lines.join('\n'), fixes };
+}
+
+function summarizeNormalizationFixes(fixes) {
+    if (!fixes || fixes.length === 0) return null;
+
+    const grouped = { bom: [], smartQuotes: [], leadingTabs: [], keyColonSpace: [] };
+    for (const fix of fixes) {
+        if (grouped[fix.kind]) grouped[fix.kind].push(fix);
+    }
+
+    const parts = [];
+    if (grouped.bom.length) parts.push('Stripped UTF-8 BOM at file start.');
+    if (grouped.smartQuotes.length) {
+        const ex = grouped.smartQuotes[0];
+        parts.push(`Converted smart quotes to straight quotes on ${grouped.smartQuotes.length} line${grouped.smartQuotes.length === 1 ? '' : 's'} (e.g., line ${ex.lineNo}: "${ex.snippet}").`);
+    }
+    if (grouped.leadingTabs.length) {
+        const ex = grouped.leadingTabs[0];
+        parts.push(`Converted leading tabs to spaces on ${grouped.leadingTabs.length} line${grouped.leadingTabs.length === 1 ? '' : 's'} (e.g., line ${ex.lineNo}).`);
+    }
+    if (grouped.keyColonSpace.length) {
+        const ex = grouped.keyColonSpace[0];
+        parts.push(`Added missing space after colon on ${grouped.keyColonSpace.length} line${grouped.keyColonSpace.length === 1 ? '' : 's'} (e.g., line ${ex.lineNo}: "${ex.snippet}").`);
+    }
+
+    return `Normalized YAML before parse:\n  • ${parts.join('\n  • ')}\nLLMs frequently produce these; safe to ignore.`;
+}
+
+function shouldShowNormalizationWarnings() {
+    if (typeof game === 'undefined') return false;
+    return game.settings?.get?.(MODULE_NAME, 'showNormalizationWarnings') ?? false;
+}
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const RARITY_MAP = {
@@ -51,8 +154,17 @@ const RARITY_MAP = {
 };
 
 const VALID_DENOMINATIONS = ['pp', 'gp', 'ep', 'sp', 'cp'];
-const VALID_WEIGHT_UNITS = ['lb', 'tn', 'kg', 't'];
+const WEIGHT_UNIT_MAP = { lb: 'lb', tn: 'tn', kg: 'kg', mg: 'Mg', t: 'Mg' };
+const VALID_WEIGHT_UNITS = Object.keys(WEIGHT_UNIT_MAP);
 const VALID_RANGE_UNITS = ['ft', 'm', 'sq', 'mi'];
+const VOLUME_UNIT_MAP = {
+    cubicfoot: 'cubicFoot',
+    cubicfeet: 'cubicFoot',
+    ft: 'cubicFoot',
+    liter: 'liter',
+    litre: 'liter',
+    l: 'liter'
+};
 
 const VALID_DAMAGE_TYPES = [
     'acid', 'bludgeoning', 'cold', 'fire', 'force', 'lightning',
@@ -135,10 +247,10 @@ const VALID_POISON_TYPES = ['contact', 'ingested', 'inhaled', 'injury'];
 // ─── Tool Constants ─────────────────────────────────────────────────────────
 
 const BASE_TOOL_MAPPINGS = {
-    alch: 'art', brew: 'art', calli: 'art', carp: 'art', carta: 'art',
-    cob: 'art', cook: 'art', glass: 'art', jewel: 'art', leath: 'art',
-    maso: 'art', paint: 'art', pott: 'art', smith: 'art', tink: 'art',
-    weav: 'art', wood: 'art',
+    alchemist: 'art', brewer: 'art', calligrapher: 'art', carpenter: 'art', cartographer: 'art',
+    cobbler: 'art', cook: 'art', glassblower: 'art', jeweler: 'art', leatherworker: 'art',
+    mason: 'art', painter: 'art', potter: 'art', smith: 'art', tinker: 'art',
+    weaver: 'art', woodcarver: 'art',
     dice: 'game', card: 'game', chess: 'game',
     bagpipes: 'music', drum: 'music', dulcimer: 'music', flute: 'music',
     horn: 'music', lute: 'music', lyre: 'music', panflute: 'music',
@@ -146,7 +258,30 @@ const BASE_TOOL_MAPPINGS = {
     disg: '', forg: '', herb: '', navg: '', pois: '', thief: ''
 };
 
-const VALID_TOOL_TYPES = ['art', 'game', 'music', 'other'];
+const LEGACY_BASE_TOOL_ALIASES = {
+    alch: 'alchemist',
+    brew: 'brewer',
+    calli: 'calligrapher',
+    carp: 'carpenter',
+    carta: 'cartographer',
+    cob: 'cobbler',
+    glass: 'glassblower',
+    jewel: 'jeweler',
+    leath: 'leatherworker',
+    maso: 'mason',
+    paint: 'painter',
+    pott: 'potter',
+    tink: 'tinker',
+    weav: 'weaver',
+    wood: 'woodcarver'
+};
+
+const VALID_TOOL_TYPES = ['art', 'game', 'music'];
+
+function getDefaultIdentifiedSetting() {
+    if (typeof game === 'undefined') return true;
+    return game.settings?.get?.(MODULE_NAME, 'createIdentified') ?? true;
+}
 
 // ─── Loot Constants ─────────────────────────────────────────────────────────
 
@@ -155,7 +290,7 @@ const VALID_LOOT_TYPES = ['art', 'gear', 'gem', 'junk', 'material', 'resource', 
 // ─── Spell Constants ─────────────────────────────────────────────────────────
 
 const VALID_SPELL_SCHOOLS = ['abj', 'con', 'div', 'enc', 'evo', 'ill', 'nec', 'trs'];
-const VALID_SPELL_PREP_METHODS = ['atwill', 'innate', 'ritual', 'pact', 'prepared'];
+const VALID_SPELL_PREP_METHODS = ['atwill', 'innate', 'ritual', 'pact', 'spell', 'prepared'];
 const VALID_SPELL_ACTIVATION_TYPES = ['action', 'bonus', 'reaction', 'minute', 'hour', 'day', 'special'];
 const VALID_SPELL_RANGE_UNITS = ['self', 'touch', 'spec', 'any', 'ft', 'mi', 'm', 'km'];
 const VALID_DURATION_UNITS = ['inst', 'spec', 'turn', 'round', 'minute', 'hour', 'day', 'month', 'year', 'disp', 'dstr', 'perm'];
@@ -187,7 +322,14 @@ export class YamlItemParser {
 
         try {
             // 1. Strip code fences
-            const yamlText = this.stripCodeFences(text);
+            const stripped = this.stripCodeFences(text);
+
+            // 1b. Run the LLM-tolerance pre-pass
+            const { text: yamlText, fixes } = normalizeYamlForLlm(stripped);
+            if (fixes.length > 0 && shouldShowNormalizationWarnings()) {
+                const summary = summarizeNormalizationFixes(fixes);
+                if (summary) this.addWarning(summary);
+            }
 
             // 2. Parse YAML
             let doc;
@@ -267,8 +409,13 @@ export class YamlItemParser {
     parseAll(text) {
         if (!text || !text.trim()) return [];
 
-        const yamlText = this.stripCodeFences(text);
+        const stripped = this.stripCodeFences(text);
         const validKeys = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER', 'SPELL'];
+
+        // Run the LLM-tolerance pre-pass so loadAll() doesn't reject the batch.
+        // Per-item warnings are emitted later when each sub-document is re-parsed
+        // through parse() (where the setting check + addWarning live).
+        const { text: yamlText } = normalizeYamlForLlm(stripped);
 
         // Use loadAll to handle --- document separators
         let documents;
@@ -336,8 +483,8 @@ export class YamlItemParser {
 
     stripCodeFences(text) {
         let cleaned = text.trim();
-        // Remove opening ```yaml or ```markdown
-        cleaned = cleaned.replace(/^```(?:yaml|markdown)\s*\n?/i, '');
+        // Remove opening ```, ```yaml, or ```markdown
+        cleaned = cleaned.replace(/^```(?:yaml|markdown)?\s*\n?/i, '');
         // Remove closing ```
         cleaned = cleaned.replace(/\n?```\s*$/, '');
         return cleaned.trim();
@@ -409,7 +556,7 @@ export class YamlItemParser {
         // Inventory
         const inv = data?.INVENTORY || {};
         itemData.quantity = asInt(inv['Quantity'], 1);
-        itemData.identified = asBool(inv['Identified'], true);
+        itemData.identified = asBool(inv['Identified'], getDefaultIdentifiedSetting());
         itemData.equipped = asBool(inv['Equipped'], false);
 
         // Cost and Weight
@@ -423,8 +570,8 @@ export class YamlItemParser {
 
         itemData.weight = asFloat(cw['Weight Value'], 0);
         const wUnits = asString(cw['Weight Units'], 'lb').toLowerCase();
-        itemData.weightUnits = VALID_WEIGHT_UNITS.includes(wUnits) ? wUnits : 'lb';
-        if (!VALID_WEIGHT_UNITS.includes(wUnits) && wUnits !== '') {
+        itemData.weightUnits = WEIGHT_UNIT_MAP[wUnits] ?? 'lb';
+        if (!WEIGHT_UNIT_MAP[wUnits] && wUnits !== '') {
             this.addWarning(`Invalid weight units "${wUnits}", using default: lb`);
         }
 
@@ -805,7 +952,10 @@ export class YamlItemParser {
             if (siegeAC !== null) item.siegeArmorClass = asInt(siegeAC);
 
             const coverRaw = asString(siege['Cover'], 'none').toLowerCase();
-            item.cover = coverRaw;
+            item.cover = EQUIPMENT_COVER_MAP[coverRaw] !== undefined ? EQUIPMENT_COVER_MAP[coverRaw] : 0;
+            if (EQUIPMENT_COVER_MAP[coverRaw] === undefined) {
+                this.addWarning(`Invalid Cover value "${coverRaw}". Expected: none, half, threequarters, total`);
+            }
 
             const hpCurrent = asNullable(siege['Hit Points Current']);
             const hpMax = asNullable(siege['Hit Points Max']);
@@ -1092,27 +1242,29 @@ export class YamlItemParser {
     extractToolFields(item, data) {
         const itemSection = data?.ITEM || {};
 
-        // Tool Type (required)
-        const toolTypeRaw = asString(itemSection['Tool Type'], '').toLowerCase();
-        if (!toolTypeRaw) {
-            this.addError('Tool Type field is required but was not found');
-            item.toolType = '';
-        } else if (!VALID_TOOL_TYPES.includes(toolTypeRaw)) {
-            this.addError(`Invalid Tool Type "${toolTypeRaw}". Must be one of: ${VALID_TOOL_TYPES.join(', ')}`);
-            item.toolType = '';
-        } else {
-            // Map "other" to empty string for system compatibility
-            item.toolType = toolTypeRaw === 'other' ? '' : toolTypeRaw;
-        }
-
         // Base Tool (required)
         const baseToolRaw = asString(itemSection['Base Tool'], '').toLowerCase();
         if (!baseToolRaw) {
             this.addError('Base Tool field is required but was not found');
-        } else if (BASE_TOOL_MAPPINGS.hasOwnProperty(baseToolRaw)) {
-            item.baseToolItem = baseToolRaw;
         } else {
-            this.addError(`Invalid Base Tool "${baseToolRaw}". See template for valid base tool IDs.`);
+            const normalizedBaseTool = LEGACY_BASE_TOOL_ALIASES[baseToolRaw] ?? baseToolRaw;
+            if (BASE_TOOL_MAPPINGS.hasOwnProperty(normalizedBaseTool)) {
+                item.baseToolItem = normalizedBaseTool;
+            } else {
+                this.addError(`Invalid Base Tool "${baseToolRaw}". See template for valid base tool IDs.`);
+            }
+        }
+
+        // Tool Type (optional, inferred from Base Tool when omitted)
+        const toolTypeRaw = asString(itemSection['Tool Type'], '').toLowerCase();
+        const normalizedToolType = toolTypeRaw === 'other' ? '' : toolTypeRaw;
+        if (!toolTypeRaw) {
+            item.toolType = item.baseToolItem ? (BASE_TOOL_MAPPINGS[item.baseToolItem] ?? '') : '';
+        } else if (!VALID_TOOL_TYPES.includes(normalizedToolType) && normalizedToolType !== '') {
+            this.addError(`Invalid Tool Type "${toolTypeRaw}". Must be one of: ${VALID_TOOL_TYPES.join(', ')} or left blank for disguise/forgery/herbalism/navigator/poisoner/thieves' tools.`);
+            item.toolType = item.baseToolItem ? (BASE_TOOL_MAPPINGS[item.baseToolItem] ?? '') : '';
+        } else {
+            item.toolType = normalizedToolType;
         }
 
         // Properties
@@ -1168,7 +1320,7 @@ export class YamlItemParser {
             if (expectedType !== undefined && expectedType !== item.toolType) {
                 this.addError(
                     `Base Tool "${item.baseToolItem}" does not match Tool Type "${item.toolType}". ` +
-                    `This base tool requires type "${expectedType || 'other'}".`
+                    `This base tool requires type "${expectedType || '(blank)'}".`
                 );
             }
         }
@@ -1248,8 +1400,8 @@ export class YamlItemParser {
         const weightCapUnits = asNullable(capacity['Weight Capacity Units']);
         if (weightCapUnits) {
             const units = String(weightCapUnits).trim().toLowerCase();
-            if (VALID_WEIGHT_UNITS.includes(units)) {
-                item.weightCapacityUnits = units;
+            if (WEIGHT_UNIT_MAP[units]) {
+                item.weightCapacityUnits = WEIGHT_UNIT_MAP[units];
             }
         }
 
@@ -1266,19 +1418,16 @@ export class YamlItemParser {
         const volumeCapUnits = asNullable(capacity['Volume Capacity Units']);
         if (volumeCapUnits) {
             const units = String(volumeCapUnits).trim().toLowerCase();
-            if (units === 'cubicfoot') {
-                item.volumeCapacityUnits = 'cubicFoot';
-            } else if (units === 'liter') {
-                item.volumeCapacityUnits = 'liter';
+            if (VOLUME_UNIT_MAP[units]) {
+                item.volumeCapacityUnits = VOLUME_UNIT_MAP[units];
             } else {
                 this.addWarning(`Invalid Volume Capacity Units "${units}". Expected "cubicfoot" or "liter".`);
             }
         }
 
-        // Currency Contents (required)
+        // Currency Contents (optional)
         const currency = data?.CURRENCY_CONTENTS || {};
         if (!data?.CURRENCY_CONTENTS) {
-            this.addError('CURRENCY CONTENTS section is required but was not found');
             item.currency = { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
         } else {
             const currencyTypes = [
@@ -1377,13 +1526,14 @@ export class YamlItemParser {
 
         // Preparation
         const prep = data?.PREPARATION || {};
-        const methodRaw = asString(prep['Method'], 'prepared').toLowerCase();
+        const methodRaw = asString(prep['Method'], 'spell').toLowerCase();
+        const normalizedMethod = methodRaw === 'prepared' ? 'spell' : methodRaw;
         if (!VALID_SPELL_PREP_METHODS.includes(methodRaw)) {
-            this.addWarning(`Invalid Preparation Method "${prep['Method']}", defaulting to "prepared"`);
-            item.preparationMode = 'prepared';
+            this.addWarning(`Invalid Preparation Method "${prep['Method']}", defaulting to "spell"`);
+            item.preparationMode = 'spell';
         } else {
-            item.preparationMode = methodRaw;
-            item.ritual = (methodRaw === 'ritual');
+            item.preparationMode = normalizedMethod;
+            item.ritual = (normalizedMethod === 'ritual');
         }
         item.prepared = asBool(prep['Prepared'], false);
 

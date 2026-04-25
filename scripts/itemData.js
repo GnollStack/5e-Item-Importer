@@ -115,7 +115,7 @@ export class ItemData {
     this.weightCapacity = null; // Weight capacity value
     this.weightCapacityUnits = "lb"; // lb, tn, kg, Mg
     this.volumeCapacity = null; // Volume capacity value
-    this.volumeCapacityUnits = "ft"; // ft (cubic feet) or l (liters) - dnd5e system values
+    this.volumeCapacityUnits = "cubicFoot"; // cubicFoot or liter
     this.itemCapacity = null; // Item count capacity
     this.weightlessContents = false; // Weightless contents property
 
@@ -134,7 +134,7 @@ export class ItemData {
     this.materialConsumed = false;
 
     // Preparation
-    this.preparationMode = 'prepared';
+    this.preparationMode = 'spell';
     this.prepared = false;
     this.ritual = false;
     this.concentration = false;
@@ -1108,10 +1108,11 @@ export class ItemData {
     }
 
     // Preparation
-    this.setProperty("system.method", this.preparationMode);
+    const preparationMethod = this.preparationMode === "prepared" ? "spell" : (this.preparationMode || "spell");
+    this.setProperty("system.method", preparationMethod);
     this.setProperty("system.prepared", this.prepared ? 1 : 0);
     ItemUtils.log("Preparation set", {
-      method: this.preparationMode,
+      method: preparationMethod,
       prepared: this.prepared
     });
 
@@ -1279,7 +1280,7 @@ export class ItemData {
         // Apply inline activities/effects if present
         let activityResults = { addedActivities: 0, addedEffects: 0, issues: [] };
         if (this.pendingActivities.length > 0) {
-          activityResults = await this.applyActivities(createdItem);
+          activityResults = await this.applyActivities(createdItem, options.parsedActivityResults);
           for (const issue of activityResults.issues) {
             ItemUtils.warn(`Activity/Effect issue: ${issue}`);
           }
@@ -1353,12 +1354,14 @@ export class ItemData {
 
   /**
    * Apply inline activities and effects to a created Foundry item.
-   * Dynamically imports the activity parser from the 5e-activity-importer module.
+   * If pre-parsed results (with resolved UUIDs) are provided, uses those directly.
+   * Otherwise dynamically imports the activity parser from the 5e-activity-importer module.
    *
    * @param {Object} createdItem - The created Foundry Item document
+   * @param {Array<Object>|null} [parsedResults=null] - Pre-parsed activity results with resolved UUIDs
    * @returns {Promise<Object>} { addedActivities, addedEffects, issues }
    */
-  async applyActivities(createdItem) {
+  async applyActivities(createdItem, parsedResults = null) {
     const issues = [];
     let addedActivities = 0;
     let addedEffects = 0;
@@ -1369,67 +1372,95 @@ export class ItemData {
       return { addedActivities, addedEffects, issues };
     }
 
-    // Dynamically import the activity parser
-    let parseAllBlocksYaml;
-    try {
-      const mod = await import("/modules/5e-activity-importer/scripts/activityParsers/yamlParser.js");
-      parseAllBlocksYaml = mod.parseAllBlocksYaml;
-    } catch (err) {
-      issues.push(`Could not load activity parser: ${err.message}`);
-      return { addedActivities, addedEffects, issues };
+    // Determine which results to use: pre-parsed (with resolved UUIDs) or fresh parse
+    let allResults;
+    if (parsedResults && parsedResults.length > 0) {
+      // Use pre-parsed results directly (UUIDs already resolved by drop zones)
+      allResults = parsedResults;
+    } else {
+      // Fallback: parse from raw YAML data (original behavior)
+      let parseAllBlocksYaml;
+      try {
+        const mod = await import("/modules/5e-activity-importer/scripts/activityParsers/yamlParser.js");
+        parseAllBlocksYaml = mod.parseAllBlocksYaml;
+        if (typeof parseAllBlocksYaml !== "function") {
+          throw new Error("Expected export parseAllBlocksYaml(text) was not found.");
+        }
+      } catch (err) {
+        issues.push(`Could not load activity parser: ${err.message}`);
+        return { addedActivities, addedEffects, issues };
+      }
+
+      allResults = [];
+      for (const pending of this.pendingActivities) {
+        try {
+          const yamlText = jsyaml.dump(pending.rawData);
+          const results = parseAllBlocksYaml(yamlText);
+          for (const result of results) {
+            if (!result.success) {
+              issues.push(`Failed to parse ${pending.key} "${pending.name}": ${result.errors.join(', ')}`);
+            }
+          }
+          allResults.push(...results);
+        } catch (err) {
+          issues.push(`Error parsing ${pending.key} "${pending.name}": ${err.message}`);
+        }
+      }
     }
 
-    for (const pending of this.pendingActivities) {
+    // Apply each parsed result to the created item
+    const itemSupportsActivities = !!createdItem.system?.activities;
+    for (const result of allResults) {
       try {
-        // Serialize back to YAML for the activity parser
-        const yamlText = jsyaml.dump(pending.rawData);
-        const results = parseAllBlocksYaml(yamlText);
+        if (!result.success) {
+          if (!parsedResults) continue; // Already reported above for fallback path
+          issues.push(`Failed to parse activity: ${(result.errors || []).join(', ')}`);
+          continue;
+        }
 
-        for (const result of results) {
-          if (!result.success) {
-            issues.push(`Failed to parse ${pending.key} "${pending.name}": ${result.errors.join(', ')}`);
+        if (result.resultType === "effect") {
+          const { effectData } = result;
+          await this.applyIconFallback(effectData, ItemData.EFFECT_DEFAULT_ICON);
+          ItemUtils.log("Adding inline effect to item:", createdItem.name, effectData);
+          await createdItem.createEmbeddedDocuments("ActiveEffect", [effectData]);
+          addedEffects++;
+        } else {
+          const { activityType, activityData } = result;
+          if (!itemSupportsActivities) {
+            issues.push(`${createdItem.type} items do not support dnd5e activities. Skipping "${activityData?.name || activityType}".`);
             continue;
           }
 
-          if (result.resultType === "effect") {
-            const { effectData } = result;
-            await this.applyIconFallback(effectData, ItemData.EFFECT_DEFAULT_ICON);
-            ItemUtils.log("Adding inline effect to item:", createdItem.name, effectData);
-            await createdItem.createEmbeddedDocuments("ActiveEffect", [effectData]);
-            addedEffects++;
-          } else {
-            const { activityType, activityData } = result;
-            const fallbackIcon = ItemData.ACTIVITY_DEFAULT_ICONS[activityType] ?? ItemData.ACTIVITY_DEFAULT_ICONS.utility;
-            await this.applyIconFallback(activityData, fallbackIcon);
+          const fallbackIcon = ItemData.ACTIVITY_DEFAULT_ICONS[activityType] ?? ItemData.ACTIVITY_DEFAULT_ICONS.utility;
+          await this.applyIconFallback(activityData, fallbackIcon);
 
-            // Handle embedded effects (APPLIED_EFFECTS within the activity)
-            const embeddedEffects = (result.embeddedEffectResults || []).filter(er => er.success && er.effectData);
-            const failedEmbedded = (result.embeddedEffectResults || []).filter(er => !er.success);
+          // Handle embedded effects (APPLIED_EFFECTS within the activity)
+          const embeddedEffects = (result.embeddedEffectResults || []).filter(er => er.success && er.effectData);
+          const failedEmbedded = (result.embeddedEffectResults || []).filter(er => !er.success);
 
-            if (embeddedEffects.length > 0) {
-              ItemUtils.log(`Creating ${embeddedEffects.length} embedded effect(s) for activity...`);
-              for (const er of embeddedEffects) {
-                await this.applyIconFallback(er.effectData, ItemData.EFFECT_DEFAULT_ICON);
-              }
-              const createdEffects = await createdItem.createEmbeddedDocuments(
-                "ActiveEffect",
-                embeddedEffects.map(er => er.effectData)
-              );
-              activityData.effects = createdEffects.map(e => ({ _id: e.id }));
-              ItemUtils.log("Linked effect IDs to activity:", activityData.effects);
+          if (embeddedEffects.length > 0) {
+            ItemUtils.log(`Creating ${embeddedEffects.length} embedded effect(s) for activity...`);
+            for (const er of embeddedEffects) {
+              await this.applyIconFallback(er.effectData, ItemData.EFFECT_DEFAULT_ICON);
             }
-
-            if (failedEmbedded.length > 0) {
-              issues.push(`${failedEmbedded.length} embedded effect(s) in ${pending.key} "${pending.name}" failed to parse and were skipped.`);
-            }
-
-            ItemUtils.log("Adding inline activity to item:", createdItem.name, activityType, activityData);
-            await createdItem.createActivity(activityType, activityData, { renderSheet: false });
-            addedActivities++;
+            const createdEffects = await createdItem.createEmbeddedDocuments(
+              "ActiveEffect",
+              embeddedEffects.map(er => er.effectData)
+            );
+            activityData.effects = createdEffects.map(e => ({ _id: e.id }));
+            ItemUtils.log("Linked effect IDs to activity:", activityData.effects);
           }
+
+          if (failedEmbedded.length > 0) {
+            issues.push(`${failedEmbedded.length} embedded effect(s) failed to parse and were skipped.`);
+          }
+
+          ItemUtils.log("Adding inline activity to item:", createdItem.name, activityType, activityData);
+          await createdItem.createActivity(activityType, activityData, { renderSheet: false });
+          addedActivities++;
         }
       } catch (err) {
-        issues.push(`Error applying ${pending.key} "${pending.name}": ${err.message}`);
+        issues.push(`Error applying activity: ${err.message}`);
       }
     }
 

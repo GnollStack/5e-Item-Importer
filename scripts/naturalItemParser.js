@@ -11,9 +11,15 @@
  */
 
 import { ItemUtils } from "./itemUtils.js";
+import { MODULE_NAME } from "./itemConfig.js";
 import { getParserForText } from "./strictItemParsers/strictParserDispatcher.js";
 import { ItemRegex } from "./itemRegex.js";
 import jsyaml from "./vendor/js-yaml.mjs";
+
+function getDefaultIdentifiedSetting() {
+  if (typeof game === "undefined") return true;
+  return game.settings?.get?.(MODULE_NAME, "createIdentified") ?? true;
+}
 
 export class NaturalItemParser {
   constructor() {
@@ -329,7 +335,7 @@ export class NaturalItemParser {
 
     data.INVENTORY = {
       Quantity: extracted.quantity || 1,
-      Identified: true,
+      Identified: getDefaultIdentifiedSetting(),
       Equipped: false,
     };
 
@@ -484,8 +490,8 @@ buildWeaponSections(extracted, data) {
    */
   buildToolSections(extracted, data) {
     // Add type-specific fields to ITEM section
-    data.ITEM["Tool Type"] = extracted.toolType || "other";
-    data.ITEM["Base Tool"] = extracted.baseTool || "thief";
+    data.ITEM["Tool Type"] = extracted.toolType || "";
+    data.ITEM["Base Tool"] = extracted.baseTool || "";
 
     // Properties section
     data.PROPERTIES = {
@@ -554,21 +560,20 @@ buildWeaponSections(extracted, data) {
       };
     }
 
-    // Currency contents section (REQUIRED by YAML parser)
-    const currency = extracted.currencyContents || {
-      pp: 0,
-      gp: 0,
-      ep: 0,
-      sp: 0,
-      cp: 0,
-    };
-    data.CURRENCY_CONTENTS = {
-      Platinum: currency.pp || 0,
-      Gold: currency.gp || 0,
-      Electrum: currency.ep || 0,
-      Silver: currency.sp || 0,
-      Copper: currency.cp || 0,
-    };
+    // Currency contents section (only when currency is actually present)
+    const currency = extracted.currencyContents;
+    const hasCurrency = currency
+      ? Object.values(currency).some((value) => Number(value) > 0)
+      : false;
+    if (hasCurrency) {
+      data.CURRENCY_CONTENTS = {
+        Platinum: currency.pp || 0,
+        Gold: currency.gp || 0,
+        Electrum: currency.ep || 0,
+        Silver: currency.sp || 0,
+        Copper: currency.cp || 0,
+      };
+    }
   }
 
   /**
@@ -870,12 +875,17 @@ buildWeaponSections(extracted, data) {
       }
     }
 
-    // 7. Default to loot for unrecognized items
+    // 7. Use the configured default for unrecognized items
+    const validDefaults = new Set(["loot", "consumable", "weapon", "equipment", "tool", "container"]);
+    const configuredDefault = typeof game !== "undefined"
+      ? game.settings?.get?.(MODULE_NAME, "defaultItemType") ?? "loot"
+      : "loot";
+    const defaultType = validDefaults.has(configuredDefault) ? configuredDefault : "loot";
     ItemUtils.log(
-      "NaturalItemParser: Could not determine item type, defaulting to loot"
+      `NaturalItemParser: Could not determine item type, defaulting to ${defaultType}`
     );
     this.confidence.itemType = 0.3;
-    return "loot";
+    return defaultType;
   }
 
   extractRarity(text) {
@@ -1861,25 +1871,28 @@ buildWeaponSections(extracted, data) {
       game: /\b(?:gaming\s+set|dice\s+set|playing\s+card|dragonchess|three-dragon\s+ante)\b/i,
       music:
         /\b(?:musical\s+instrument|bagpipes|drum|dulcimer|flute|horn|lute|lyre|pan\s+flute|shawm|viol)\b/i,
-      other:
+      none:
         /\b(?:disguise\s+kit|forgery\s+kit|herbalism\s+kit|navigator|poisoner|thieves|thief)\b/i,
     };
 
     // Check for explicit type declaration
     for (const [type, pattern] of Object.entries(typePatterns)) {
       if (pattern.test(text)) {
-        ItemUtils.log(`NaturalItemParser: Found tool type: ${type}`);
+        const normalizedType = type === "none" ? "" : type;
+        ItemUtils.log(
+          `NaturalItemParser: Found tool type: ${normalizedType || "(blank)"}`
+        );
         this.confidence.toolType = 0.85;
-        return type;
+        return normalizedType;
       }
     }
 
-    // Default to other
+    // Let the strict parser infer the type from the base tool when possible
     ItemUtils.log(
-      "NaturalItemParser: Could not determine tool type, defaulting to other"
+      "NaturalItemParser: Could not determine tool type, leaving it blank"
     );
     this.confidence.toolType = 0.3;
-    return "other";
+    return "";
   }
 
   extractBaseTool(text) {
@@ -1888,23 +1901,23 @@ buildWeaponSections(extracted, data) {
     // Base tool mappings with their common names
     const baseTools = {
       // Artisan's Tools
-      alch: ["alchemist", "alchemist's supplies"],
-      brew: ["brewer", "brewer's supplies"],
-      calli: ["calligrapher", "calligrapher's supplies"],
-      carp: ["carpenter", "carpenter's tools"],
-      carta: ["cartographer", "cartographer's tools"],
-      cob: ["cobbler", "cobbler's tools"],
+      alchemist: ["alchemist", "alchemist's supplies"],
+      brewer: ["brewer", "brewer's supplies"],
+      calligrapher: ["calligrapher", "calligrapher's supplies"],
+      carpenter: ["carpenter", "carpenter's tools"],
+      cartographer: ["cartographer", "cartographer's tools"],
+      cobbler: ["cobbler", "cobbler's tools"],
       cook: ["cook", "cook's utensils"],
-      glass: ["glassblower", "glassblower's tools"],
-      jewel: ["jeweler", "jeweler's tools"],
-      leath: ["leatherworker", "leatherworker's tools"],
-      maso: ["mason", "mason's tools"],
-      paint: ["painter", "painter's supplies"],
-      pott: ["potter", "potter's tools"],
+      glassblower: ["glassblower", "glassblower's tools"],
+      jeweler: ["jeweler", "jeweler's tools"],
+      leatherworker: ["leatherworker", "leatherworker's tools"],
+      mason: ["mason", "mason's tools"],
+      painter: ["painter", "painter's supplies"],
+      potter: ["potter", "potter's tools"],
       smith: ["smith", "smith's tools", "blacksmith"],
-      tink: ["tinker", "tinker's tools"],
-      weav: ["weaver", "weaver's tools"],
-      wood: ["woodcarver", "woodcarver's tools"],
+      tinker: ["tinker", "tinker's tools"],
+      weaver: ["weaver", "weaver's tools"],
+      woodcarver: ["woodcarver", "woodcarver's tools"],
 
       // Gaming Sets
       dice: ["dice set", "dice"],
@@ -2004,29 +2017,29 @@ buildWeaponSections(extracted, data) {
     // Infer from tool type if not explicitly stated
     const baseTool = this.extractBaseTool(text);
     const abilityDefaults = {
-      // Artisan tools - typically INT or DEX
-      alch: "int",
-      brew: "int",
-      calli: "dex",
-      carp: "str",
-      carta: "int",
-      cob: "dex",
+      // Artisan tools
+      alchemist: "int",
+      brewer: "int",
+      calligrapher: "dex",
+      carpenter: "str",
+      cartographer: "wis",
+      cobbler: "dex",
       cook: "wis",
-      glass: "dex",
-      jewel: "dex",
-      leath: "dex",
-      maso: "str",
-      paint: "dex",
-      pott: "dex",
+      glassblower: "int",
+      jeweler: "int",
+      leatherworker: "dex",
+      mason: "str",
+      painter: "wis",
+      potter: "int",
       smith: "str",
-      tink: "dex",
-      weav: "dex",
-      wood: "dex",
+      tinker: "dex",
+      weaver: "dex",
+      woodcarver: "dex",
 
-      // Gaming sets - typically CHA or INT
-      dice: "cha",
-      card: "cha",
-      chess: "int",
+      // Gaming sets
+      dice: "wis",
+      card: "wis",
+      chess: "wis",
 
       // Musical instruments - typically CHA
       bagpipes: "cha",
@@ -2043,7 +2056,7 @@ buildWeaponSections(extracted, data) {
       // Other tools
       disg: "cha",
       forg: "dex",
-      herb: "wis",
+      herb: "int",
       navg: "wis",
       pois: "int",
       thief: "dex",
@@ -2090,7 +2103,7 @@ buildWeaponSections(extracted, data) {
       weightValue: null,
       weightUnits: "lb",
       volumeValue: null,
-      volumeUnits: "ft",
+      volumeUnits: "cubicFoot",
     };
 
     // Item count capacity: "holds 10 items", "capacity: 15 items"

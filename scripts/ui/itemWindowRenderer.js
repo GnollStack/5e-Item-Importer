@@ -358,7 +358,7 @@ export function renderSection(icon, title, properties) {
     let html = `<div class="ii-section">
     <div class="ii-section-header">
       <i class="fas fa-${icon} ii-section-icon"></i>
-      <span class="ii-section-title">${title}</span>
+      <span class="ii-section-title">${esc(title)}</span>
       <i class="fas fa-chevron-down ii-section-toggle"></i>
     </div>
     <div class="ii-section-content">`;
@@ -366,8 +366,8 @@ export function renderSection(icon, title, properties) {
     properties.forEach(prop => {
         const fullWidthClass = prop.fullWidth ? " full-width" : "";
         html += `<div class="ii-section-row${fullWidthClass}">
-      <span class="ii-row-label">${prop.label}</span>
-      <span class="ii-row-value">${prop.value}</span>
+      <span class="ii-row-label">${esc(prop.label)}</span>
+      <span class="ii-row-value">${esc(prop.value)}</span>
     </div>`;
     });
 
@@ -475,18 +475,27 @@ export function renderItemCard(item, result) {
             html += `<div class="ii-parse-warning" style="margin-bottom: 0.5em;"><i class="fas fa-exclamation-triangle"></i> 5e-activity-importer module is not active. These will be skipped on import.</div>`;
         }
 
-        html += `<div class="ii-properties-grid">`;
-        for (const pa of pendingActs) {
-            const typeLabel = pa.key === 'EFFECT' ? 'Effect' : pa.key.replace('ACTIVITY_', '');
-            const icon = pa.key === 'EFFECT' ? 'fa-magic' : 'fa-bolt';
-            html += `<div class="ii-prop"><span class="ii-prop-label"><i class="fas ${icon}"></i> ${esc(typeLabel)}</span><span class="ii-prop-value">${esc(pa.name)}</span></div>`;
+        // If we have pre-parsed activity results (with UUID drop zones), render rich cards
+        if (item._parsedActivityResults && item._parsedActivityResults.length > 0) {
+            html += renderParsedActivityCards(item._parsedActivityResults);
+        } else {
+            // Fallback: simple name/type listing
+            html += `<div class="ii-properties-grid">`;
+            for (const pa of pendingActs) {
+                const typeLabel = pa.key === 'EFFECT' ? 'Effect' : pa.key.replace('ACTIVITY_', '');
+                const icon = pa.key === 'EFFECT' ? 'fa-magic' : 'fa-bolt';
+                html += `<div class="ii-prop"><span class="ii-prop-label"><i class="fas ${icon}"></i> ${esc(typeLabel)}</span><span class="ii-prop-value">${esc(pa.name)}</span></div>`;
+            }
+            html += `</div>`;
         }
-        html += `</div>`;
 
         const summary = [];
         if (actCount > 0) summary.push(`${actCount} activit${actCount === 1 ? 'y' : 'ies'}`);
         if (effCount > 0) summary.push(`${effCount} effect${effCount === 1 ? '' : 's'}`);
-        html += `<p style="margin: 0.5em 0 0; font-size: 0.85em; opacity: 0.8;">${summary.join(' and ')} will be added on import</p>`;
+        const importSummary = activityImporterActive
+            ? `${summary.join(' and ')} will be added on import`
+            : `${summary.join(' and ')} will be skipped unless 5e-activity-importer is active`;
+        html += `<p style="margin: 0.5em 0 0; font-size: 0.85em; opacity: 0.8;">${importSummary}</p>`;
 
         html += `</div></div>`;
     }
@@ -549,7 +558,7 @@ export function renderBatchSummary(results, selectedItems) {
           <i class="fas fa-chevron-down ii-section-toggle"></i>
         </div>
         <div class="ii-section-content" style="display: block;">
-          
+
           <div class="ii-batch-controls">
             <div class="ii-batch-select-actions">
               <button type="button" class="ii-batch-select-btn" data-action="selectAll">
@@ -569,7 +578,7 @@ export function renderBatchSummary(results, selectedItems) {
         results.successes.forEach((res, index) => {
             const icon = getPreviewIcon(res.item);
             const isSelected = selectedItems.has(index);
-            html += `<div class="ii-batch-item success selectable${isSelected ? " selected" : ""}" data-action="toggleBatchItem" data-index="${index}">
+            html += `<div class="ii-batch-item success selectable${isSelected ? " selected" : ""}" data-index="${index}">
         <input type="checkbox" class="ii-batch-checkbox" data-index="${index}"${isSelected ? " checked" : ""}>
         <div class="ii-batch-item-icon-wrapper">
           <img src="${icon}" alt="">
@@ -603,6 +612,92 @@ export function renderBatchSummary(results, selectedItems) {
         html += `</ul></div></div>`;
     }
 
+    // UUID Resolution Section for batch items that have unresolved UUIDs
+    const itemsWithUuids = getItemsNeedingUuidResolution(results.successes);
+    if (itemsWithUuids.length > 0) {
+        html += `<div class="ii-section">
+      <div class="ii-section-header">
+        <i class="fas fa-crosshairs ii-section-icon" style="color: #1565c0;"></i>
+        <span class="ii-section-title">UUID Resolution (${itemsWithUuids.length} item${itemsWithUuids.length !== 1 ? 's' : ''} need attention)</span>
+        <i class="fas fa-chevron-down ii-section-toggle"></i>
+      </div>
+      <div class="ii-section-content" style="display: block;">
+        <p style="margin: 0 0 0.75em; font-size: 0.85em; opacity: 0.8;">
+          The following items have activities that reference spells or actors. Drag the appropriate documents onto the drop zones below.
+        </p>`;
+
+        for (const { index, item } of itemsWithUuids) {
+            html += `<div class="ii-batch-uuid-item" data-batch-item-index="${index}">
+          <h4 style="margin: 0.5em 0 0.25em; font-size: 0.95em;">
+            <i class="fas fa-box" style="margin-right: 4px; opacity: 0.6;"></i>${esc(item.name)}
+          </h4>`;
+            html += renderParsedActivityCards(item._parsedActivityResults, index);
+            html += `</div>`;
+        }
+
+        html += `</div></div>`;
+    }
+
     html += `</div></div>`; // Close card-body, item-card
     return html;
+}
+
+// ==========================================
+// Parsed Activity Card Rendering (UUID Zones)
+// ==========================================
+
+/**
+ * Render pre-parsed activity results as rich cards with UUID drop zones.
+ * Delegates to the activity importer's renderer via dynamic import cache.
+ *
+ * @param {Array<Object>} parsedResults - Pre-parsed activity results
+ * @param {number} [itemIndex=0] - Item index for batch scoping
+ * @returns {string} HTML string
+ */
+function renderParsedActivityCards(parsedResults, itemIndex = 0) {
+    if (!parsedResults || parsedResults.length === 0) return "";
+
+    // Use the cached renderer if available (set by itemWindowActions after dynamic import)
+    if (renderParsedActivityCards._renderer) {
+        return renderParsedActivityCards._renderer(parsedResults, itemIndex);
+    }
+
+    // Fallback: render a simple summary (shouldn't normally happen since
+    // _renderer is set before renderItemCard is called)
+    let html = "";
+    for (const result of parsedResults) {
+        if (!result.success) continue;
+        if (result.resultType === "effect") {
+            html += `<div class="ii-prop"><span class="ii-prop-label"><i class="fas fa-magic"></i> Effect</span><span class="ii-prop-value">${esc(result.effectData?.name || "Unnamed")}</span></div>`;
+        } else {
+            html += `<div class="ii-prop"><span class="ii-prop-label"><i class="fas fa-bolt"></i> ${esc(result.activityType || "Activity")}</span><span class="ii-prop-value">${esc(result.activityData?.name || "Unnamed")}</span></div>`;
+        }
+    }
+    return html;
+}
+
+/**
+ * Set the renderer function for parsed activity cards.
+ * Called by itemWindowActions after dynamically importing the helper.
+ * @param {Function} renderer - renderActivityUuidZones from uuidDropZoneHelper.js
+ */
+export function setActivityRenderer(renderer) {
+    renderParsedActivityCards._renderer = typeof renderer === "function" ? renderer : null;
+}
+
+/**
+ * Get batch items that have pre-parsed activities with unresolved UUIDs.
+ * @param {Array<Object>} successes - Array of batch parse results
+ * @returns {Array<{index: number, item: Object}>}
+ */
+function getItemsNeedingUuidResolution(successes) {
+    if (!successes) return [];
+    const items = [];
+    for (let i = 0; i < successes.length; i++) {
+        const item = successes[i].item;
+        if (item?._parsedActivityResults && item._hasUnresolvedUuids) {
+            items.push({ index: i, item });
+        }
+    }
+    return items;
 }

@@ -2,7 +2,7 @@
   "id": "5e-item-importer",
   "title": "5e Item Importer",
   "description": "A module to parse and import D&D 5e items from text format (PDFs, websites, homebrew) into Foundry VTT.",
-  "version": "13.8.4",
+  "version": "13.9.0",
   "compatibility": {
     "minimum": "13",
     "verified": "13.351"

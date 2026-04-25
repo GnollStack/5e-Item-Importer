@@ -16,6 +16,125 @@ import { ItemComparisonWindow } from "./itemComparisonWindow.js";
 /** Shorthand for HTML escaping */
 const esc = (str) => ItemUtils.escapeHtml(str);
 
+function getImportFailureIssue(result) {
+    if (!Array.isArray(result?.issues)) return null;
+    return result.issues.find(issue => typeof issue === "string" && issue.trim()) ?? null;
+}
+
+/** Cached reference to the UUID drop zone helper module (loaded dynamically). */
+let _uuidHelper = null;
+
+/**
+ * Dynamically load the UUID drop zone helper from the activity importer module.
+ * Returns null if the activity importer is not active.
+ * @returns {Promise<Object|null>}
+ */
+async function loadUuidHelper() {
+    if (_uuidHelper) return _uuidHelper;
+
+    const activityImporterActive = typeof game !== 'undefined'
+        && game.modules?.get?.("5e-activity-importer")?.active;
+    if (!activityImporterActive) return null;
+
+    try {
+        _uuidHelper = await import("/modules/5e-activity-importer/scripts/ui/uuidDropZoneHelper.js");
+        const requiredExports = [
+            "preParseActivities",
+            "hasUnresolvedUuids",
+            "renderActivityUuidZones",
+            "setupUuidDropZones",
+            "scrollToFirstDropZone"
+        ];
+        const missing = requiredExports.filter(name => typeof _uuidHelper[name] !== "function");
+        if (missing.length > 0) {
+            ItemUtils.warn(`UUID drop zone helper is missing expected export(s): ${missing.join(", ")}. Falling back to basic activity preview.`);
+            _uuidHelper = null;
+            Renderer.setActivityRenderer(null);
+            return null;
+        }
+        // Register the renderer with the item window renderer module
+        Renderer.setActivityRenderer(_uuidHelper.renderActivityUuidZones);
+        return _uuidHelper;
+    } catch (err) {
+        ItemUtils.warn("Could not load UUID drop zone helper:", err.message);
+        return null;
+    }
+}
+
+/**
+ * Pre-parse activities for an item and attach results to it.
+ * Sets item._parsedActivityResults and item._hasUnresolvedUuids.
+ * @param {Object} item - Parsed item data with pendingActivities
+ * @param {Object} helper - The UUID helper module
+ */
+function preParseItemActivities(item, helper) {
+    if (!item?.pendingActivities?.length || !helper) return;
+
+    try {
+        item._parsedActivityResults = helper.preParseActivities(item.pendingActivities);
+        item._hasUnresolvedUuids = helper.hasUnresolvedUuids(item._parsedActivityResults);
+    } catch (err) {
+        ItemUtils.warn(`Could not pre-parse inline activities. Falling back to basic preview: ${err.message}`);
+        delete item._parsedActivityResults;
+        item._hasUnresolvedUuids = false;
+    }
+}
+
+/**
+ * Set up UUID drop zones on the output container for pre-parsed activity results.
+ * Handles both single items and batch items.
+ * @this {ItemWindow}
+ * @param {Object} helper - The UUID helper module
+ */
+function setupItemUuidDropZones(helper) {
+    const output = this.element.querySelector("#ii-parse-output");
+    if (!output || !helper) return;
+
+    // Collect all parse results that need UUID zones
+    // Single item mode
+    if (this.currentParseResult?.item?._parsedActivityResults) {
+        const results = this.currentParseResult.item._parsedActivityResults;
+        const onReRender = () => reRenderItemActivities.call(this, helper);
+        helper.setupUuidDropZones(output, results, onReRender);
+        helper.scrollToFirstDropZone(output);
+    }
+
+    // Batch mode
+    if (this.currentParseResult?.successes) {
+        for (let i = 0; i < this.currentParseResult.successes.length; i++) {
+            const res = this.currentParseResult.successes[i];
+            if (res.item?._parsedActivityResults) {
+                const results = res.item._parsedActivityResults;
+                const onReRender = () => reRenderItemActivities.call(this, helper);
+                helper.setupUuidDropZones(output, results, onReRender, i);
+            }
+        }
+        helper.scrollToFirstDropZone(output);
+    }
+}
+
+/**
+ * Re-render the item preview after a UUID clear, then re-bind drop zones.
+ * @this {ItemWindow}
+ * @param {Object} helper - The UUID helper module
+ */
+function reRenderItemActivities(helper) {
+    // Trigger a full re-render of the parse preview
+    const output = this.element.querySelector("#ii-parse-output");
+    if (!output) return;
+
+    if (this.currentParseResult?.successes) {
+        // Batch mode
+        output.innerHTML = Renderer.renderBatchSummary(this.currentParseResult, this.selectedBatchItems);
+    } else if (this.currentParseResult?.item) {
+        // Single item mode
+        output.innerHTML = Renderer.renderItemCard(this.currentParseResult.item, this.currentParseResult);
+    }
+
+    this._setupCollapsibleSections();
+    setupItemUuidDropZones.call(this, helper);
+}
+
 /**
  * Detect whether text looks like a YAML strict template.
  * Checks if any valid top-level type key (e.g., WEAPON:, LOOT:) appears at the start of a line,
@@ -36,7 +155,7 @@ function isYamlFormat(text) {
  */
 function isYamlMultiItem(text) {
     // Check for YAML document separators (handles same-type batching)
-    const stripped = text.replace(/^```(?:yaml|markdown)\s*\n?/i, '').replace(/\n?```\s*$/, '');
+    const stripped = text.replace(/^```(?:yaml|markdown)?\s*\n?/i, '').replace(/\n?```\s*$/, '');
     if (/^---\s*$/m.test(stripped)) return true;
 
     // Check for multiple different top-level type keys
@@ -51,7 +170,7 @@ function isYamlMultiItem(text) {
  * Parse the item text
  * @this {ItemWindow}
  */
-export function parse() {
+export async function parse() {
     const input = this.element.querySelector("#ii-input");
     const output = this.element.querySelector("#ii-parse-output");
     const importBtn = this.element.querySelector("[data-action='import']");
@@ -74,14 +193,14 @@ export function parse() {
 
     if (itemMarkers && itemMarkers.length > 1) {
         ItemUtils.log(`Batch import detected with ${itemMarkers.length} items (marker-based).`);
-        handleBatchParse.call(this, text);
+        await handleBatchParse.call(this, text);
         return;
     }
 
     // Detect YAML multi-item batch (multiple top-level type keys)
     if (isYamlMultiItem(text)) {
         ItemUtils.log("YAML multi-item batch detected.");
-        handleYamlBatchParse.call(this, text);
+        await handleYamlBatchParse.call(this, text);
         return;
     }
 
@@ -103,6 +222,12 @@ export function parse() {
             return;
         }
 
+        // Pre-parse activities for UUID resolution
+        const helper = await loadUuidHelper();
+        if (helper && result.item.pendingActivities?.length > 0) {
+            preParseItemActivities(result.item, helper);
+        }
+
         // Generate card-based preview
         const item = result.item;
         const html = Renderer.renderItemCard(item, result);
@@ -113,6 +238,11 @@ export function parse() {
 
         // Set up collapsible section handlers
         this._setupCollapsibleSections();
+
+        // Set up UUID drop zones if activities were pre-parsed
+        if (helper && result.item._parsedActivityResults) {
+            setupItemUuidDropZones.call(this, helper);
+        }
 
         ItemUtils.log("Parse successful", result);
     } catch (error) {
@@ -132,7 +262,7 @@ export function parse() {
  * @this {ItemWindow}
  * @param {string} text - Full input text
  */
-export function handleBatchParse(text) {
+export async function handleBatchParse(text) {
     const output = this.element.querySelector("#ii-parse-output");
     const importBtn = this.element.querySelector("[data-action='import']");
     if (!output || !importBtn) return;
@@ -165,6 +295,14 @@ export function handleBatchParse(text) {
         }
     }
 
+    // Pre-parse activities for UUID resolution
+    const helper = await loadUuidHelper();
+    if (helper) {
+        for (const res of results.successes) {
+            preParseItemActivities(res.item, helper);
+        }
+    }
+
     // Store results and initialize selection
     this.currentParseResult = results;
     this.selectedBatchItems = new Set(
@@ -180,6 +318,11 @@ export function handleBatchParse(text) {
     importBtn.disabled = results.successes.length === 0;
     this._updateParseState(results.successes.length > 0 ? "valid" : "error");
     this._setupCollapsibleSections();
+
+    // Set up UUID drop zones for batch items
+    if (helper) {
+        setupItemUuidDropZones.call(this, helper);
+    }
 }
 
 /**
@@ -188,7 +331,7 @@ export function handleBatchParse(text) {
  * @this {ItemWindow}
  * @param {string} text - Full YAML input text
  */
-function handleYamlBatchParse(text) {
+async function handleYamlBatchParse(text) {
     const output = this.element.querySelector("#ii-parse-output");
     const importBtn = this.element.querySelector("[data-action='import']");
     if (!output || !importBtn) return;
@@ -205,6 +348,14 @@ function handleYamlBatchParse(text) {
             }))
     };
 
+    // Pre-parse activities for UUID resolution
+    const helper = await loadUuidHelper();
+    if (helper) {
+        for (const res of results.successes) {
+            preParseItemActivities(res.item, helper);
+        }
+    }
+
     // Store results and initialize selection
     this.currentParseResult = results;
     this.selectedBatchItems = new Set(
@@ -220,6 +371,11 @@ function handleYamlBatchParse(text) {
     importBtn.disabled = results.successes.length === 0;
     this._updateParseState(results.successes.length > 0 ? "valid" : "error");
     this._setupCollapsibleSections();
+
+    // Set up UUID drop zones for batch items
+    if (helper) {
+        setupItemUuidDropZones.call(this, helper);
+    }
 }
 
 /**
@@ -276,11 +432,23 @@ export async function importItems() {
             importBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Importing (${i + 1}/${total})...`;
 
             try {
-                const result = await parseResult.item.createItem5e(folderId, importOptions);
+                // Include pre-parsed activity results with resolved UUIDs
+                const itemImportOptions = {
+                    ...importOptions,
+                    parsedActivityResults: parseResult.item._parsedActivityResults || null
+                };
+                const result = await parseResult.item.createItem5e(folderId, itemImportOptions);
+                if (!result?.item) {
+                    failCount++;
+                    const issue = getImportFailureIssue(result);
+                    ui.notifications.error(`Failed to import ${parseResult.item.name}${issue ? `: ${issue}` : ""}`);
+                    continue;
+                }
+
                 successCount++;
 
                 // Collect comparison data for batch
-                if (wantsComparison && result?.item) {
+                if (wantsComparison) {
                     const expectedProps = extractExpectedItemProps(parseResult);
                     const actualProps = extractActualItemProps(result.item);
                     const diffReport = compareProperties(expectedProps, actualProps);
@@ -315,7 +483,16 @@ export async function importItems() {
         importBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Importing...`;
 
         try {
-            const result = await this.currentParseResult.item.createItem5e(folderId, importOptions);
+            // Include pre-parsed activity results with resolved UUIDs
+            const singleImportOptions = {
+                ...importOptions,
+                parsedActivityResults: this.currentParseResult.item._parsedActivityResults || null
+            };
+            const result = await this.currentParseResult.item.createItem5e(folderId, singleImportOptions);
+            if (!result?.item) {
+                const issue = getImportFailureIssue(result);
+                ui.notifications.error(`Failed to import ${this.currentParseResult.item.name}${issue ? `: ${issue}` : ""}`);
+            }
 
             // Show comparison in a separate window if requested
             if (wantsComparison && result?.item) {
@@ -401,7 +578,12 @@ export function insertTemplate(event, { templateId }) {
 
     const input = this.element.querySelector("#ii-input");
     if (input) {
-        input.value = template.text;
+        const createIdentified = game.settings.get(MODULE_NAME, "createIdentified");
+        const templateText = template.text.replace(
+            /(^\s*Identified:\s*)(true|false)/im,
+            `$1${createIdentified}`
+        );
+        input.value = templateText;
         input.focus();
 
         // Trigger parse if auto-parse is enabled
