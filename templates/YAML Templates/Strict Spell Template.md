@@ -8,6 +8,12 @@
 - Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
 
+**dnd5e Description Features:**
+- `DESCRIPTION.Description` and `CHAT_FLAVOR.Chat Description` preserve Foundry/dnd5e text features for Foundry to resolve when displayed.
+- You can use dnd5e enrichers such as `[[/damage 1d6 fire average]]`, roll-data formulas such as `@prof` or `@abilities.str.mod`, dynamic lookups such as `[[lookup @name]]{the creature}`, System HTML classes, and pass-through document links such as `@UUID[...]` or `@Embed[...]`.
+- Use stock dnd5e `[[lookup @name]]` text for active narration and chat flavor: sentence start `[[lookup @name]]{The creature} drinks the potion.`; mid-sentence `When [[lookup @name]]{the creature} hits with this weapon...`. This normally resolves to the actor name; the optional Token Name Lookup companion can prefer token aliases at render time without changing item syntax.
+- Keep passive rules text natural. Do not force dynamic name lookups into every description.
+
 **Batching multiple items:**
 Combine different item types in one block by stacking top-level keys:
 ```text
@@ -405,7 +411,7 @@ These fields are optional and only needed for spells with unusual area geometry.
 <ul>
 <li><strong>Save:</strong> [[/save con dc=@spell.dc]]</li>
 <li><strong>Damage:</strong> [[/damage 6d10 force average]]</li>
-<li><strong>Failure:</strong> Target is &Reference[restrained] until the start of your next turn.</li>
+<li><strong>Failure:</strong> Target is &Reference[restrained] until the start of [[lookup @name]]{the creature}'s next turn.</li>
 <li><strong>Success:</strong> Half damage, no additional effects.</li>
 </ul>
 ```
@@ -413,13 +419,13 @@ These fields are optional and only needed for spells with unusual area geometry.
 ### **Higher Levels Section**
 ```html
 <section class="secret" id="upcast">
-<p><strong>At Higher Levels.</strong> When you cast this spell using a spell slot of Xth level or higher, the damage increases by [[/damage 1d6 fire]] for each slot level above X.</p>
+<p><strong>At Higher Levels.</strong> When [[lookup @name]]{the creature} casts this spell using a spell slot of Xth level or higher, the damage increases by [[/damage 1d6 fire]] for each slot level above X.</p>
 </section>
 ```
 
 ### **Concentration Reminder**
 ```html
-<p><strong>Maintaining Concentration.</strong> If you take damage while concentrating on this spell, you must succeed on a [[/concentration]] saving throw or the spell ends.</p>
+<p><strong>Maintaining Concentration.</strong> If [[lookup @name]]{the creature} takes damage while concentrating on this spell, they must succeed on a [[/concentration]] saving throw or the spell ends.</p>
 ```
 
 ---

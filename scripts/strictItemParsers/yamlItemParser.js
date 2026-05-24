@@ -304,6 +304,7 @@ export class YamlItemParser {
     constructor() {
         this.errors = [];
         this.warnings = [];
+        this.trace = null;
     }
 
     /**
@@ -314,18 +315,28 @@ export class YamlItemParser {
     parse(text) {
         this.errors = [];
         this.warnings = [];
+        this.trace = {
+            selectedParser: 'YamlItemParser',
+            inputKind: 'strictYaml',
+            inputLength: typeof text === 'string' ? text.length : 0,
+            normalizationFixes: []
+        };
 
         if (!text || !text.trim()) {
             this.addError('Empty text provided');
+            this.trace.errors = [...this.errors];
             return this.createResult(false, null);
         }
 
         try {
             // 1. Strip code fences
             const stripped = this.stripCodeFences(text);
+            this.trace.strippedText = stripped;
 
             // 1b. Run the LLM-tolerance pre-pass
             const { text: yamlText, fixes } = normalizeYamlForLlm(stripped);
+            this.trace.normalizedText = yamlText;
+            this.trace.normalizationFixes = fixes;
             if (fixes.length > 0 && shouldShowNormalizationWarnings()) {
                 const summary = summarizeNormalizationFixes(fixes);
                 if (summary) this.addWarning(summary);
@@ -337,18 +348,25 @@ export class YamlItemParser {
                 doc = jsyaml.load(yamlText);
             } catch (yamlError) {
                 this.addError(`YAML parse error: ${yamlError.message}`);
+                this.trace.errors = [...this.errors];
+                this.trace.warnings = [...this.warnings];
                 return this.createResult(false, null);
             }
 
             if (!doc || typeof doc !== 'object') {
                 this.addError('YAML document is empty or not an object');
+                this.trace.errors = [...this.errors];
+                this.trace.warnings = [...this.warnings];
                 return this.createResult(false, null);
             }
 
             // 3. Detect item type from top-level key
             const { type, data } = this.detectItemType(doc);
+            this.trace.detectedType = type || null;
             if (!type) {
                 this.addError('Could not detect item type. Expected top-level key: WEAPON, LOOT, EQUIPMENT, CONSUMABLE, TOOL, CONTAINER, or SPELL');
+                this.trace.errors = [...this.errors];
+                this.trace.warnings = [...this.warnings];
                 return this.createResult(false, null);
             }
 
@@ -388,11 +406,15 @@ export class YamlItemParser {
             // 6. Return result
             const success = this.errors.length === 0;
             ItemUtils.log(`YamlItemParser: Parsing ${success ? 'succeeded' : 'completed with errors'}`);
+            this.trace.errors = [...this.errors];
+            this.trace.warnings = [...this.warnings];
             return this.createResult(success, itemData);
 
         } catch (error) {
             ItemUtils.error('YamlItemParser: Unexpected error', error);
             this.addError(`Unexpected error: ${error.message}`);
+            this.trace.errors = [...this.errors];
+            this.trace.warnings = [...this.warnings];
             return this.createResult(false, null);
         }
     }
@@ -794,6 +816,19 @@ export class YamlItemParser {
         return types.length === 1 ? types[0] : types;
     }
 
+    extractFormulaDamageTypes(formula) {
+        const formulaText = asString(formula, '').toLowerCase();
+        if (!formulaText) return [];
+
+        const found = [];
+        for (const match of formulaText.matchAll(/\[([a-z]+)\]/g)) {
+            if (VALID_DAMAGE_TYPES.includes(match[1]) && !found.includes(match[1])) {
+                found.push(match[1]);
+            }
+        }
+        return found;
+    }
+
     // ─── WEAPON ─────────────────────────────────────────────────────────────
 
     extractWeaponFields(item, data) {
@@ -895,16 +930,17 @@ export class YamlItemParser {
         const dmg = data?.DAMAGE || {};
         const dmgFormula = asString(dmg['Damage Formula'], '');
         const dmgType = this.parseDamageType(dmg['Damage Type']);
+        const dmgFormulaTypes = this.extractFormulaDamageTypes(dmgFormula);
 
         if (!dmgFormula) {
             this.addError('Damage Formula is required but was not found');
         }
-        if (!dmgType) {
-            this.addError('Damage Type is required but was not found');
+        if (!dmgType && dmgFormulaTypes.length === 0) {
+            this.addError('Damage Type is required unless Damage Formula uses typed terms like 1d8[piercing]');
         }
 
-        if (dmgFormula && dmgType) {
-            item.damage = { formula: dmgFormula, type: dmgType };
+        if (dmgFormula && (dmgType || dmgFormulaTypes.length > 0)) {
+            item.damage = { formula: dmgFormula, type: dmgType || [] };
         }
 
         // Versatile Damage (conditional)
@@ -912,16 +948,17 @@ export class YamlItemParser {
             const versDmg = data?.VERSATILE_DAMAGE || {};
             const versFormula = asString(versDmg['Versatile Formula'], '');
             const versType = this.parseDamageType(versDmg['Versatile Damage Type']);
+            const versFormulaTypes = this.extractFormulaDamageTypes(versFormula);
 
             if (!versFormula) {
                 this.addError('Versatile Formula is required when Versatile property is true');
             }
-            if (!versType) {
-                this.addError('Versatile Damage Type is required when Versatile property is true');
+            if (!versType && versFormulaTypes.length === 0) {
+                this.addError('Versatile Damage Type is required unless Versatile Formula uses typed terms like 1d10[slashing]');
             }
 
-            if (versFormula && versType) {
-                item.versatileDamage = { formula: versFormula, type: versType };
+            if (versFormula && (versType || versFormulaTypes.length > 0)) {
+                item.versatileDamage = { formula: versFormula, type: versType || [] };
             } else if (versFormula && dmgType) {
                 item.versatileDamage = { formula: versFormula, type: dmgType };
             }
@@ -1183,10 +1220,15 @@ export class YamlItemParser {
                 const dmgFormula = asNullable(ammoProps['Damage Formula']);
                 if (dmgFormula) {
                     const dmgType = this.parseDamageType(ammoProps['Damage Type']);
-                    item.damage = {
-                        formula: String(dmgFormula),
-                        type: dmgType
-                    };
+                    const dmgFormulaTypes = this.extractFormulaDamageTypes(dmgFormula);
+                    if (!dmgType && dmgFormulaTypes.length === 0) {
+                        this.addError('Ammunition Damage Type is required unless Damage Formula uses typed terms like 1d6[piercing]');
+                    } else {
+                        item.damage = {
+                            formula: String(dmgFormula),
+                            type: dmgType || []
+                        };
+                    }
                 }
 
                 // Damage Replace

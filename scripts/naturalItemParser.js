@@ -21,12 +21,20 @@ function getDefaultIdentifiedSetting() {
   return game.settings?.get?.(MODULE_NAME, "createIdentified") ?? true;
 }
 
+function inferVersatileFormula(formula) {
+  const match = String(formula ?? "").match(/^1d(4|6|8|10)$/i);
+  if (!match) return null;
+  const nextDie = { 4: 6, 6: 8, 8: 10, 10: 12 }[match[1]];
+  return nextDie ? `1d${nextDie}` : null;
+}
+
 export class NaturalItemParser {
   constructor() {
     this.errors = [];
     this.warnings = [];
     this.text = "";
     this.confidence = {}; // Track confidence scores for extracted fields
+    this.trace = null;
   }
 
   // Base armor data lookup table for inheriting properties
@@ -114,6 +122,11 @@ export class NaturalItemParser {
 
     // Normalize text first to handle encoding issues
     this.text = ItemRegex.normalizeText(text);
+    this.trace = {
+      selectedParser: "NaturalItemParser",
+      inputKind: "natural",
+      inputLength: this.text.length
+    };
 
     if (!this.text) {
       this.addError("Empty text provided");
@@ -122,6 +135,7 @@ export class NaturalItemParser {
 
     // Detect input format for better parsing
     this.inputFormat = this.detectInputFormat(this.text);
+    this.trace.inputFormat = this.inputFormat;
     ItemUtils.log(`NaturalItemParser: Detected format: ${this.inputFormat}`);
 
     ItemUtils.log("NaturalItemParser: Starting natural language parsing...");
@@ -132,12 +146,15 @@ export class NaturalItemParser {
         "NaturalItemParser: Extracting fields from natural language..."
       );
       const extracted = this.extractAllFields(this.text);
+      this.trace.extractedFields = extracted;
+      this.trace.confidence = { ...this.confidence };
 
       // Step 2: Build strict template from extracted data
       ItemUtils.log(
         "NaturalItemParser: Building strict template from extracted data..."
       );
       const strictTemplate = this.buildStrictTemplate(extracted);
+      this.trace.generatedStrictTemplate = strictTemplate;
 
       // Log the generated template for debugging
       if (game.settings.get("5e-item-importer", "debug")) {
@@ -148,10 +165,14 @@ export class NaturalItemParser {
       ItemUtils.log("NaturalItemParser: Passing to strict parser...");
       const strictParser = getParserForText(strictTemplate);
       const result = strictParser.parse(strictTemplate);
+      this.trace.yaml = strictParser.trace ?? null;
+      this.trace.errors = result.errors ?? [];
+      this.trace.warnings = result.warnings ?? [];
 
       // Add our warnings to the result
       if (this.warnings.length > 0) {
         result.warnings = [...result.warnings, ...this.warnings];
+        this.trace.warnings = result.warnings;
       }
 
       ItemUtils.log("NaturalItemParser: Natural language parsing completed");
@@ -164,6 +185,7 @@ export class NaturalItemParser {
       this.addError(
         `Unexpected error during natural parsing: ${error.message}`
       );
+      this.trace.errors = [...this.errors];
       return this.createResult(false, null);
     }
   }
@@ -436,7 +458,10 @@ buildWeaponSections(extracted, data) {
 
     // Versatile damage section
     const hasVersatile = props.versatile ?? baseProps.includes("versatile");
-    const versatileDamage = extracted.versatileDamage?.formula || baseData.versatile;
+    const versatileDamage =
+      extracted.versatileDamage?.formula ||
+      baseData.versatile ||
+      (hasVersatile ? inferVersatileFormula(extracted.damage?.formula || baseData.damage) : null);
     if (versatileDamage || hasVersatile) {
       data.VERSATILE_DAMAGE = {
         "Versatile Formula": versatileDamage || "n/a",
@@ -463,11 +488,18 @@ buildWeaponSections(extracted, data) {
       Proficient: "Automatic",
     };
 
-    // Attunement section (only if magical and attunement required)
+    // Attunement section (include magic bonus even when attunement is not required)
     if (extracted.isMagical && extracted.attunement?.required) {
       data.ATTUNEMENT = {
         Attunement: "required",
         "Attunement By": extracted.attunement.byClass || "n/a",
+        "Magic Bonus": extracted.magicBonus || 0,
+      };
+    } else if (extracted.magicBonus !== null && extracted.magicBonus !== undefined) {
+      data.ATTUNEMENT = {
+        Attunement: "none",
+        "Attunement By": "n/a",
+        "Magic Bonus": extracted.magicBonus,
       };
     }
   }
@@ -1199,6 +1231,25 @@ buildWeaponSections(extracted, data) {
       }
     }
 
+    const aliases = [
+      { pattern: /\bhooked\s+blade\b/i, base: "scimitar" },
+      { pattern: /\bkatana\b/i, base: "longsword" },
+      { pattern: /\bsab(?:er|re)\b/i, base: "scimitar" },
+      { pattern: /\bcleaver\b/i, base: "handaxe" },
+      { pattern: /\bknife\b/i, base: "dagger" },
+      { pattern: /\bcudgel\b/i, base: "club" },
+      { pattern: /\bpoleaxe\b/i, base: "halberd" },
+      { pattern: /\bwar\s+scythe\b/i, base: "glaive" },
+    ];
+
+    for (const { pattern, base } of aliases) {
+      if (pattern.test(lowerText)) {
+        ItemUtils.log(`NaturalItemParser: Inferred base weapon from alias: ${base}`);
+        this.confidence.baseWeapon = 0.65;
+        return base;
+      }
+    }
+
     ItemUtils.log("NaturalItemParser: Could not determine base weapon");
     return null;
   }
@@ -1842,10 +1893,11 @@ buildWeaponSections(extracted, data) {
   }
 
   extractMagicBonus(text) {
-    // Pattern: "+1 armor", "+2 shield", "armor +3"
+    // Pattern: "+1 armor", "+1 weapon", "longsword +1", "+1 bonus to attack and damage"
     const patterns = [
-      /[+](\d)\s+(?:armor|shield|equipment)/i,
-      /(?:armor|shield|equipment)\s+[+](\d)/i,
+      /[+](\d+)\s+(?:armor|shield|equipment|weapon|longsword|shortsword|greatsword|sword|axe|mace|hammer|dagger|bow|crossbow|spear|staff|club|flail|whip|lance|pike|scimitar|rapier|trident|glaive|halberd|maul|morningstar|war\s*pick)/i,
+      /(?:armor|shield|equipment|weapon|longsword|shortsword|greatsword|sword|axe|mace|hammer|dagger|bow|crossbow|spear|staff|club|flail|whip|lance|pike|scimitar|rapier|trident|glaive|halberd|maul|morningstar|war\s*pick)\s+[+](\d+)/i,
+      /[+](\d+)\s+bonus\s+to\s+(?:attack\s+and\s+damage|damage\s+and\s+attack)\s+rolls/i,
     ];
 
     for (const pattern of patterns) {

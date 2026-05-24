@@ -8,6 +8,12 @@
 - Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
 
+**dnd5e Description Features:**
+- `DESCRIPTION.Description` and `CHAT_FLAVOR.Chat Description` preserve Foundry/dnd5e text features for Foundry to resolve when displayed.
+- You can use dnd5e enrichers such as `[[/damage 1d6 fire average]]`, roll-data formulas such as `@prof` or `@abilities.str.mod`, dynamic lookups such as `[[lookup @name]]{the creature}`, System HTML classes, and pass-through document links such as `@UUID[...]` or `@Embed[...]`.
+- Use stock dnd5e `[[lookup @name]]` text for active narration and chat flavor: sentence start `[[lookup @name]]{The creature} drinks the potion.`; mid-sentence `When [[lookup @name]]{the creature} hits with this weapon...`. This normally resolves to the actor name; the optional Token Name Lookup companion can prefer token aliases at render time without changing item syntax.
+- Keep passive rules text natural. Do not force dynamic name lookups into every description.
+
 **Batching multiple items:**
 Combine different item types in one block by stacking top-level keys:
 ```text
@@ -226,7 +232,7 @@ When requested, append them after `CHAT_FLAVOR`:
 
 ### **Retrieval Mechanics**
 ```html
-<p><strong>Retrieval.</strong> Retrieving an item from the container requires an action. If a specific item is desired, you can find it instantly without searching.</p>
+<p><strong>Retrieval.</strong> Retrieving an item from the container requires an action. If a specific item is desired, [[lookup @name]]{the creature} can find it instantly without searching.</p>
 ```
 
 ### **Hazard/Trap Pattern**
@@ -236,7 +242,7 @@ When requested, append them after `CHAT_FLAVOR`:
 
 ### **Cursed Container Pattern**
 ```html
-<p><strong>Curse.</strong> Once you place an item inside this container, you must succeed on a [[/save wis 15 format=long]] or become unwilling to part with it. While cursed, you have disadvantage on attack rolls and ability checks whenever the container is more than 10 feet away from you.</p>
+<p><strong>Curse.</strong> Once [[lookup @name]]{the creature} places an item inside this container, they must succeed on a [[/save wis 15 format=long]] or become unwilling to part with it. While cursed, they have disadvantage on attack rolls and ability checks whenever the container is more than 10 feet away from them.</p>
 ```
 
 ---

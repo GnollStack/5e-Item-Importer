@@ -213,7 +213,7 @@ export class ItemUtils {
      * @param {string} itemType - Type of item (weapon, equipment, etc.)
      * @returns {Promise<string|null>} Icon path or null
      */
-    static async findSystemIcon(itemName, itemType) {
+    static async findSystemIcon(itemName, itemType, options = {}) {
         if (!itemName || !itemType) return null;
 
         this.log(`Searching for icon: ${itemName} (${itemType})`);
@@ -246,7 +246,7 @@ export class ItemUtils {
         }));
 
         // Sort by score (highest first)
-        scored.sort((a, b) => b.score - a.score);
+        scored.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
 
         this.debug("Icon Search", "Top 5 matches", scored.slice(0, 5));
 
@@ -258,9 +258,12 @@ export class ItemUtils {
 
         // If no good match, return random icon from appropriate category
         if (scored.length > 0) {
-            const randomIndex = Math.floor(Math.random() * Math.min(5, scored.length));
-            this.log(`Using random icon from top matches: ${scored[randomIndex].path}`);
-            return scored[randomIndex].path;
+            const candidates = scored.slice(0, Math.min(5, scored.length));
+            const selected = options.deterministicIcons
+                ? candidates[0]
+                : candidates[Math.floor(Math.random() * candidates.length)];
+            this.log(`Using ${options.deterministicIcons ? "deterministic" : "random"} icon from top matches: ${selected.path}`);
+            return selected.path;
         }
 
         return null;

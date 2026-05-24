@@ -193,6 +193,15 @@ export function registerSettings() {
         default: true,
     });
 
+    game.settings.register(MODULE_NAME, "replaceGeneratedDefaultActivities", {
+        name: "Replace Generated Default Activities",
+        hint: "When importing inline activities, prevent dnd5e from adding its generated weapon/tool default if the imported activities already include that same primary activity type. Disable this to keep both the generated default and imported activities.",
+        scope: "client",
+        config: true,
+        type: Boolean,
+        default: true,
+    });
+
     // Track if welcome message has been shown (internal)
     game.settings.register(MODULE_NAME, "hasShownWelcome", {
         name: "Has Shown Welcome",

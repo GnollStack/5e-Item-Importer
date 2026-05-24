@@ -8,6 +8,12 @@
 - Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
 
+**dnd5e Description Features:**
+- `DESCRIPTION.Description` and `CHAT_FLAVOR.Chat Description` preserve Foundry/dnd5e text features for Foundry to resolve when displayed.
+- You can use dnd5e enrichers such as `[[/damage 1d6 fire average]]`, roll-data formulas such as `@prof` or `@abilities.str.mod`, dynamic lookups such as `[[lookup @name]]{the creature}`, System HTML classes, and pass-through document links such as `@UUID[...]` or `@Embed[...]`.
+- Use stock dnd5e `[[lookup @name]]` text for active narration and chat flavor: sentence start `[[lookup @name]]{The creature} drinks the potion.`; mid-sentence `When [[lookup @name]]{the creature} hits with this weapon...`. This normally resolves to the actor name; the optional Token Name Lookup companion can prefer token aliases at render time without changing item syntax.
+- Keep passive rules text natural. Do not force dynamic name lookups into every description.
+
 **Batching multiple items:**
 Combine different item types in one block by stacking top-level keys:
 ```text
@@ -45,6 +51,8 @@ You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMEN
 - Do not omit individual fields from required sections just because their value is `n/a`.
 - Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
 - Use HTML tags inside description fields, not Markdown headings or Markdown lists.
+- For mixed weapon damage formulas like `1d8[piercing] + 1d6[lightning]`, set `Damage Type` to the weapon's primary damage type, such as `piercing`. Do the same for `Versatile Damage Type`. The primary type gives dnd5e a default for system-added ability and magic bonuses, while bracketed formula terms keep extra damage such as lightning separate for resistance and immunity.
+- Use `n/a` for `Damage Type` or `Versatile Damage Type` only when the typed formula is fully self-contained and will not receive system-added ability, magic, or ammunition bonuses.
 
 **YAML Syntax Rules (do not violate):**
 - Every key needs a SPACE after the colon: `KEY: value`, never `KEY:value`. js-yaml will reject the file with a confusing "multiline key" error otherwise.
@@ -119,8 +127,8 @@ WEAPON:
 
   VERSATILE_DAMAGE:
     # (Required only if Versatile is true)
-    Versatile Formula: "[e.g. 1d10 + @mod]"
-    Versatile Damage Type: "[slashing|piercing|bludgeoning|etc]"
+    Versatile Formula: "[e.g. 1d10 + @mod OR 1d10[slashing] + 1d6[fire]]"
+    Versatile Damage Type: "[primary type such as slashing|piercing|bludgeoning|etc|n/a only for fully self-contained typed formulas]"
 
   SIEGE_PROPERTIES:
     # (Required only if Weapon Type is siege)
@@ -138,8 +146,8 @@ WEAPON:
     Range Units: "[ft|m|sq|mi]"
 
   DAMAGE:
-    Damage Formula: "[e.g. 2d6 + @mod]"
-    Damage Type: "[acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder]"
+    Damage Formula: "[e.g. 2d6 + @mod OR 1d8[piercing] + 1d6[lightning]]"
+    Damage Type: "[primary type such as piercing|slashing|bludgeoning|etc|n/a only for fully self-contained typed formulas]"
 
   MASTERY:
     Mastery: "[cleave|graze|nick|push|sap|slow|topple|vex|n/a]"
@@ -326,17 +334,17 @@ When requested, append them after `CHAT_FLAVOR`:
 
 ### **Extra Damage on Hit**
 ```html
-<p><strong>Elemental Strike.</strong> When you hit with this weapon, the target takes an extra [[/damage 1d6 fire average]].</p>
+<p><strong>Elemental Strike.</strong> When [[lookup @name]]{the creature} hits with this weapon, the target takes an extra [[/damage 1d6 fire average]].</p>
 ```
 
 ### **On-Hit Save Effect**
 ```html
-<p><strong>Venomous.</strong> When you hit a creature with this weapon, the target must succeed on a [[/save con 14 format=long]] or become &Reference[poisoned] for 1 minute. The creature can repeat the save at the end of each of its turns, ending the effect on a success.</p>
+<p><strong>Venomous.</strong> When [[lookup @name]]{the creature} hits a creature with this weapon, the target must succeed on a [[/save con 14 format=long]] or become &Reference[poisoned] for 1 minute. The creature can repeat the save at the end of each of its turns, ending the effect on a success.</p>
 ```
 
 ### **Charge-Based Abilities**
 ```html
-<p>This weapon has X charges. While holding it, you can expend charges to use the following abilities:</p>
+<p>This weapon has X charges. While holding it, [[lookup @name]]{the creature} can expend charges to use the following abilities:</p>
 <ul>
 <li><strong>Ability Name (1 Charge):</strong> Effect description.</li>
 <li><strong>Ability Name (2 Charges):</strong> Effect description.</li>
@@ -346,7 +354,7 @@ When requested, append them after `CHAT_FLAVOR`:
 
 ### **Critical Hit Enhancement**
 ```html
-<p><strong>Devastating Critical.</strong> When you score a critical hit with this weapon, you can roll one additional weapon damage die when determining the extra damage.</p>
+<p><strong>Devastating Critical.</strong> When [[lookup @name]]{the creature} scores a critical hit with this weapon, they can roll one additional weapon damage die when determining the extra damage.</p>
 ```
 
 ### **Sentient Weapon**

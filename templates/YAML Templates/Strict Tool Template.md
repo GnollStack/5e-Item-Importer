@@ -8,6 +8,12 @@
 - Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
 
+**dnd5e Description Features:**
+- `DESCRIPTION.Description` and `CHAT_FLAVOR.Chat Description` preserve Foundry/dnd5e text features for Foundry to resolve when displayed.
+- You can use dnd5e enrichers such as `[[/damage 1d6 fire average]]`, roll-data formulas such as `@prof` or `@abilities.str.mod`, dynamic lookups such as `[[lookup @name]]{the creature}`, System HTML classes, and pass-through document links such as `@UUID[...]` or `@Embed[...]`.
+- Use stock dnd5e `[[lookup @name]]` text for active narration and chat flavor: sentence start `[[lookup @name]]{The creature} drinks the potion.`; mid-sentence `When [[lookup @name]]{the creature} hits with this weapon...`. This normally resolves to the actor name; the optional Token Name Lookup companion can prefer token aliases at render time without changing item syntax.
+- Keep passive rules text natural. Do not force dynamic name lookups into every description.
+
 **Batching multiple items:**
 Combine different item types in one block by stacking top-level keys:
 ```text
@@ -279,7 +285,7 @@ Legacy short artisan IDs such as `alch` and `calli` are still accepted for backw
 <p><em>Brief flavor description of the tool's appearance.</em></p>
 <hr>
 
-<p>Proficiency with these tools lets you add your proficiency bonus to any ability checks you make using them.</p>
+<p>Proficiency with these tools lets [[lookup @name]]{the creature} add their proficiency bonus to ability checks they make using them.</p>
 ```
 
 ### **Magical Tool with Bonus**
@@ -287,7 +293,7 @@ Legacy short artisan IDs such as `alch` and `calli` are still accepted for backw
 <p><em>Flavor description.</em></p>
 <hr>
 
-<p>You have a +X bonus to ability checks made using these tools.</p>
+<p>While using these tools, [[lookup @name]]{the creature} has a +X bonus to ability checks made with them.</p>
 ```
 
 ### **Charge-Based Tool**
@@ -295,7 +301,7 @@ Legacy short artisan IDs such as `alch` and `calli` are still accepted for backw
 <p><em>Flavor description.</em></p>
 <hr>
 
-<p>This item has X charges. While using it, you can expend charges to activate the following abilities:</p>
+<p>This item has X charges. While using it, [[lookup @name]]{the creature} can expend charges to activate the following abilities:</p>
 <ul>
 <li><strong>Ability Name (1 Charge):</strong> Effect description.</li>
 <li><strong>Ability Name (2 Charges):</strong> Effect description.</li>
@@ -305,12 +311,12 @@ Legacy short artisan IDs such as `alch` and `calli` are still accepted for backw
 
 ### **Area Effect (Musical Instruments)**
 ```html
-<p><strong>Haunting Melody (1 Charge).</strong> As an action, you can play the instrument and expend 1 charge. Each creature of your choice within 30 feet that can hear you must succeed on a [[/save wis 15 format=long]] or become &Reference[frightened] of you for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.</p>
+<p><strong>Haunting Melody (1 Charge).</strong> As an action, [[lookup @name]]{the creature} can play the instrument and expend 1 charge. Each creature of their choice within 30 feet that can hear them must succeed on a [[/save wis 15 format=long]] or become &Reference[frightened] of them for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.</p>
 ```
 
 ### **Crafting Enhancement**
 ```html
-<p><strong>Master's Touch.</strong> When you use these tools to craft an item during downtime, you complete the work in half the normal time.</p>
+<p><strong>Master's Touch.</strong> When [[lookup @name]]{the creature} uses these tools to craft an item during downtime, they complete the work in half the normal time.</p>
 ```
 
 ### **Proficiency Requirement**

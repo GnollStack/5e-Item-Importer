@@ -1,0 +1,83 @@
+name: Feature idea
+description: Suggest something 5e Item Importer should help you do at the table.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature ideas are welcome. Tell me what happened at your table; I may adapt, decline, or implement the idea myself.
+
+  - type: textarea
+    id: table-situation
+    attributes:
+      label: What happened at your table or during prep?
+      description: Describe the real game situation or import workflow behind the idea.
+      placeholder: |
+        During prep, I wanted to import...
+        The hard part was...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature area
+      description: Which area would this improve?
+      options:
+        - Natural Language parsing
+        - Strict YAML templates
+        - Batch imports
+        - Activities / effects
+        - Icon matching
+        - Import preview / comparison
+        - Documentation / examples
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired-outcome
+    attributes:
+      label: What do you wish would happen?
+      description: What should feel easier, better, or more reliable if this exists?
+    validations:
+      required: true
+
+  - type: textarea
+    id: feature-idea
+    attributes:
+      label: Feature idea
+      description: Describe the feature or behavior you have in mind.
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround
+      description: How are you handling this today, if at all?
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or references
+      description: Add item text, YAML examples, screenshots, mockups, module examples, or table-use examples if useful.
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      description: How important is this for your table or prep workflow?
+      options:
+        - Would be nice
+        - I would use this often
+        - This would make prep or play much easier
+        - This is blocking something I want to run
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else you want to say?
+      description: Use this space naturally if the form did not quite fit your idea.

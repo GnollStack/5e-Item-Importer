@@ -1,0 +1,104 @@
+name: Template or parser issue
+description: Report item text or YAML that does not parse/import the way you expect.
+title: "[Parser]: "
+labels:
+  - bug
+  - parser
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when a specific item, template, YAML block, or batch does not import correctly. The exact text matters most.
+
+  - type: dropdown
+    id: parser-type
+    attributes:
+      label: Parser type
+      description: Which input style did you use?
+      options:
+        - Natural Language
+        - Strict YAML
+        - Lightweight key/value
+        - Batch YAML
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: expected-item-type
+    attributes:
+      label: Expected item type
+      description: What should the importer create?
+      options:
+        - weapon
+        - equipment
+        - consumable
+        - container
+        - loot
+        - spell
+        - tool
+        - not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: input-text
+    attributes:
+      label: Exact input text
+      description: Paste the exact text or YAML you tried to import.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-result
+    attributes:
+      label: Expected parsed result
+      description: Describe the item name, type, base item, damage, AC, uses, activities, effects, icon, or other fields you expected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-result
+    attributes:
+      label: Actual parsed result
+      description: Describe what the importer produced or which validation errors appeared.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation-output
+    attributes:
+      label: Parser or MCP validation output
+      description: Paste Parse Results, console logs, MCP validation output, or screenshots of the parse preview if available.
+      render: text
+
+  - type: input
+    id: foundry-version
+    attributes:
+      label: Foundry VTT version
+      placeholder: "Example: v13.351"
+    validations:
+      required: true
+
+  - type: input
+    id: dnd5e-version
+    attributes:
+      label: D&D 5e system version
+      placeholder: "Example: 5.2.5"
+    validations:
+      required: true
+
+  - type: input
+    id: module-version
+    attributes:
+      label: 5e Item Importer version
+      placeholder: "Example: 13.9.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else?
+      description: Add context about source books, homebrew conventions, or why the expected result matters.

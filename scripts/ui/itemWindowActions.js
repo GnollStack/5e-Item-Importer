@@ -4,9 +4,9 @@
  */
 
 import { ItemUtils } from "../itemUtils.js";
-import { MODULE_NAME, YAML_ITEM_KEYS, YAML_KEY_REGEXES } from "../itemConfig.js";
+import { MODULE_NAME } from "../itemConfig.js";
 import { getParserForText, parseAllItemsYaml } from "../strictItemParsers/strictParserDispatcher.js";
-import { NaturalItemParser } from "../naturalItemParser.js";
+import { isYamlMultiItem, parseItemText } from "../parserRouting.js";
 import { ITEM_TEMPLATES } from "./itemTemplates.js";
 import * as Renderer from "./itemWindowRenderer.js";
 import { extractExpectedItemProps, extractActualItemProps } from "./itemComparisonExtractor.js";
@@ -136,37 +136,6 @@ function reRenderItemActivities(helper) {
 }
 
 /**
- * Detect whether text looks like a YAML strict template.
- * Checks if any valid top-level type key (e.g., WEAPON:, LOOT:) appears at the start of a line,
- * optionally inside a code fence.
- * @param {string} text
- * @returns {boolean}
- */
-function isYamlFormat(text) {
-    const stripped = text.replace(/^```(?:yaml|markdown)?\s*\n?/i, '').replace(/\n?```\s*$/, '');
-    return YAML_ITEM_KEYS.some(key => YAML_KEY_REGEXES[key].test(stripped));
-}
-
-/**
- * Detect whether text contains multiple YAML items.
- * Checks for: multiple different top-level keys, OR --- document separators.
- * @param {string} text
- * @returns {boolean}
- */
-function isYamlMultiItem(text) {
-    // Check for YAML document separators (handles same-type batching)
-    const stripped = text.replace(/^```(?:yaml|markdown)?\s*\n?/i, '').replace(/\n?```\s*$/, '');
-    if (/^---\s*$/m.test(stripped)) return true;
-
-    // Check for multiple different top-level type keys
-    let count = 0;
-    for (const key of YAML_ITEM_KEYS) {
-        if (YAML_KEY_REGEXES[key].test(text)) count++;
-    }
-    return count > 1;
-}
-
-/**
  * Parse the item text
  * @this {ItemWindow}
  */
@@ -205,9 +174,7 @@ export async function parse() {
     }
 
     try {
-        // Route to YAML parser or Natural Language parser based on input format
-        const parser = isYamlFormat(text) ? getParserForText(text) : new NaturalItemParser();
-        const result = parser.parse(text);
+        const result = parseItemText(text);
 
         this.currentParseResult = result;
 

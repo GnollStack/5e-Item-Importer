@@ -8,6 +8,12 @@
 - Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
 
+**dnd5e Description Features:**
+- `DESCRIPTION.Description` and `CHAT_FLAVOR.Chat Description` preserve Foundry/dnd5e text features for Foundry to resolve when displayed.
+- You can use dnd5e enrichers such as `[[/damage 1d6 fire average]]`, roll-data formulas such as `@prof` or `@abilities.str.mod`, dynamic lookups such as `[[lookup @name]]{the creature}`, System HTML classes, and pass-through document links such as `@UUID[...]` or `@Embed[...]`.
+- Use stock dnd5e `[[lookup @name]]` text for active narration and chat flavor: sentence start `[[lookup @name]]{The creature} drinks the potion.`; mid-sentence `When [[lookup @name]]{the creature} hits with this weapon...`. This normally resolves to the actor name; the optional Token Name Lookup companion can prefer token aliases at render time without changing item syntax.
+- Keep passive rules text natural. Do not force dynamic name lookups into every description.
+
 **Batching multiple items:**
 Combine different item types in one block by stacking top-level keys:
 ```text
@@ -45,6 +51,8 @@ You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMEN
 - Do not omit individual fields from required sections just because their value is `n/a`.
 - Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
 - Use HTML tags inside description fields, not Markdown headings or Markdown lists.
+- For dnd5e typed custom ammunition formulas that replace weapon damage, set `Damage Type` to the primary ammunition damage type, such as `piercing`. This gives dnd5e a default for system-added ability, weapon magic, and ammunition magic bonuses while bracketed terms keep extra damage separate for resistance and immunity.
+- Use `Damage Type: n/a` only when the ammunition formula is fully self-contained and will not receive system-added bonuses.
 
 **YAML Syntax Rules (do not violate):**
 - Every key needs a SPACE after the colon: `KEY: value`, never `KEY:value`. js-yaml will reject the file with a confusing "multiline key" error otherwise.
@@ -100,8 +108,8 @@ CONSUMABLE:
     Silvered: "[true|false]"
     Returning: "[true|false]"
     Magic Bonus: "[integer|n/a]"
-    Damage Formula: "[e.g. 1d6 + @mod|n/a]"
-    Damage Type: "[piercing|bludgeoning|slashing|etc|n/a]"
+    Damage Formula: "[e.g. 1d6 + @mod OR 1d6[piercing] + 1d4[fire]|n/a]"
+    Damage Type: "[primary type such as piercing|bludgeoning|slashing|etc|n/a only for fully self-contained typed formulas]"
     Damage Replace: "[true|false]"
 
   POISON_PROPERTIES:
@@ -259,7 +267,7 @@ When requested, append them after `CHAT_FLAVOR`:
 
 ### **Standard Consumable Effect**
 ```html
-<p>When you drink this potion, you regain [[/heal 2d4 + 2 average]] hit points.</p>
+<p>When [[lookup @name]]{the creature} drinks this potion, they regain [[/heal 2d4 + 2 average]] hit points.</p>
 ```
 
 ### **Save-Based Effect**
@@ -282,7 +290,7 @@ When requested, append them after `CHAT_FLAVOR`:
 
 ### **Charge-Based Usage**
 ```html
-<p>This wand has 7 charges. While holding it, you can use an action to expend 1 or more charges to cast a spell from it.</p>
+<p>This wand has 7 charges. While holding it, [[lookup @name]]{the creature} can use an action to expend 1 or more charges to cast a spell from it.</p>
 <ul>
 <li><strong>1 Charge:</strong> [[/damage 1d4 + 1 force average]] (1st-level)</li>
 <li><strong>2 Charges:</strong> [[/damage 2d4 + 2 force average]] (2nd-level)</li>
@@ -292,7 +300,7 @@ When requested, append them after `CHAT_FLAVOR`:
 
 ### **Risk on Empty**
 ```html
-<p><strong>Crumble Risk.</strong> If you expend the item's last charge, roll a d20. On a 1, it crumbles into ashes and is destroyed.</p>
+<p><strong>Crumble Risk.</strong> If [[lookup @name]]{the creature} expends the item's last charge, roll a d20. On a 1, it crumbles into ashes and is destroyed.</p>
 ```
 
 ---

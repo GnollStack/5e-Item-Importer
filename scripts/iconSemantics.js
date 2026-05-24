@@ -12,6 +12,12 @@
 import { ItemUtils } from "./itemUtils.js";
 import { MODULE_NAME } from "./itemConfig.js";
 
+function chooseIcon(candidates, options = {}) {
+  const sorted = [...candidates].sort((a, b) => String(a.path ?? a).localeCompare(String(b.path ?? b)));
+  if (options.deterministicIcons) return sorted[0];
+  return sorted[Math.floor(Math.random() * sorted.length)];
+}
+
 /**
  * Base path for Foundry core weapon icons
  * Note: These are in Foundry CORE, not the dnd5e system
@@ -258,8 +264,8 @@ const TOOL_ICON_PATHS = {
  */
 const BASE_TOOL_KEYWORDS = {
   // Artisan's Tools
-  alchemist: ["alchemist", "alchemy", "potion", "vial", "flask", "chemistry"],
-  alch: ["alchemist", "alchemy", "potion", "vial", "flask", "chemistry"],
+  alchemist: ["alchemist", "alchemy", "potion", "vial", "flask", "mortar", "pestle", "chemistry"],
+  alch: ["alchemist", "alchemy", "potion", "vial", "flask", "mortar", "pestle", "chemistry"],
   brewer: ["brewer", "brewing", "barrel", "keg", "beer", "ale"],
   brew: ["brewer", "brewing", "barrel", "keg", "beer", "ale"],
   calligrapher: ["calligrapher", "quill", "pen", "ink", "writing"],
@@ -321,6 +327,8 @@ const BASE_TOOL_KEYWORDS = {
  * Base paths for container icons
  */
 const CONTAINER_ICON_PATHS = [
+  "icons/containers/bags",
+  "icons/containers/chest",
   "icons/containers",
   "icons/sundries/survival",
   "icons/commodities/bags",
@@ -494,7 +502,8 @@ const LOOT_TYPE_KEYWORDS = {
 export async function getRandomWeaponIcon(
   baseWeapon,
   weaponType,
-  itemName = null
+  itemName = null,
+  options = {}
 ) {
   // Check if feature is enabled
   if (!game.settings.get(MODULE_NAME, "useSemanticIcons")) {
@@ -546,7 +555,7 @@ export async function getRandomWeaponIcon(
   }
 
   // Try to find the best matching icon using priority selection
-  const selectedIcon = selectBestIcon(icons, baseWeapon, itemName);
+  const selectedIcon = selectBestIcon(icons, baseWeapon, itemName, options);
 
   ItemUtils.log(
     `Selected icon: ${selectedIcon} (from ${icons.length} options)`
@@ -565,7 +574,7 @@ export async function getRandomWeaponIcon(
  * @param {string} itemName - The full item name
  * @returns {string} The selected icon path
  */
-function selectBestIcon(icons, baseWeapon, itemName) {
+function selectBestIcon(icons, baseWeapon, itemName, options = {}) {
   // Score all icons
   const scoredIcons = icons.map((iconPath) => {
     const filename = extractFilename(iconPath);
@@ -613,7 +622,7 @@ function selectBestIcon(icons, baseWeapon, itemName) {
   });
 
   // Sort by score (highest first)
-  scoredIcons.sort((a, b) => b.score - a.score);
+  scoredIcons.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
 
   // Log top matches for debugging
   const topMatches = scoredIcons.slice(0, 5);
@@ -633,8 +642,7 @@ function selectBestIcon(icons, baseWeapon, itemName) {
     const topScoringIcons = scoredIcons.filter((i) => i.score === topScore);
 
     // Randomly select from the top-scoring icons
-    const randomIndex = Math.floor(Math.random() * topScoringIcons.length);
-    const selected = topScoringIcons[randomIndex];
+    const selected = chooseIcon(topScoringIcons, options);
 
     ItemUtils.log(
       `Selected from ${topScoringIcons.length} top matches (score: ${topScore}): ${selected.path}`
@@ -643,11 +651,11 @@ function selectBestIcon(icons, baseWeapon, itemName) {
   }
 
   // No good match - pick random from all icons
-  const randomIndex = Math.floor(Math.random() * icons.length);
+  const selectedIcon = chooseIcon(icons.map((path) => ({ path })), options).path;
   ItemUtils.log(
-    `No keyword match, selecting random icon: ${icons[randomIndex]}`
+    `No keyword match, selecting ${options.deterministicIcons ? "deterministic" : "random"} icon: ${selectedIcon}`
   );
-  return icons[randomIndex];
+  return selectedIcon;
 }
 
 /**
@@ -803,7 +811,8 @@ export function clearIconCache() {
 export async function getRandomEquipmentIcon(
   baseEquipment,
   armorType,
-  itemName = null
+  itemName = null,
+  options = {}
 ) {
   // Check if feature is enabled
   if (!game.settings.get(MODULE_NAME, "useSemanticIcons")) {
@@ -859,7 +868,7 @@ export async function getRandomEquipmentIcon(
     const icons = await getIconsFromFolder(folderPath);
 
     if (icons && icons.length > 0) {
-      const selectedIcon = selectBestIcon(icons, baseEquipment, itemName);
+      const selectedIcon = selectBestIcon(icons, baseEquipment, itemName, options);
       ItemUtils.log(`Selected equipment icon from ${folder}: ${selectedIcon}`);
       return selectedIcon;
     }
@@ -905,7 +914,7 @@ export async function getRandomEquipmentIcon(
   );
 
   // Use keyword matching to find the best icon across all folders
-  const selectedIcon = selectBestIcon(allIcons, baseEquipment, itemName);
+  const selectedIcon = selectBestIcon(allIcons, baseEquipment, itemName, options);
   ItemUtils.log(`Selected equipment icon from all folders: ${selectedIcon}`);
   return selectedIcon;
 }
@@ -997,7 +1006,8 @@ export async function getRandomConsumableIcon(
   consumableType,
   ammunitionType = null,
   poisonType = null,
-  itemName = null
+  itemName = null,
+  options = {}
 ) {
   // Check if feature is enabled
   if (!game.settings.get(MODULE_NAME, "useSemanticIcons")) {
@@ -1055,7 +1065,8 @@ export async function getRandomConsumableIcon(
     allIcons,
     consumableType,
     subtypeKeywords,
-    itemName
+    itemName,
+    options
   );
 
   ItemUtils.log(`Selected consumable icon: ${selectedIcon}`);
@@ -1074,7 +1085,8 @@ function selectBestConsumableIcon(
   icons,
   consumableType,
   subtypeKeywords,
-  itemName
+  itemName,
+  options = {}
 ) {
   // Score all icons
   const scoredIcons = icons.map((iconPath) => {
@@ -1114,7 +1126,7 @@ function selectBestConsumableIcon(
   });
 
   // Sort by score (highest first)
-  scoredIcons.sort((a, b) => b.score - a.score);
+  scoredIcons.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
 
   // Log top matches
   const topMatches = scoredIcons.slice(0, 5);
@@ -1131,8 +1143,7 @@ function selectBestConsumableIcon(
   // If we have matches, randomly select from all icons with the top score
   if (topScore > 0) {
     const topScoringIcons = scoredIcons.filter((i) => i.score === topScore);
-    const randomIndex = Math.floor(Math.random() * topScoringIcons.length);
-    const selected = topScoringIcons[randomIndex];
+    const selected = chooseIcon(topScoringIcons, options);
 
     ItemUtils.log(
       `Selected from ${topScoringIcons.length} top matches (score: ${topScore}): ${selected.path}`
@@ -1141,11 +1152,11 @@ function selectBestConsumableIcon(
   }
 
   // No good match - pick random
-  const randomIndex = Math.floor(Math.random() * icons.length);
+  const selectedIcon = chooseIcon(icons.map((path) => ({ path })), options).path;
   ItemUtils.log(
-    `No keyword match, selecting random icon: ${icons[randomIndex]}`
+    `No keyword match, selecting ${options.deterministicIcons ? "deterministic" : "random"} icon: ${selectedIcon}`
   );
-  return icons[randomIndex];
+  return selectedIcon;
 }
 
 /**
@@ -1158,7 +1169,8 @@ function selectBestConsumableIcon(
 export async function getRandomToolIcon(
   toolType,
   baseToolItem,
-  itemName = null
+  itemName = null,
+  options = {}
 ) {
   // Check if feature is enabled
   if (!game.settings.get(MODULE_NAME, "useSemanticIcons")) {
@@ -1208,7 +1220,7 @@ export async function getRandomToolIcon(
   }
 
   // Use enhanced selection with tool keywords
-  const selectedIcon = selectBestToolIcon(allIcons, toolKeywords, itemName);
+  const selectedIcon = selectBestToolIcon(allIcons, toolKeywords, itemName, options);
 
   ItemUtils.log(`Selected tool icon: ${selectedIcon}`);
   return selectedIcon;
@@ -1221,7 +1233,7 @@ export async function getRandomToolIcon(
  * @param {string} itemName - The full item name
  * @returns {string} The selected icon path
  */
-function selectBestToolIcon(icons, toolKeywords, itemName) {
+function selectBestToolIcon(icons, toolKeywords, itemName, options = {}) {
   // Score all icons
   const scoredIcons = icons.map((iconPath) => {
     const filename = extractFilename(iconPath);
@@ -1254,7 +1266,7 @@ function selectBestToolIcon(icons, toolKeywords, itemName) {
   });
 
   // Sort by score (highest first)
-  scoredIcons.sort((a, b) => b.score - a.score);
+  scoredIcons.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
 
   // Log top matches
   const topMatches = scoredIcons.slice(0, 5);
@@ -1271,8 +1283,7 @@ function selectBestToolIcon(icons, toolKeywords, itemName) {
   // If we have matches, randomly select from all icons with the top score
   if (topScore > 0) {
     const topScoringIcons = scoredIcons.filter((i) => i.score === topScore);
-    const randomIndex = Math.floor(Math.random() * topScoringIcons.length);
-    const selected = topScoringIcons[randomIndex];
+    const selected = chooseIcon(topScoringIcons, options);
 
     ItemUtils.log(
       `Selected from ${topScoringIcons.length} top matches (score: ${topScore}): ${selected.path}`
@@ -1281,11 +1292,11 @@ function selectBestToolIcon(icons, toolKeywords, itemName) {
   }
 
   // No good match - pick random
-  const randomIndex = Math.floor(Math.random() * icons.length);
+  const selectedIcon = chooseIcon(icons.map((path) => ({ path })), options).path;
   ItemUtils.log(
-    `No keyword match, selecting random icon: ${icons[randomIndex]}`
+    `No keyword match, selecting ${options.deterministicIcons ? "deterministic" : "random"} icon: ${selectedIcon}`
   );
-  return icons[randomIndex];
+  return selectedIcon;
 }
 
 /**
@@ -1293,7 +1304,7 @@ function selectBestToolIcon(icons, toolKeywords, itemName) {
  * @param {string} itemName - The full item name for keyword matching
  * @returns {Promise<string|null>} Path to a random icon, or null if none found
  */
-export async function getRandomContainerIcon(itemName = null) {
+export async function getRandomContainerIcon(itemName = null, options = {}) {
   // Check if feature is enabled
   if (!game.settings.get(MODULE_NAME, "useSemanticIcons")) {
     ItemUtils.log("Semantic icons disabled, skipping");
@@ -1340,7 +1351,8 @@ export async function getRandomContainerIcon(itemName = null) {
   const selectedIcon = selectBestContainerIcon(
     allIcons,
     containerKeywords,
-    itemName
+    itemName,
+    options
   );
 
   ItemUtils.log(`Selected container icon: ${selectedIcon}`);
@@ -1354,16 +1366,17 @@ export async function getRandomContainerIcon(itemName = null) {
  * @param {string} itemName - The full item name
  * @returns {string} The selected icon path
  */
-function selectBestContainerIcon(icons, containerKeywords, itemName) {
+function selectBestContainerIcon(icons, containerKeywords, itemName, options = {}) {
   // Score all icons
   const scoredIcons = icons.map((iconPath) => {
     const filename = extractFilename(iconPath);
+    const searchPath = iconPath.toLowerCase();
     let score = 0;
     let matchReason = "random";
 
     // Priority 1: Match container type keywords
     for (const keyword of containerKeywords) {
-      if (filename.includes(keyword.toLowerCase())) {
+      if (filename.includes(keyword.toLowerCase()) || searchPath.includes(keyword.toLowerCase())) {
         score += 100;
         matchReason = `container keyword: "${keyword}"`;
         break;
@@ -1387,7 +1400,7 @@ function selectBestContainerIcon(icons, containerKeywords, itemName) {
   });
 
   // Sort by score (highest first)
-  scoredIcons.sort((a, b) => b.score - a.score);
+  scoredIcons.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
 
   // Log top matches
   const topMatches = scoredIcons.slice(0, 5);
@@ -1404,8 +1417,7 @@ function selectBestContainerIcon(icons, containerKeywords, itemName) {
   // If we have matches, randomly select from all icons with the top score
   if (topScore > 0) {
     const topScoringIcons = scoredIcons.filter((i) => i.score === topScore);
-    const randomIndex = Math.floor(Math.random() * topScoringIcons.length);
-    const selected = topScoringIcons[randomIndex];
+    const selected = chooseIcon(topScoringIcons, options);
 
     ItemUtils.log(
       `Selected from ${topScoringIcons.length} top matches (score: ${topScore}): ${selected.path}`
@@ -1414,11 +1426,11 @@ function selectBestContainerIcon(icons, containerKeywords, itemName) {
   }
 
   // No good match - pick random
-  const randomIndex = Math.floor(Math.random() * icons.length);
+  const selectedIcon = chooseIcon(icons.map((path) => ({ path })), options).path;
   ItemUtils.log(
-    `No keyword match, selecting random icon: ${icons[randomIndex]}`
+    `No keyword match, selecting ${options.deterministicIcons ? "deterministic" : "random"} icon: ${selectedIcon}`
   );
-  return icons[randomIndex];
+  return selectedIcon;
 }
 
 /**
@@ -1427,7 +1439,7 @@ function selectBestContainerIcon(icons, containerKeywords, itemName) {
  * @param {string} itemName - The full item name for keyword matching
  * @returns {Promise<string|null>} Path to a random icon, or null if none found
  */
-export async function getRandomLootIcon(lootType, itemName = null) {
+export async function getRandomLootIcon(lootType, itemName = null, options = {}) {
   // Check if feature is enabled
   if (!game.settings.get(MODULE_NAME, "useSemanticIcons")) {
     ItemUtils.log("Semantic icons disabled, skipping");
@@ -1473,7 +1485,8 @@ export async function getRandomLootIcon(lootType, itemName = null) {
     allIcons,
     lootType,
     lootKeywords,
-    itemName
+    itemName,
+    options
   );
 
   ItemUtils.log(`Selected loot icon: ${selectedIcon}`);
@@ -1488,7 +1501,7 @@ export async function getRandomLootIcon(lootType, itemName = null) {
  * @param {string} itemName - The full item name
  * @returns {string} The selected icon path
  */
-function selectBestLootIcon(icons, lootType, lootKeywords, itemName) {
+function selectBestLootIcon(icons, lootType, lootKeywords, itemName, options = {}) {
   // Score all icons
   const scoredIcons = icons.map((iconPath) => {
     const filename = extractFilename(iconPath);
@@ -1526,7 +1539,7 @@ function selectBestLootIcon(icons, lootType, lootKeywords, itemName) {
   });
 
   // Sort by score (highest first)
-  scoredIcons.sort((a, b) => b.score - a.score);
+  scoredIcons.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
 
   // Log top matches
   const topMatches = scoredIcons.slice(0, 5);
@@ -1543,8 +1556,7 @@ function selectBestLootIcon(icons, lootType, lootKeywords, itemName) {
   // If we have matches, randomly select from all icons with the top score
   if (topScore > 0) {
     const topScoringIcons = scoredIcons.filter((i) => i.score === topScore);
-    const randomIndex = Math.floor(Math.random() * topScoringIcons.length);
-    const selected = topScoringIcons[randomIndex];
+    const selected = chooseIcon(topScoringIcons, options);
 
     ItemUtils.log(
       `Selected from ${topScoringIcons.length} top matches (score: ${topScore}): ${selected.path}`
@@ -1553,11 +1565,11 @@ function selectBestLootIcon(icons, lootType, lootKeywords, itemName) {
   }
 
   // No good match - pick random
-  const randomIndex = Math.floor(Math.random() * icons.length);
+  const selectedIcon = chooseIcon(icons.map((path) => ({ path })), options).path;
   ItemUtils.log(
-    `No keyword match, selecting random icon: ${icons[randomIndex]}`
+    `No keyword match, selecting ${options.deterministicIcons ? "deterministic" : "random"} icon: ${selectedIcon}`
   );
-  return icons[randomIndex];
+  return selectedIcon;
 }
 
 /**
@@ -1745,7 +1757,7 @@ const SPELL_KEYWORD_ICONS = {
  * @param {string} name - Spell name for keyword matching
  * @returns {Promise<string|null>} Icon path or null
  */
-export async function getRandomSpellIcon(school, level, name) {
+export async function getRandomSpellIcon(school, level, name, options = {}) {
     // Check if semantic icons are enabled
     const MODULE_NAME = "5e-item-importer";
     if (!game.settings.get(MODULE_NAME, "useSemanticIcons")) {
@@ -1757,7 +1769,7 @@ export async function getRandomSpellIcon(school, level, name) {
         const nameLower = name.toLowerCase();
         for (const [keyword, icons] of Object.entries(SPELL_KEYWORD_ICONS)) {
             if (nameLower.includes(keyword)) {
-                const randomIcon = icons[Math.floor(Math.random() * icons.length)];
+                const randomIcon = chooseIcon(icons.map((path) => ({ path })), options).path;
                 console.log(`[Item Importer] Spell icon matched by keyword "${keyword}": ${randomIcon}`);
                 return randomIcon;
             }
@@ -1766,7 +1778,7 @@ export async function getRandomSpellIcon(school, level, name) {
 
     // 2. Use cantrip icons for level 0 spells
     if (level === 0) {
-        const randomIcon = CANTRIP_ICONS[Math.floor(Math.random() * CANTRIP_ICONS.length)];
+        const randomIcon = chooseIcon(CANTRIP_ICONS.map((path) => ({ path })), options).path;
         console.log(`[Item Importer] Cantrip icon selected: ${randomIcon}`);
         return randomIcon;
     }
@@ -1774,7 +1786,7 @@ export async function getRandomSpellIcon(school, level, name) {
     // 3. Fall back to school-based icons
     if (school && SPELL_SCHOOL_ICONS[school]) {
         const schoolIcons = SPELL_SCHOOL_ICONS[school];
-        const randomIcon = schoolIcons[Math.floor(Math.random() * schoolIcons.length)];
+        const randomIcon = chooseIcon(schoolIcons.map((path) => ({ path })), options).path;
         console.log(`[Item Importer] Spell icon matched by school "${school}": ${randomIcon}`);
         return randomIcon;
     }

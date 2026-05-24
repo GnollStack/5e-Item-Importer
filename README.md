@@ -1,29 +1,117 @@
+<div align="center">
+
 # 5e Item Importer
 
-![Foundry v13](https://img.shields.io/badge/Foundry-v13-informational)
-![Latest Release](https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer)
-![Total Downloads](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/total)
-![Latest Downloads](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/total)
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20a%20Steak-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/gnollstack)
+**Stop manually typing items.**
 
-**Stop manually typing items.**  
-The **5e Item Importer** allows you to import D&D 5e items directly from text into Foundry VTT. It supports two powerful workflows:
+[![Latest Release](https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer?label=Latest%20Release&style=flat-square)](https://github.com/GnollStack/5e-Item-Importer/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/total?style=flat-square&color=green)](https://github.com/GnollStack/5e-Item-Importer/releases)
+[![Downloads@latest](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/total?style=flat-square)](https://github.com/GnollStack/5e-Item-Importer/releases/latest)
+[![Foundry VTT](https://img.shields.io/badge/Foundry-v13-orange?style=flat-square)](https://foundryvtt.com)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20a%20Steak-FF5E5B?style=flat-square&logo=ko-fi&logoColor=white)](https://ko-fi.com/gnollstack)
 
-1.  **Natural Language:** Copy/paste directly from PDFs, D&D Beyond, or websites. This method handles standard D&D 5e formatting.
-2.  **Strict Format:** Use the provided templates to generate near perfect imports every time. Great for homebrew, bulk generation, or working with LLMs. **Supports Batches**.
+*For GMs who want D&D 5e items imported from text instead of typed by hand.*
 
-<img width="640" height="865" alt="image" src="https://github.com/user-attachments/assets/c9d0b2ea-930d-4600-849c-200e8b4f40e6" />
+[Features](#what-you-get) &middot; [Quick Start](#quick-start) &middot; [Preview](#preview) &middot; [Installation](#installation) &middot; [Compatibility](#compatibility) &middot; [Templates](#template-reference) &middot; [Common Issues](#common-issues) &middot; [Community](#community) &middot; [Contributing](#contributing) &middot; [AI Use](#ai-use) &middot; [Support](#support-development) &middot; [License](#license-permissions)
 
-## See it in Action on Youtube: 
+</div>
+
+---
+
+## Feature Index
+
+| Feature | Why it matters |
+| --- | --- |
+| **[Natural Language Parser](#natural-language-parser)** | Copy/paste directly from PDFs, D&D Beyond, or websites. This method handles standard D&D 5e formatting. |
+| **[Strict Format Parser](#strict-format-parser)** | Use the provided templates to generate near perfect imports every time. |
+| **[Batch / LLM-Friendly Imports](#batch-and-llm-friendly-imports)** | Great for homebrew, bulk generation, or working with LLMs. |
+| **[Template Downloads](#template-reference)** | Download the canonical template files for weapons, consumables, containers, equipment, loot, spells, and tools. |
+| **[Common Issues](#common-issues)** | Quick fixes for natural parsing, icons, and descriptions. |
+
+> *The **5e Item Importer** allows you to import D&D 5e items directly from text into Foundry VTT. It supports two powerful workflows: Natural Language and Strict Format.*
+
+---
+
+<a id="quick-start"></a>
+
+## Quick Start
+
+1. Install and enable **5e Item Importer** in your world.
+2. Open the **Items Directory** in Foundry.
+3. Click **Import Item**.
+4. Paste the item text and click **Import**.
+5. Parse and then Import. You can choose a file to put it into.
+
+---
+
+<a id="preview"></a>
+
+## Preview
+
+<img width="640" height="865" alt="5e Item Importer preview" src="https://github.com/user-attachments/assets/c9d0b2ea-930d-4600-849c-200e8b4f40e6" />
+
+### See it in Action on YouTube
+
 - [5e Importer V13.2.0](https://youtu.be/THrikJq0EY4)
 - [5e Importer V13.7.2](https://youtu.be/dyhUoiNYxmA?si=DozAjOLjFGEmcAk-)
 
 ---
 
-##  1. Natural Language Parser
+<a id="what-you-get"></a>
+
+## What You Get
+
+### Natural Language Parser
+**Copy/paste directly from PDFs, D&D Beyond, or websites.**
+
+The module attempts to read standard D&D 5e statblock formatting. It automatically detects item types, costs, weights, and damage formulas.
+
+### Strict Format Parser
+**Use the provided templates to generate near perfect imports every time.**
+
+The Strict Parser uses a specific key/value format. This is ideal for using with **LLMs (ChatGPT, Claude, Gemini)**. You can paste a System Prompt into an AI, tell it "Make me a sword that does ice damage," and it will output a block you can paste directly into Foundry with the stats, icons, and configuration filled in on the imported item.
+
+<a id="batch-and-llm-friendly-imports"></a>
+
+### Batch and LLM-Friendly Imports
+**Great for homebrew, bulk generation, or working with LLMs.**
+
+Strict Format supports batches by stacking different item types in one block or separating multiple items of the same type with YAML document separators. Supported top-level keys are `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, and `CONTAINER`.
+
+---
+
+<a id="installation"></a>
+
+## Installation
+
+1. Foundry -> **Add-on Modules** -> **Install Module**.
+2. Search "5e Item Importer", or paste this manifest URL:
+
+```text
+https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.json
+```
+
+3. Enable the module in your world.
+
+---
+
+<a id="compatibility"></a>
+
+## Compatibility
+
+| Requirement | Version |
+| --- | --- |
+| Foundry VTT | v13+ (verified through v13.351) |
+| D&D 5e System | v5.1.10+ (verified through v5.2.5) |
+
+---
+
+<a id="natural-language-parser"></a>
+
+## Natural Language Parser
 *Best for: Quick imports from books, PDFs, or websites.*
 
-**This feaure is still under active development**
+**This feature is still under active development**
 
 The module attempts to read standard D&D 5e statblock formatting. It automatically detects item types, costs, weights, and damage formulas.
 
@@ -37,7 +125,7 @@ The module attempts to read standard D&D 5e statblock formatting. It automatical
 <details>
 <summary><strong>📄 View Natural Language Template & Examples</strong></summary>
 
-### Best Practice Patterns
+###### Best Practice Patterns
 For best results, try to match the standard D&D 5e Statblock format:
 
 ```text
@@ -53,15 +141,15 @@ AC: [Number] (max Dex [Number])
 
 ---
 
-## **BEST PRACTICE PATTERNS**
+##### **BEST PRACTICE PATTERNS**
 *Based on parser logic in `naturalItemParser.js`*
 
-### **1. Naming & Header**
+###### **1. Naming & Header**
 The parser uses 3 strategies. The safest is Title Case on the first line.
 *   **Good:** `Flame Tongue`
 *   **Better:** `Name: Flame Tongue` (Guarantees 100% confidence)
 
-### **2. Type Detection**
+###### **2. Type Detection**
 Include specific keywords in the first 3 lines to trigger type detection:
 *   **Weapon:** "Weapon", "Melee Weapon", "Ranged Weapon", "Attack Roll"
 *   **Armor:** "Armor", "Shield", "Plate", "Leather", "AC"
@@ -70,19 +158,19 @@ Include specific keywords in the first 3 lines to trigger type detection:
 *   **Container:** "Bag", "Backpack", "Box", "Holds", "Capacity"
 *   **Loot:** "Gem", "Art Object", "Treasure", "Material"
 
-### **3. Weapons**
+###### **3. Weapons**
 To ensure correct parsing of damage and properties:
 *   **Type:** Use full terms like "Martial Melee Weapon" or "Simple Ranged Weapon".
 *   **Damage:** Format as `1d8 slashing` or `Damage: 2d6 fire`.
 *   **Properties:** List them clearly: `Finesse, Light, Thrown`.
 *   **Versatile:** Use the specific format `Versatile (1d10)`.
 
-### **4. Armor & Equipment**
+###### **4. Armor & Equipment**
 *   **AC:** Use `AC 18` or `Armor Class: 14`.
 *   **Stealth:** Use the phrase `Disadvantage on Stealth checks`.
 *   **Strength:** Use `Requires Strength 13` or `Str 15`.
 
-### **5. Containers**
+###### **5. Containers**
 The parser looks for specific capacity phrases:
 *   **Weight:** "Holds 500 pounds" or "Capacity: 500 lbs".
 *   **Volume:** "64 cubic feet".
@@ -90,57 +178,56 @@ The parser looks for specific capacity phrases:
 
 ---
 
-## **EXAMPLE: WEAPON (Best Result)**
+##### **EXAMPLE: WEAPON (Best Result)**
 
-### Input
+###### Input
 ```text
-Sun Blade
-Weapon (longsword), rare (requires attunement)
-Cost: 5000 gp, Weight: 3 lb.
-Damage: 1d8 radiant
-Properties: Finesse, Versatile (1d10)
+Stormglass Rapier
+Weapon (rapier), rare (requires attunement)
+Cost: 2500 gp, Weight: 2 lb.
+Damage: 1d8 piercing
+Properties: Finesse
 
-This item appears to be a longsword hilt. While grasping the hilt, you can use a bonus action to cause a blade of pure radiance to spring into existence, or make the blade disappear.
+This slender blade is forged from blue crystal that hums before a storm. The wielder has a +1 bonus to attack and damage rolls made with this magic weapon. When the wielder hits a creature with it, the target takes an extra 1d6 lightning damage. Once per turn, the wielder can force the target to make a DC 14 Constitution saving throw or be deafened until the end of its next turn.
 ```
 
-## **EXAMPLE: ARMOR (Best Result)**
+##### **EXAMPLE: ARMOR (Best Result)**
 
-### Input
+###### Input
 ```text
-Dragon Scale Mail
-Armor (scale mail), very rare (requires attunement)
-Cost: 4000 gp, Weight: 45 lb.
-AC: 14 (max Dex 2)
+Emberguard Half Plate
+Armor (half plate), rare (requires attunement)
+Cost: 3500 gp, Weight: 40 lb.
+Armor Class: 15 (max Dex 2)
 
-Dragon scale mail is made of the scales of one kind of dragon. While wearing this armor, you have advantage on saving throws against the Frightful Presence and breath weapons of dragons.
+This blackened half plate is warm to the touch and etched with lines like cooling lava. While wearing this armor, the wearer has a +1 bonus to AC and resistance to fire damage. When a creature within 5 feet hits the wearer with a melee attack, sparks leap from the plates and scorch the attacker.
 ```
 
-## **EXAMPLE: CONTAINER (Best Result)**
+##### **EXAMPLE: CONTAINER (Best Result)**
 
-### Input
+###### Input
 ```text
-Bag of Holding
-Wondrous item, uncommon
-Weight: 15 lb.
+Moonwell Bag
+Container, uncommon
+Weight: 2 lb.
 
-This bag has an interior space considerably larger than its outside dimensions. The bag can hold up to 500 pounds, not exceeding a volume of 64 cubic feet.
-The bag currently contains 50 gp and 10 sp.
+This silver-threaded bag feels cool even in direct sunlight. The bag can hold up to 120 pounds, not exceeding a volume of 12 cubic feet, and its contents do not add to the carrier's encumbrance. The carrier can whisper the name of a stored item to retrieve it without searching. The bag currently contains 3 moonstones, 20 gp, and 12 sp.
 ```
 
-## **EXAMPLE: TOOL (Best Result)**
+##### **EXAMPLE: TOOL (Best Result)**
 
-### Input
+###### Input
 ```text
-Thieves' Tools
-Tool, common
-Cost: 25 gp, Weight: 1 lb.
+Cartographer's Quillcase
+Tool, uncommon
+Cost: 75 gp, Weight: 1 lb.
 
-This set of tools includes a small file, a set of lock picks, a small mirror mounted on a metal handle, a set of narrow-bladed scissors, and a pair of pliers. Proficiency with these tools lets you add your proficiency bonus to any ability checks you make to disarm traps or open locks.
+This lacquered case contains enchanted inks, folding rulers, waxed vellum, and a silver nib that points toward true north. Proficiency with these tools lets the user add their proficiency bonus to ability checks they make to draw maps, mark safe routes, or decode old survey notes. Once per day, the user can mark one safe route they can see; checks to follow that route have advantage for 24 hours.
 ```
 
 ---
 
-## **HOW IT WORKS (Internal Logic)**
+##### **HOW IT WORKS (Internal Logic)**
 1.  **Extraction:** The parser scans the text using Regex to find Stats (Name, Type, Cost, Weight, Damage, Properties, AC, etc.).
 2.  **Stripping:** It removes lines that look like Stats to isolate the **Description**.
 3.  **Conversion:** It builds a YAML document matching the strict template format.
@@ -150,2202 +237,720 @@ This set of tools includes a small file, a set of lock picks, a small mirror mou
 
 ---
 
-## 2. Strict Format Parser
+<a id="strict-format-parser"></a>
+
+## Strict Format Parser
 *Best for: Complex homebrew and bulk generation.*
 
-The Strict Parser uses a specific key/value format. This is ideal for using with **LLMs (ChatGPT, Claude, Gemini)**. You can paste a System Prompt into an AI, tell it "Make me a sword that does ice damage," and it will output a block you can paste directly into Foundry with the  stats, icons, and configuration filled in on the imported item, Not that this only fills in the basic item fields and details
+The Strict Parser uses a specific key/value format. This is ideal for using with **LLMs (ChatGPT, Claude, Gemini)**. You can paste a System Prompt into an AI, tell it "Make me a sword that does ice damage," and it will output a block you can paste directly into Foundry with the stats, icons, and configuration filled in on the imported item. Note that this only fills in the basic item fields and details.
 
-### Strict Templates
-Expand the sections below to copy the templates for prompts and to view example items.
+<a id="validated-custom-yaml-examples"></a>
+
+### Validated Custom YAML Examples
+
+These examples were validated through the 5e Item Importer MCP diagnostics. They intentionally use optional sections like uses, recovery, chat flavor, unidentified descriptions, dnd5e enrichers, and dynamic name lookups, while avoiding inline activity and active-effect blocks so they work with only 5e Item Importer installed.
+
+For mixed weapon damage, use a dnd5e typed custom formula such as `1d8[piercing] + 1d6[lightning]` and set `Damage Type` to the weapon's primary damage type, such as `piercing`. Do the same for `Versatile Damage Type`. The primary type gives dnd5e a default for system-added ability and magic bonuses, while bracketed formula terms keep extra damage such as lightning separate for resistance and immunity. Use `n/a` only for fully self-contained typed formulas that will not receive system-added ability, magic, or ammunition bonuses. For saves, conditions, healing, and other effects that need automation beyond base item fields, keep the rules in the description text unless the user explicitly wants Activity Importer support.
+
+<a id="validated-yaml-stormglass-rapier"></a>
 
 <details>
-<summary><strong>⚔️ Strict Weapon Template</strong></summary>
+<summary><strong>⚔️ Stormglass Rapier (`WEAPON`)</strong></summary>
 
-# Strict_Weapon_Template_v3.md
-
-## INSTRUCTIONS
-
-**How to use this template:**
-- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
-- Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
-- For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
-
-**Batching multiple items:**
-Combine different item types in one block by stacking top-level keys:
-```text
-WEAPON:
-  ITEM:
-    Name: "Longsword +1"
-    # additional fields omitted in this batching example
-EQUIPMENT:
-  ITEM:
-    Name: "Plate Armor +1"
-    # additional fields omitted in this batching example
-```
-For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```text
-WEAPON:
-  ITEM:
-    Name: "Longsword +1"
-    # additional fields omitted in this batching example
----
-WEAPON:
-  ITEM:
-    Name: "Dagger of Venom"
-    # additional fields omitted in this batching example
-```
-You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
-
-**For LLM generation:**
-- Output ONLY the yaml code block. No commentary before or after.
-- Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
-- Booleans: `true` or `false` (lowercase, no quotes).
-- Required scalar fields that do not apply: use the literal string `n/a`.
-- **Omit conditional sections entirely** (e.g., ATTUNEMENT, AMMUNITION, RELOAD) when their condition is not met. Do not fill omitted sections with `n/a` values.
-- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
-- Do not include template comments (`# ...`) in the final YAML output.
-- Do not omit individual fields from required sections just because their value is `n/a`.
-- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
-- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
-
-**Default assumptions when source text is silent:**
-- Quantity: `1`
-- Identified: `true`
-- Equipped: `false`
-- Rarity: `n/a` for mundane or unspecified items.
-- Price Value: `0`; Price Denomination: `gp`
-- Weight Value: `0` when negligible or not listed; Weight Units: `lb`
-- Uses Spent: `0`; Uses Max: `n/a` unless the item tracks charges or uses.
-- RECOVERY: `[]` when no charge recovery applies.
-- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
-- Chat Description: `n/a` unless special chat flavor is needed.
-
----
 
 ```yaml
 WEAPON:
   ITEM:
-    Name: "[text]"
-    Rarity: "[common|uncommon|rare|veryRare|legendary|artifact|n/a]"
-    Weapon Type: "[simpleM|simpleR|martialM|martialR|natural|improv|siege]"
-    Base Weapon: "[e.g. longsword, dagger, bow - see list below - OR n/a]"
+    Name: "Stormglass Rapier"
+    Rarity: rare
+    Weapon Type: martialM
+    Base Weapon: rapier
 
   INVENTORY:
-    Quantity: "[integer]"
-    Identified: "[true|false]"
-    Equipped: "[true|false]"
+    Quantity: 1
+    Identified: true
+    Equipped: false
 
   COST_AND_WEIGHT:
-    Price Value: "[number]"
-    Price Denomination: "[pp|gp|ep|sp|cp]"
-    Weight Value: "[number]"
-    Weight Units: "[lb|tn|kg|Mg]"
+    Price Value: 2500
+    Price Denomination: gp
+    Weight Value: 2
+    Weight Units: lb
 
   PROPERTIES:
-    Adamantine: "[true|false]"
-    Ammunition: "[true|false]"
-    Finesse: "[true|false]"
-    Firearm: "[true|false]"
-    Focus: "[true|false]"
-    Heavy: "[true|false]"
-    Light: "[true|false]"
-    Loading: "[true|false]"
-    Magical: "[true|false]"
-    Reach: "[true|false]"
-    Reload: "[true|false]"
-    Returning: "[true|false]"
-    Silvered: "[true|false]"
-    Special: "[true|false]"
-    Thrown: "[true|false]"
-    Two-Handed: "[true|false]"
-    Versatile: "[true|false]"
+    Adamantine: false
+    Ammunition: false
+    Magical: true
+    Finesse: true
+    Firearm: false
+    Focus: false
+    Heavy: false
+    Light: false
+    Loading: false
+    Reach: false
+    Reload: false
+    Returning: false
+    Silvered: false
+    Special: true
+    Thrown: false
+    Two-Handed: false
+    Versatile: false
 
   ATTUNEMENT:
-    # (Required only if Magical is true)
-    Attunement: "[none|required|optional]"
-    Attunement By: "[text|n/a]"
-    Magic Bonus: "[integer|n/a]"
-
-  AMMUNITION:
-    # (Required only if Ammunition is true)
-    Ammunition Type: "[arrow|crossbowBolt|firearmBullet|slingBullet|energyCell|blowgunNeedle]"
-
-  RELOAD:
-    # (Required only if Reload is true)
-    Reload Amount: "[integer]"
-
-  VERSATILE_DAMAGE:
-    # (Required only if Versatile is true)
-    Versatile Formula: "[e.g. 1d10 + @mod]"
-    Versatile Damage Type: "[slashing|piercing|bludgeoning|etc]"
-
-  SIEGE_PROPERTIES:
-    # (Required only if Weapon Type is siege)
-    Siege Armor Class: "[integer]"
-    Cover: "[none|half|threequarters|total]"
-    Hit Points Current: "[integer]"
-    Hit Points Max: "[integer]"
-    Hit Points Threshold: "[integer]"
-    Health Conditions: "[text|n/a]"
+    Attunement: required
+    Attunement By: n/a
+    Magic Bonus: 1
 
   RANGE:
-    Reach: "[integer|n/a]"
-    Range Normal: "[integer|n/a]"
-    Range Long: "[integer|n/a]"
-    Range Units: "[ft|m|sq|mi]"
+    Reach: 5
+    Range Normal: n/a
+    Range Long: n/a
+    Range Units: ft
 
   DAMAGE:
-    Damage Formula: "[e.g. 2d6 + @mod]"
-    Damage Type: "[acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder]"
+    Damage Formula: "1d8[piercing] + 1d6[lightning]"
+    Damage Type: piercing
 
   MASTERY:
-    Mastery: "[cleave|graze|nick|push|sap|slow|topple|vex|n/a]"
+    Mastery: vex
 
   PROFICIENCY:
-    Proficient: "[Automatic|0|1]"
+    Proficient: Automatic
 
   USAGE:
-    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
-    # Uses Max = total number of charges the item can hold.
-    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
-    Uses Spent: "[integer|n/a]"
-    Uses Max: "[integer|n/a]"
+    Uses Spent: 0
+    Uses Max: 3
 
-  RECOVERY: []
-    # Optional, repeatable. Use [] when there is no recovery.
-    # If Uses Max > 0, replace [] with one or more entries:
-    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
-    #   Type: "[recoverAll|loseAll|formula]"
-    #   Formula: "[text|n/a]"
+  RECOVERY:
+    - Period: dawn
+      Type: formula
+      Formula: "1d3"
 
   DESCRIPTION:
     Description: |
-      [multiline HTML content containing Enrichers]
+      <p>This slender blade is forged from blue crystal that hums before a storm.</p>
+      <p>You have a +1 bonus to attack and damage rolls made with this magic weapon.</p>
+      <p><strong>Stormglass Edge.</strong> When [[lookup @name]]{the creature} hits with this weapon, the target takes an extra [[/damage 1d6 lightning average]].</p>
+      <p><strong>Thunderhead Lunge.</strong> [[lookup @name]]{The creature} can expend 1 charge to force the target to make a [[/save con 14 format=long]] or be &Reference[deafened] until the end of its next turn.</p>
 
   UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "[text|n/a]"
+    Unidentified Name: "Blue Crystal Rapier"
     Unidentified Description: |
-      [multiline HTML content]
+      <p>A finely balanced rapier with a translucent blue blade and a faint static hum.</p>
 
   CHAT_FLAVOR:
     Chat Description: |
-      [multiline text content]
-
-```
-## OPTIONAL ADVANCED SECTIONS
-
-Do not include `effects:` or `Activities:` in normal output. Add them only when the user explicitly asks for passive Active Effects or extra activities beyond the base item behavior.
-
-When requested, append them after `CHAT_FLAVOR`:
-
-```yaml
-  effects:
-    # Passive Active Effects applied to the actor when the item is equipped, attuned, or otherwise active.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry follows the EFFECT template format.
-
-  Activities:
-    # Extra activities only. Most base item behavior is generated by the dnd5e system.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry starts with a dash and has one ACTIVITY_* key.
+      [[lookup @name]]{The creature} thrusts with a storm-bright blade.
 ```
 
----
-
-## **FIELD REFERENCE**
-
-### **Weapon Types**
-| Type | Description |
-|------|-------------|
-| `simpleM` | Simple Melee Weapon |
-| `simpleR` | Simple Ranged Weapon |
-| `martialM` | Martial Melee Weapon |
-| `martialR` | Martial Ranged Weapon |
-| `natural` | Natural Weapon (claws, bite, etc.) |
-| `improv` | Improvised Weapon |
-| `siege` | Siege Weapon |
-
-### **Base Weapons - Melee**
-| Simple | Martial |
-|--------|---------|
-| `club`, `dagger`, `greatclub`, `handaxe`, `javelin`, `lighthammer`, `mace`, `quarterstaff`, `sickle`, `spear` | `battleaxe`, `flail`, `glaive`, `greataxe`, `greatsword`, `halberd`, `lance`, `longsword`, `maul`, `morningstar`, `pike`, `rapier`, `scimitar`, `shortsword`, `trident`, `warpick`, `warhammer`, `whip` |
-
-### **Base Weapons - Ranged**
-| Simple | Martial |
-|--------|---------|
-| `dart`, `lightcrossbow`, `shortbow`, `sling` | `blowgun`, `handcrossbow`, `heavycrossbow`, `longbow`, `net` |
-
-### **Weapon Mastery Properties (2024)**
-| Mastery | Effect |
-|---------|--------|
-| `cleave` | Hit another creature within 5 ft for ability mod damage |
-| `graze` | Deal ability mod damage on a miss |
-| `nick` | Make extra attack with light weapon as part of Attack action |
-| `push` | Push Large or smaller creature 10 ft away |
-| `sap` | Disadvantage on target's next attack roll |
-| `slow` | Reduce target's speed by 10 ft until your next turn |
-| `topple` | Target must make Con save or fall prone |
-| `vex` | Advantage on next attack against same target |
-
-### **Recovery Periods**
-| Period | Description |
-|--------|-------------|
-| `lr` | Long Rest |
-| `sr` | Short Rest |
-| `day` | Daily (any time) |
-| `dawn` | At dawn |
-| `dusk` | At dusk |
-| `recharge` | Roll d6 at dawn; recharge on X+ |
-
----
-
-## **ENRICHER REFERENCE**
-
-### **Attack Rolls**
-```html
-[[/attack]]                            → Auto-links to weapon's attack activity
-[[/attack +7]]                         → Fixed +7 to hit
-[[/attack extended]]                   → "Melee Attack Roll: [+X], reach 5 ft"
-[[/attack thrown]]                     → Uses thrown attack mode
-[[/attack twoHanded]]                  → Uses two-handed attack mode
-```
-
-### **Damage Rolls**
-```html
-[[/damage 2d6 slashing]]               → [2d6] slashing
-[[/damage 2d6 slashing average]]       → 7 (2d6) slashing
-[[/damage 1d8 + @mod slashing]]        → Includes ability modifier
-[[/damage 2d6 slashing & 1d6 fire average]] → Multiple damage types
-[[/damage]]                            → Auto-links to weapon's damage activity
-[[/damage twoHanded]]                  → Uses two-handed damage
-[[/damage format=extended]]            → "Hit: [2d6] slashing damage"
-```
-
-### **Saving Throws**
-```html
-[[/save str 15]]                       → [DC 15 Strength]
-[[/save dex 14 format=long]]           → [DC 14 Dexterity] saving throw
-[[/save con dc=@abilities.str.dc]]     → Uses wielder's Strength DC
-[[/save con dc=8+@prof+@abilities.str.mod]] → Calculated DC
-```
-
-### **Healing**
-```html
-[[/heal 2d6]]                          → [2d6] healing
-[[/heal 2d6 average]]                  → 7 (2d6) healing
-[[/heal 10 temp]]                      → [10] temporary hit points
-```
-
-### **Ability Checks**
-```html
-[[/check athletics 15]]                → [DC 15 Strength (Athletics)]
-[[/check acrobatics 13 format=long]]   → [DC 13 Dexterity (Acrobatics)] check
-```
-
-### **Condition & Rule References**
-```html
-&Reference[prone]                      → Prone (with tooltip)
-&Reference[restrained]                 → Restrained
-&Reference[frightened]                 → Frightened
-&Reference[paralyzed]                  → Paralyzed
-&Reference[stunned]                    → Stunned
-&Reference[poisoned]                   → Poisoned
-&Reference[blinded]                    → Blinded
-&Reference[grappled]                   → Grappled
-```
-
-### **Dynamic Lookups**
-```html
-[[lookup @name]]                       → Wielder's name
-[[lookup @abilities.str.mod]]          → Strength modifier
-[[lookup @attributes.prof]]            → Proficiency bonus
-```
-
----
-
-## **HTML PATTERNS**
-
-### **Standard Magic Weapon**
-```html
-<p><em>Brief flavor description of the weapon's appearance.</em></p>
-<hr>
-
-<p>You have a +X bonus to attack and damage rolls made with this magic weapon.</p>
-```
-
-### **Extra Damage on Hit**
-```html
-<p><strong>Elemental Strike.</strong> When you hit with this weapon, the target takes an extra [[/damage 1d6 fire average]].</p>
-```
-
-### **On-Hit Save Effect**
-```html
-<p><strong>Venomous.</strong> When you hit a creature with this weapon, the target must succeed on a [[/save con 14 format=long]] or become &Reference[poisoned] for 1 minute. The creature can repeat the save at the end of each of its turns, ending the effect on a success.</p>
-```
-
-### **Charge-Based Abilities**
-```html
-<p>This weapon has X charges. While holding it, you can expend charges to use the following abilities:</p>
-<ul>
-<li><strong>Ability Name (1 Charge):</strong> Effect description.</li>
-<li><strong>Ability Name (2 Charges):</strong> Effect description.</li>
-</ul>
-<p>The weapon regains 1d4 + 1 expended charges daily at dawn.</p>
-```
-
-### **Critical Hit Enhancement**
-```html
-<p><strong>Devastating Critical.</strong> When you score a critical hit with this weapon, you can roll one additional weapon damage die when determining the extra damage.</p>
-```
-
-### **Sentient Weapon**
-```html
-<p><strong>Sentience.</strong> This weapon is sentient with Intelligence X, Wisdom Y, and Charisma Z. It has hearing and darkvision out to 60 feet. It can communicate telepathically with its wielder and speaks [languages].</p>
-
-<p><strong>Personality.</strong> [Description of the weapon's personality, goals, and potential conflicts.]</p>
-```
-
----
 </details>
 
-<details>
-<summary><strong>🧪 Strict Consumable Template</strong></summary>
-
-# Strict_Consumable_Template_v3.md
-
-## INSTRUCTIONS
-
-**How to use this template:**
-- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
-- Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
-- For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
-
-**Batching multiple items:**
-Combine different item types in one block by stacking top-level keys:
-```text
-CONSUMABLE:
-  ITEM:
-    Name: "Potion of Healing"
-    # additional fields omitted in this batching example
-WEAPON:
-  ITEM:
-    Name: "Longsword +1"
-    # additional fields omitted in this batching example
-```
-For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```text
-CONSUMABLE:
-  ITEM:
-    Name: "Potion of Healing"
-    # additional fields omitted in this batching example
----
-CONSUMABLE:
-  ITEM:
-    Name: "Potion of Greater Healing"
-    # additional fields omitted in this batching example
-```
-You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
-
-**For LLM generation:**
-- Output ONLY the yaml code block. No commentary before or after.
-- Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
-- Booleans: `true` or `false` (lowercase, no quotes).
-- Required scalar fields that do not apply: use the literal string `n/a`.
-- **Omit conditional sections entirely** (e.g., ATTUNEMENT, AMMUNITION_PROPERTIES, POISON_PROPERTIES) when their condition is not met. Do not fill omitted sections with `n/a` values.
-- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
-- Do not include template comments (`# ...`) in the final YAML output.
-- Do not omit individual fields from required sections just because their value is `n/a`.
-- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
-- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
-
-**Default assumptions when source text is silent:**
-- Quantity: `1`
-- Identified: `true`
-- Equipped: `false`
-- Rarity: `n/a` for mundane or unspecified consumables.
-- Price Value: `0`; Price Denomination: `gp`
-- Weight Value: `0` when negligible or not listed; Weight Units: `lb`
-- Magical: `false` unless the consumable is explicitly magical.
-- Potions, food, poison, and ammunition: Uses Spent: `0`, Uses Max: `0`, Destroy on Empty: `false`.
-- Wands, rods, and charged trinkets: Uses Spent: `0`; Uses Max should match the listed maximum charges.
-- RECOVERY: `[]` when no charge recovery applies.
-- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
-- Chat Description: `n/a` unless special chat flavor is needed.
-
----
-
-```yaml
-CONSUMABLE:
-  ITEM:
-    Name: "[text]"
-    Rarity: "[common|uncommon|rare|veryRare|legendary|artifact|n/a]"
-    Consumable Type: "[ammo|food|poison|potion|rod|scroll|trinket|wand]"
-
-  INVENTORY:
-    Quantity: "[integer]"
-    Identified: "[true|false]"
-    Equipped: "[true|false]"
-
-  COST_AND_WEIGHT:
-    Price Value: "[number]"
-    Price Denomination: "[pp|gp|ep|sp|cp]"
-    Weight Value: "[number]"
-    Weight Units: "[lb|tn|kg|Mg]"
-
-  PROPERTIES:
-    Magical: "[true|false]"
-
-  ATTUNEMENT:
-    # (Required only if Magical is true)
-    Attunement: "[none|required|optional]"
-    Attunement By: "[text|n/a]"
-
-  AMMUNITION_PROPERTIES:
-    # (Required only if Consumable Type is ammo)
-    Ammunition Type: "[arrow|bolt|dart|needle|bullet|slingbullet|energycell]"
-    Adamantine: "[true|false]"
-    Silvered: "[true|false]"
-    Returning: "[true|false]"
-    Magic Bonus: "[integer|n/a]"
-    Damage Formula: "[e.g. 1d6 + @mod|n/a]"
-    Damage Type: "[piercing|bludgeoning|slashing|etc|n/a]"
-    Damage Replace: "[true|false]"
-
-  POISON_PROPERTIES:
-    # (Required only if Consumable Type is poison)
-    Poison Type: "[contact|ingested|inhaled|injury]"
-
-  SCROLL_PROPERTIES:
-    # (Required only if Consumable Type is scroll)
-    Concentration: "[true|false]"
-    Somatic: "[true|false]"
-    Verbal: "[true|false]"
-    Ritual: "[true|false]"
-
-  USAGE:
-    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
-    # Uses Max = total number of charges the item can hold.
-    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
-    Uses Spent: "[integer|n/a]"
-    Uses Max: "[integer|n/a]"
-    Destroy on Empty: "[true|false]"
-
-  RECOVERY: []
-    # Optional, repeatable. Use [] when there is no recovery.
-    # If Uses Max > 0, replace [] with one or more entries:
-    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
-    #   Type: "[recoverAll|loseAll|formula]"
-    #   Formula: "[text|n/a]"
-
-  DESCRIPTION:
-    Description: |
-      [multiline HTML content containing Enrichers]
-
-  UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "[text|n/a]"
-    Unidentified Description: |
-      [multiline HTML content]
-
-  CHAT_FLAVOR:
-    Chat Description: |
-      [multiline text content]
-
-```
-## OPTIONAL ADVANCED SECTIONS
-
-Do not include `effects:` or `Activities:` in normal output. Add them only when the user explicitly asks for passive Active Effects or extra activities beyond the base item behavior.
-
-When requested, append them after `CHAT_FLAVOR`:
-
-```yaml
-  effects:
-    # Passive Active Effects applied to the actor when the item is equipped, attuned, or otherwise active.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry follows the EFFECT template format.
-
-  Activities:
-    # Extra activities only. Most base item behavior is generated by the dnd5e system.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry starts with a dash and has one ACTIVITY_* key.
-```
-
----
-
-## **FIELD REFERENCE**
-
-### **Usage & Recovery Rules**
-| Type | Uses Max | Destroy on Empty | Tracking |
-|------|----------|------------------|----------|
-| Potions | `0` | `false` | By Quantity |
-| Food | `0` | `false` | By Quantity |
-| Poison | `0` | `false` | By Quantity |
-| Ammunition | `0` | `false` | By Quantity |
-| Wands | Charges (e.g., `7`) | `true` or `false` | By Uses |
-| Rods | Charges (e.g., `3`) | `true` or `false` | By Uses |
-| Trinkets | Varies | Varies | Context-dependent |
-
-### **Recovery Periods**
-| Period | Description |
-|--------|-------------|
-| `lr` | Long Rest |
-| `sr` | Short Rest |
-| `day` | Daily (any time) |
-| `dawn` | At dawn |
-| `dusk` | At dusk |
-| `recharge` | Roll d6 at dawn; recharge on X+ |
-
-### **Recovery Types**
-| Type | Formula | Result |
-|------|---------|--------|
-| `recoverAll` | n/a | Regain all charges |
-| `loseAll` | n/a | Lose all remaining charges |
-| `formula` | Dice (e.g., `1d6+1`) | Regain rolled amount |
-| `formula` | Number (e.g., `5`) | For recharge: regain all on d6 ≥ 5 |
-
----
-
-## **ENRICHER REFERENCE**
-
-### **Saving Throws**
-```html
-[[/save con]]                          → [Constitution]
-[[/save con 15]]                       → [DC 15 Constitution]
-[[/save con 15 format=long]]           → [DC 15 Constitution] saving throw
-[[/save str dex 14]]                   → [DC 14 Strength or Dexterity]
-```
-
-### **Damage Rolls**
-```html
-[[/damage 2d6 poison]]                 → [2d6] poison
-[[/damage 2d6 poison average]]         → 7 (2d6) poison
-[[/damage 2d6 poison format=long]]     → [2d6] poison damage
-[[/damage 1d6 fire & 1d6 cold average]] → 3 (1d6) fire plus 3 (1d6) cold
-```
-
-### **Healing**
-```html
-[[/heal 2d4 + 2]]                      → [2d4 + 2] healing
-[[/heal 2d4 + 2 average]]              → 7 (2d4 + 2) healing
-[[/heal 10 temp]]                      → [10] temporary hit points
-```
-
-### **Ability Checks**
-```html
-[[/check con 13]]                      → [DC 13 Constitution]
-[[/check perception 15]]               → [DC 15 Wisdom (Perception)]
-[[/check con 13 format=long]]          → [DC 13 Constitution] check
-```
-
-### **Attack Rolls**
-```html
-[[/attack +7]]                         → Fixed +7 to hit
-[[/attack]]                            → Auto-links to item's attack activity
-```
-
-### **Condition & Rule References**
-```html
-&Reference[poisoned]                   → Poisoned (with tooltip)
-&Reference[paralyzed]                  → Paralyzed
-&Reference[invisible]                  → Invisible
-&Reference[unconscious]                → Unconscious
-&Reference[blinded]                    → Blinded
-&Reference[Difficult Terrain]          → Difficult Terrain
-```
-
-### **Dynamic Lookups**
-```html
-[[lookup @name]]                       → Creature's name
-[[lookup @abilities.con.mod]]          → Constitution modifier
-[[lookup @details.cr]]                 → Challenge Rating
-```
-
----
-
-## **HTML PATTERNS**
-
-### **Standard Consumable Effect**
-```html
-<p>When you drink this potion, you regain [[/heal 2d4 + 2 average]] hit points.</p>
-```
-
-### **Save-Based Effect**
-```html
-<p>A creature subjected to this poison must succeed on a [[/save con 15 format=long]] or take [[/damage 3d6 poison average]] and become &Reference[poisoned] for 1 hour.</p>
-```
-
-### **Tiered Effects (Potions of Varying Strength)**
-```html
-<table>
-<thead><tr><th>Potion</th><th>Rarity</th><th>HP Regained</th></tr></thead>
-<tbody>
-<tr><td>Healing</td><td>Common</td><td>[[/heal 2d4 + 2 average]]</td></tr>
-<tr><td>Greater Healing</td><td>Uncommon</td><td>[[/heal 4d4 + 4 average]]</td></tr>
-<tr><td>Superior Healing</td><td>Rare</td><td>[[/heal 8d4 + 8 average]]</td></tr>
-<tr><td>Supreme Healing</td><td>Very Rare</td><td>[[/heal 10d4 + 20 average]]</td></tr>
-</tbody>
-</table>
-```
-
-### **Charge-Based Usage**
-```html
-<p>This wand has 7 charges. While holding it, you can use an action to expend 1 or more charges to cast a spell from it.</p>
-<ul>
-<li><strong>1 Charge:</strong> [[/damage 1d4 + 1 force average]] (1st-level)</li>
-<li><strong>2 Charges:</strong> [[/damage 2d4 + 2 force average]] (2nd-level)</li>
-<li><strong>3 Charges:</strong> [[/damage 3d4 + 3 force average]] (3rd-level)</li>
-</ul>
-```
-
-### **Risk on Empty**
-```html
-<p><strong>Crumble Risk.</strong> If you expend the item's last charge, roll a d20. On a 1, it crumbles into ashes and is destroyed.</p>
-```
-
----
-</details>
+<a id="validated-yaml-emberguard-half-plate"></a>
 
 <details>
-<summary><strong>🎒 Strict Container Template</strong></summary>
+<summary><strong>🛡️ Emberguard Half Plate (`EQUIPMENT`)</strong></summary>
 
-# Strict_Container_Template_v3.md
-
-## INSTRUCTIONS
-
-**How to use this template:**
-- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
-- Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
-- For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
-
-**Batching multiple items:**
-Combine different item types in one block by stacking top-level keys:
-```text
-CONTAINER:
-  ITEM:
-    Name: "Bag of Holding"
-    # additional fields omitted in this batching example
-WEAPON:
-  ITEM:
-    Name: "Longsword +1"
-    # additional fields omitted in this batching example
-```
-For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```text
-CONTAINER:
-  ITEM:
-    Name: "Bag of Holding"
-    # additional fields omitted in this batching example
----
-CONTAINER:
-  ITEM:
-    Name: "Handy Haversack"
-    # additional fields omitted in this batching example
-```
-You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
-
-**For LLM generation:**
-- Output ONLY the yaml code block. No commentary before or after.
-- Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
-- Booleans: `true` or `false` (lowercase, no quotes).
-- Required scalar fields that do not apply: use the literal string `n/a`.
-- **Omit conditional sections entirely** (e.g., ATTUNEMENT) when their condition is not met. Do not fill omitted sections with `n/a` values.
-- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
-- Do not include template comments (`# ...`) in the final YAML output.
-- Do not omit individual fields from required sections just because their value is `n/a`.
-- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
-- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
-
-**Default assumptions when source text is silent:**
-- Quantity: `1`
-- Identified: `true`
-- Equipped: `false`
-- Rarity: `n/a` for mundane or unspecified containers.
-- Price Value: `0`; Price Denomination: `gp`
-- Weight Value: `0` when negligible or not listed; Weight Units: `lb`
-- Magical: `false`; Weightless Contents: `false` unless explicitly extradimensional or weightless.
-- Capacity fields: use `n/a` when unlimited, unknown, or not relevant.
-- Omit CURRENCY_CONTENTS unless the container starts with coins inside it.
-- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
-- Chat Description: `n/a` unless special chat flavor is needed.
-
----
 
 ```yaml
-CONTAINER:
+EQUIPMENT:
   ITEM:
-    Name: "[text]"
-    Rarity: "[common|uncommon|rare|veryRare|legendary|artifact|n/a]"
+    Name: "Emberguard Half Plate"
+    Rarity: rare
+    Equipment Type: medium
+    Base Equipment: halfplate
 
   INVENTORY:
-    Quantity: "[integer]"
-    Identified: "[true|false]"
-    Equipped: "[true|false]"
+    Quantity: 1
+    Identified: true
+    Equipped: false
 
   COST_AND_WEIGHT:
-    Price Value: "[number]"
-    Price Denomination: "[pp|gp|ep|sp|cp]"
-    Weight Value: "[number]"
-    Weight Units: "[lb|tn|kg|Mg]"
+    Price Value: 3500
+    Price Denomination: gp
+    Weight Value: 40
+    Weight Units: lb
 
   PROPERTIES:
-    Magical: "[true|false]"
-    Weightless Contents: "[true|false]"
+    Magical: true
+    Adamantine: false
+    Focus: false
+    Stealth Disadvantage: true
 
   ATTUNEMENT:
-    # (Required only if Magical is true)
-    Attunement: "[none|required|optional]"
-    Attunement By: "[text|n/a]"
-
-  CAPACITY:
-    Item Count: "[integer|n/a]"
-    Weight Capacity Value: "[number|n/a]"
-    Weight Capacity Units: "[lb|tn|kg|Mg|n/a]"
-    Volume Capacity Value: "[number|n/a]"
-    Volume Capacity Units: "[cubicFoot|liter|n/a]"
-
-  CURRENCY_CONTENTS:
-    # Optional. Omit this entire section if the container holds no coins.
-    # If included, all fields are required; use 0 for empty denominations.
-    Platinum: "[integer]"
-    Gold: "[integer]"
-    Electrum: "[integer]"
-    Silver: "[integer]"
-    Copper: "[integer]"
-
-  DESCRIPTION:
-    Description: |
-      [multiline HTML content containing Enrichers]
-
-  UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "[text|n/a]"
-    Unidentified Description: |
-      [multiline HTML content]
-
-  CHAT_FLAVOR:
-    Chat Description: |
-      [multiline text content]
-
-```
-## OPTIONAL ADVANCED SECTIONS
-
-Do not include `effects:` or `Activities:` in normal output. Add them only when the user explicitly asks for passive Active Effects or extra activities beyond the base item behavior.
-
-When requested, append them after `CHAT_FLAVOR`:
-
-```yaml
-  effects:
-    # Passive Active Effects applied to the actor when the item is equipped, attuned, or otherwise active.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry follows the EFFECT template format.
-
-  Activities:
-    # Extra activities only. Most base item behavior is generated by the dnd5e system.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry starts with a dash and has one ACTIVITY_* key.
-```
-
----
-
-## **FIELD REFERENCE**
-
-### **Capacity Rules**
-| Field | Description |
-|-------|-------------|
-| `Item Count` | Maximum number of discrete items (n/a = unlimited) |
-| `Weight Capacity` | Maximum weight the container can hold |
-| `Volume Capacity` | Maximum volume the container can hold |
-| `Weightless Contents` | If `true`, contents don't add to carried weight |
-
-### **Volume Units**
-| Value | Description |
-|-------|-------------|
-| `cubicFoot` | Cubic feet (do NOT use `ft^3` or `cu ft`) |
-| `liter` | Liters |
-
-### **Common Container Capacities**
-| Container | Weight | Volume | Notes |
-|-----------|--------|--------|-------|
-| Backpack | 30 lb | 1 cu ft | Standard adventuring gear |
-| Bag of Holding | 500 lb | 64 cu ft | Weightless contents |
-| Portable Hole | 10,000 lb | 282 cu ft | 6 ft diameter, 10 ft deep |
-| Handy Haversack | 120 lb | ~12 cu ft | Weightless, retrieval bonus |
-
----
-
-## **ENRICHER REFERENCE**
-
-### **Saving Throws**
-```html
-[[/save dex 15]]                       → [DC 15 Dexterity]
-[[/save con 13 format=long]]           → [DC 13 Constitution] saving throw
-[[/save wis 14]]                       → [DC 14 Wisdom]
-```
-
-### **Damage Rolls**
-```html
-[[/damage 2d6 piercing]]               → [2d6] piercing
-[[/damage 4d10 force average]]         → 22 (4d10) force
-[[/damage 2d6 acid average]]           → 7 (2d6) acid
-```
-
-### **Ability Checks**
-```html
-[[/check investigation 15]]            → [DC 15 Intelligence (Investigation)]
-[[/check sleightofhand 12]]            → [DC 12 Dexterity (Sleight of Hand)]
-[[/check arcana 14 format=long]]       → [DC 14 Intelligence (Arcana)] check
-```
-
-### **Condition & Rule References**
-```html
-&Reference[restrained]                 → Restrained (with tooltip)
-&Reference[prone]                      → Prone
-&Reference[blinded]                    → Blinded
-&Reference[incapacitated]              → Incapacitated
-&Reference[Suffocating]                → Suffocating rules
-```
-
-### **Dynamic Lookups**
-```html
-[[lookup @name]]                       → Creature's name
-[[lookup @abilities.str.mod]]          → Strength modifier
-```
-
----
-
-## **HTML PATTERNS**
-
-### **Standard Container Description**
-```html
-<p><em>A brief flavor description of the container's appearance.</em></p>
-<hr>
-
-<p>This container can hold up to X pounds of material, not exceeding Y cubic feet in volume.</p>
-```
-
-### **Extradimensional Space Warning**
-```html
-<p><strong>Extradimensional Interference.</strong> Placing this container inside an extradimensional space created by a &Reference[Bag of Holding], &Reference[Portable Hole], or similar item instantly destroys both items and opens a gate to the Astral Plane.</p>
-```
-
-### **Retrieval Mechanics**
-```html
-<p><strong>Retrieval.</strong> Retrieving an item from the container requires an action. If a specific item is desired, you can find it instantly without searching.</p>
-```
-
-### **Hazard/Trap Pattern**
-```html
-<p><strong>Triggered Trap.</strong> When opened by a creature not attuned to it, the container releases a burst of energy. Each creature within 10 feet must make a [[/save dex 14 format=long]] or take [[/damage 3d6 fire average]].</p>
-```
-
-### **Cursed Container Pattern**
-```html
-<p><strong>Curse.</strong> Once you place an item inside this container, you must succeed on a [[/save wis 15 format=long]] or become unwilling to part with it. While cursed, you have disadvantage on attack rolls and ability checks whenever the container is more than 10 feet away from you.</p>
-```
-
----
-
----
-</details>
-
-<details>
-<summary><strong>🛡️ Strict Equipment Template</strong></summary>
-
-# Strict_Equipment_Template_v3.md
-
-## INSTRUCTIONS
-
-**How to use this template:**
-- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
-- Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
-- For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
-
-**Batching multiple items:**
-Combine different item types in one block by stacking top-level keys:
-```text
-EQUIPMENT:
-  ITEM:
-    Name: "Plate Armor +1"
-    # additional fields omitted in this batching example
-WEAPON:
-  ITEM:
-    Name: "Longsword +1"
-    # additional fields omitted in this batching example
-```
-For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```text
-EQUIPMENT:
-  ITEM:
-    Name: "Plate Armor +1"
-    # additional fields omitted in this batching example
----
-EQUIPMENT:
-  ITEM:
-    Name: "Cloak of Protection"
-    # additional fields omitted in this batching example
-```
-You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
-
-**For LLM generation:**
-- Output ONLY the yaml code block. No commentary before or after.
-- Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
-- Booleans: `true` or `false` (lowercase, no quotes).
-- Required scalar fields that do not apply: use the literal string `n/a`.
-- **Omit conditional sections entirely** (e.g., ATTUNEMENT, ARMOR, VEHICLE_PROPERTIES) when their condition is not met. Do not fill omitted sections with `n/a` values.
-- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
-- Do not include template comments (`# ...`) in the final YAML output.
-- Do not omit individual fields from required sections just because their value is `n/a`.
-- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
-- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
-
-**Default assumptions when source text is silent:**
-- Quantity: `1`
-- Identified: `true`
-- Equipped: `false`
-- Rarity: `n/a` for mundane or unspecified items.
-- Price Value: `0`; Price Denomination: `gp`
-- Weight Value: `0` when negligible or not listed; Weight Units: `lb`
-- Uses Spent: `0`; Uses Max: `n/a` unless the item tracks charges or uses.
-- RECOVERY: `[]` when no charge recovery applies.
-- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
-- Chat Description: `n/a` unless special chat flavor is needed.
-
----
-
-```yaml
-EQUIPMENT:
-  ITEM:
-    Name: "[text]"
-    Rarity: "[common|uncommon|rare|veryRare|legendary|artifact|n/a]"
-    Equipment Type: "[light|medium|heavy|natural|shield|clothing|ring|rod|trinket|wand|wondrous|vehicle]"
-    Base Equipment: "[e.g. plate, leather, shield - OR n/a for wondrous items]"
-
-  INVENTORY:
-    Quantity: "[integer]"
-    Identified: "[true|false]"
-    Equipped: "[true|false]"
-
-  COST_AND_WEIGHT:
-    Price Value: "[number]"
-    Price Denomination: "[pp|gp|ep|sp|cp]"
-    Weight Value: "[number]"
-    Weight Units: "[lb|tn|kg|Mg]"
-
-  PROPERTIES:
-    Magical: "[true|false]"
-    Adamantine: "[true|false]"
-    Focus: "[true|false]"
-    Stealth Disadvantage: "[true|false]"
-
-  ATTUNEMENT:
-    # (Required only if Magical is true)
-    Attunement: "[none|required|optional]"
-    Attunement By: "[text|n/a]"
-    Magic Bonus: "[integer|n/a]"
+    Attunement: required
+    Attunement By: n/a
+    Magic Bonus: 1
 
   ARMOR:
-    # (Required only for Armor/Shields: light, medium, heavy, natural, shield)
-    Armor Class: "[integer]"
-    Max Dex Modifier: "[integer|n/a]"
-    Strength Requirement: "[integer|n/a]"
-
-  VEHICLE_PROPERTIES:
-    # (Required only if Equipment Type is vehicle)
-    Vehicle Armor Class: "[integer]"
-    Cover: "[none|half|threequarters|total]"
-    Hit Points Current: "[integer]"
-    Hit Points Max: "[integer]"
-    Hit Points Threshold: "[integer]"
-    Health Conditions: "[text|n/a]"
-    Speed: "[integer]"
-    Speed Conditions: "[text|n/a]"
+    Armor Class: 15
+    Max Dex Modifier: 2
+    Strength Requirement: n/a
 
   PROFICIENCY:
-    Proficient: "[Automatic|0|1]"
+    Proficient: Automatic
 
   USAGE:
-    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
-    # Uses Max = total number of charges the item can hold.
-    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
-    Uses Spent: "[integer|n/a]"
-    Uses Max: "[integer|n/a]"
+    Uses Spent: 0
+    Uses Max: 2
 
-  RECOVERY: []
-    # Optional, repeatable. Use [] when there is no recovery.
-    # If Uses Max > 0, replace [] with one or more entries:
-    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
-    #   Type: "[recoverAll|loseAll|formula]"
-    #   Formula: "[text|n/a]"
+  RECOVERY:
+    - Period: dawn
+      Type: recoverAll
+      Formula: n/a
 
   DESCRIPTION:
     Description: |
-      [multiline HTML content containing Enrichers]
+      <p>This blackened half plate is warm to the touch and etched with lines like cooling lava.</p>
+      <p>While [[lookup @name]]{the creature} wears this armor, they have a +1 bonus to AC and resistance to &Reference[fire] damage.</p>
+      <p><strong>Cinder Flare.</strong> When a creature within 5 feet hits [[lookup @name]]{the creature} with a melee attack, they can expend 1 charge to deal [[/damage 2d6 fire average]] to the attacker.</p>
 
   UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "[text|n/a]"
+    Unidentified Name: "Blackened Half Plate"
     Unidentified Description: |
-      [multiline HTML content]
+      <p>Blackened half plate with dull red seams and a faint smell of smoke.</p>
 
   CHAT_FLAVOR:
     Chat Description: |
-      [multiline text content]
-
-```
-## OPTIONAL ADVANCED SECTIONS
-
-Do not include `effects:` or `Activities:` in normal output. Add them only when the user explicitly asks for passive Active Effects or extra activities beyond the base item behavior.
-
-When requested, append them after `CHAT_FLAVOR`:
-
-```yaml
-  effects:
-    # Passive Active Effects applied to the actor when the item is equipped, attuned, or otherwise active.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry follows the EFFECT template format.
-
-  Activities:
-    # Extra activities only. Most base item behavior is generated by the dnd5e system.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry starts with a dash and has one ACTIVITY_* key.
+      Sparks crawl across [[lookup @name]]{the creature}'s armor.
 ```
 
----
-
-## **FIELD REFERENCE**
-
-### **Equipment Types & Base Equipment**
-| Type | Base Equipment Options |
-|------|------------------------|
-| `light` | `padded`, `leather`, `studdedleather` |
-| `medium` | `hide`, `chainshirt`, `scalemail`, `breastplate`, `halfplate` |
-| `heavy` | `ringmail`, `chainmail`, `splint`, `plate` |
-| `shield` | `shield` |
-| `natural` | n/a (for creature natural armor) |
-| `clothing` | n/a |
-| `ring` | n/a |
-| `wondrous` | n/a |
-| `trinket` | n/a |
-| `rod` | n/a |
-| `wand` | n/a |
-| `vehicle` | n/a |
-
-### **Armor Class Calculations**
-| Type | Base AC | Dex Modifier |
-|------|---------|--------------|
-| Light | 11-12 | Full Dex |
-| Medium | 12-15 | Max +2 Dex |
-| Heavy | 14-18 | No Dex |
-| Shield | +2 | N/A (added to base) |
-
-### **Recovery Periods**
-| Period | Description |
-|--------|-------------|
-| `lr` | Long Rest |
-| `sr` | Short Rest |
-| `day` | Daily (any time) |
-| `dawn` | At dawn |
-| `dusk` | At dusk |
-| `recharge` | Roll d6 at dawn; recharge on X+ |
-
-### **Recovery Types**
-| Type | Formula | Result |
-|------|---------|--------|
-| `recoverAll` | n/a | Regain all charges |
-| `loseAll` | n/a | Lose all remaining charges |
-| `formula` | Dice (e.g., `1d4+1`) | Regain rolled amount |
-| `formula` | Number (e.g., `5`) | For recharge: regain all on d6 ≥ 5 |
-
----
-
-## **ENRICHER REFERENCE**
-
-### **Saving Throws**
-```html
-[[/save dex 15]]                       → [DC 15 Dexterity]
-[[/save con 14 format=long]]           → [DC 14 Constitution] saving throw
-[[/save wis 13]]                       → [DC 13 Wisdom]
-[[/save str dex 15]]                   → [DC 15 Strength or Dexterity]
-```
-
-### **Damage Rolls**
-```html
-[[/damage 2d6 fire]]                   → [2d6] fire
-[[/damage 2d6 fire average]]           → 7 (2d6) fire
-[[/damage 1d8 + @mod radiant average]] → Includes ability modifier
-[[/damage 2d6 fire & 2d6 cold average]] → 7 (2d6) fire plus 7 (2d6) cold
-```
-
-### **Healing**
-```html
-[[/heal 2d8 + 2]]                      → [2d8 + 2] healing
-[[/heal 2d8 + 2 average]]              → 11 (2d8 + 2) healing
-[[/heal 10 temp]]                      → [10] temporary hit points
-```
-
-### **Ability Checks**
-```html
-[[/check stealth]]                     → [Dexterity (Stealth)]
-[[/check stealth 15]]                  → [DC 15 Dexterity (Stealth)]
-[[/check athletics 14 format=long]]    → [DC 14 Strength (Athletics)] check
-[[/check perception 12 passive]]       → passive Wisdom (Perception) of 12+
-```
-
-### **Attack Rolls**
-```html
-[[/attack +7]]                         → Fixed +7 to hit
-[[/attack]]                            → Auto-links to item's attack activity
-```
-
-### **Condition & Rule References**
-```html
-&Reference[prone]                      → Prone (with tooltip)
-&Reference[restrained]                 → Restrained
-&Reference[invisible]                  → Invisible
-&Reference[frightened]                 → Frightened
-&Reference[charmed]                    → Charmed
-&Reference[grappled]                   → Grappled
-&Reference[Difficult Terrain]          → Difficult Terrain
-&Reference[Half Cover]                 → Half Cover
-```
-
-### **Dynamic Lookups**
-```html
-[[lookup @name]]                       → Creature's name
-[[lookup @abilities.str.mod]]          → Strength modifier
-[[lookup @attributes.ac.value]]        → Current AC
-[[lookup @details.cr]]                 → Challenge Rating
-```
-
----
-
-## **HTML PATTERNS**
-
-### **Standard Magic Armor**
-```html
-<p><em>Brief flavor description of the armor's appearance.</em></p>
-<hr>
-
-<p>You have a +X bonus to AC while wearing this armor.</p>
-```
-
-### **Reactive Armor (Damage Reduction)**
-```html
-<p><strong>Reactive Defense.</strong> When you take damage from a source you can see, you can use your reaction to reduce that damage by [[/damage 1d10 + @abilities.con.mod average]].</p>
-```
-
-### **Aura Effect**
-```html
-<p><strong>Aura of Protection.</strong> While you wear this item, you and friendly creatures within 10 feet of you have advantage on saving throws against being &Reference[frightened].</p>
-```
-
-### **Charge-Based Ability**
-```html
-<p>This item has X charges. While wearing it, you can expend 1 or more charges to use the following abilities:</p>
-<ul>
-<li><strong>Ability Name (1 Charge):</strong> Effect description.</li>
-<li><strong>Ability Name (2 Charges):</strong> Effect description.</li>
-</ul>
-<p>The item regains 1d4 + 1 expended charges daily at dawn.</p>
-```
-
-### **Resistance/Immunity**
-```html
-<p><strong>Elemental Ward.</strong> While wearing this armor, you have resistance to fire damage.</p>
-```
-
-### **Triggered Effect**
-```html
-<p><strong>Retribution.</strong> When a creature within 5 feet of you hits you with a melee attack, you can use your reaction to deal [[/damage 2d6 lightning average]] to the attacker.</p>
-```
-
----
-
----
 </details>
 
+<a id="validated-yaml-potion-of-sunlit-breath"></a>
+
 <details>
-<summary><strong>💎 Strict Loot Template</strong></summary>
+<summary><strong>🧪 Potion of Sunlit Breath (`CONSUMABLE`)</strong></summary>
 
-# Strict_Loot_Template_v3.md
-
-## INSTRUCTIONS
-
-**How to use this template:**
-- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
-- Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
-- For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
-
-**Batching multiple items:**
-Combine different item types in one block by stacking top-level keys:
-```text
-LOOT:
-  ITEM:
-    Name: "Ruby Gemstone"
-    # additional fields omitted in this batching example
-WEAPON:
-  ITEM:
-    Name: "Longsword +1"
-    # additional fields omitted in this batching example
-```
-For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```text
-LOOT:
-  ITEM:
-    Name: "Ruby Gemstone"
-    # additional fields omitted in this batching example
----
-LOOT:
-  ITEM:
-    Name: "Gold Idol"
-    # additional fields omitted in this batching example
-```
-You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
-
-**For LLM generation:**
-- Output ONLY the yaml code block. No commentary before or after.
-- Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
-- Booleans: `true` or `false` (lowercase, no quotes).
-- Required scalar fields that do not apply: use the literal string `n/a`.
-- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
-- Do not include template comments (`# ...`) in the final YAML output.
-- Do not omit individual fields from required sections just because their value is `n/a`.
-- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
-- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
-
-**Default assumptions when source text is silent:**
-- Quantity: `1`
-- Identified: `true`
-- Equipped: `false`
-- Rarity: `n/a` for mundane or unspecified items.
-- Price Value: `0`; Price Denomination: `gp`
-- Weight Value: `0` when negligible or not listed; Weight Units: `lb`
-- Magical: `false` unless the item is explicitly magical.
-- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
-- Chat Description: `n/a` unless special chat flavor is needed.
-
----
 
 ```yaml
-LOOT:
+CONSUMABLE:
   ITEM:
-    Name: "[text]"
-    Rarity: "[common|uncommon|rare|veryRare|legendary|artifact|n/a]"
-    Loot Type: "[art|gear|gem|junk|material|resource|trade|treasure]"
+    Name: "Potion of Sunlit Breath"
+    Rarity: uncommon
+    Consumable Type: potion
 
   INVENTORY:
-    Quantity: "[integer]"
-    Identified: "[true|false]"
-    Equipped: "[true|false]"
+    Quantity: 1
+    Identified: true
+    Equipped: false
 
   COST_AND_WEIGHT:
-    Price Value: "[number]"
-    Price Denomination: "[pp|gp|ep|sp|cp]"
-    Weight Value: "[number]"
-    Weight Units: "[lb|tn|kg|Mg]"
+    Price Value: 125
+    Price Denomination: gp
+    Weight Value: 0.5
+    Weight Units: lb
 
   PROPERTIES:
-    Magical: "[true|false]"
-
-  DESCRIPTION:
-    Description: |
-      [multiline HTML content containing Enrichers]
-
-  UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "[text|n/a]"
-    Unidentified Description: |
-      [multiline HTML content]
-
-  CHAT_FLAVOR:
-    Chat Description: |
-      [multiline text content]
-
-```
-## OPTIONAL ADVANCED SECTIONS
-
-Do not include `effects:` or `Activities:` in normal output. Add them only when the user explicitly asks for passive Active Effects or extra activities beyond the base item behavior.
-
-When requested, append them after `CHAT_FLAVOR`:
-
-```yaml
-  effects:
-    # Passive Active Effects applied to the actor when the item is equipped, attuned, or otherwise active.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry follows the EFFECT template format.
-
-  Activities:
-    # Extra activities only. Most base item behavior is generated by the dnd5e system.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry starts with a dash and has one ACTIVITY_* key.
-```
-
----
-
-## **FIELD REFERENCE**
-
-### **Loot Types**
-| Type | Description | Examples |
-|------|-------------|----------|
-| `art` | Artistic objects, paintings, sculptures | Paintings, tapestries, carvings |
-| `gear` | Mundane equipment without function | Broken tools, old clothing |
-| `gem` | Precious stones | Diamonds, rubies, opals |
-| `junk` | Worthless or near-worthless items | Broken pottery, rusty nails |
-| `material` | Crafting components | Monster parts, rare metals |
-| `resource` | Consumable crafting resources | Ingots, lumber, cloth bolts |
-| `trade` | Trade goods with mercantile value | Silk, spices, livestock |
-| `treasure` | Coins, trade bars, valuables | Gold bars, ancient coins |
-
-### **Common Gem Values (5e Standard)**
-| Value | Examples |
-|-------|----------|
-| 10 gp | Azurite, banded agate, blue quartz, moss agate |
-| 50 gp | Bloodstone, carnelian, jasper, moonstone, onyx |
-| 100 gp | Amber, amethyst, garnet, jade, pearl, tourmaline |
-| 500 gp | Alexandrite, aquamarine, black pearl, topaz |
-| 1,000 gp | Black opal, blue sapphire, emerald, fire opal, ruby |
-| 5,000 gp | Black sapphire, diamond, jacinth, star ruby |
-
-### **Common Art Object Values (5e Standard)**
-| Value | Examples |
-|-------|----------|
-| 25 gp | Silver ewer, carved bone statuette, small gold bracelet |
-| 250 gp | Gold ring with bloodstones, carved ivory statuette |
-| 750 gp | Silver chalice with moonstones, bronze crown |
-| 2,500 gp | Gold dragon comb with red garnets, jeweled gold crown |
-| 7,500 gp | Gold and ruby ring, gold music box, painting by master |
-
----
-
-## **ENRICHER REFERENCE**
-
-Loot items typically don't have mechanical effects, but enrichers can enhance descriptions and provide hooks for magical items or crafting materials.
-
-### **Condition & Rule References**
-```html
-&Reference[blinded]                    → Blinded (with tooltip)
-&Reference[poisoned]                   → Poisoned
-&Reference[petrified]                  → Petrified
-&Reference[Difficult Terrain]          → Difficult Terrain
-```
-
-### **Damage Types (for material descriptions)**
-```html
-&Reference[fire]                       → Fire damage type info
-&Reference[cold]                       → Cold damage type info
-&Reference[radiant]                    → Radiant damage type info
-&Reference[necrotic]                   → Necrotic damage type info
-```
-
-### **Spell References (for crafting components)**
-```html
-<em>revivify</em>                      → Spell name in italics
-<em>greater restoration</em>           → Spell name in italics
-```
-
-### **Dynamic Lookups**
-```html
-[[lookup @name]]                       → Creature's name (for story items)
-[[lookup @details.type.config.label]]  → Creature type
-```
-
----
-
-## **HTML PATTERNS**
-
-### **Standard Loot Description**
-```html
-<p><em>Brief flavor description of the item's appearance.</em></p>
-```
-
-### **Detailed Art Object**
-```html
-<p><em>A detailed description of the artwork's appearance and craftsmanship.</em></p>
-
-<p><strong>Origin.</strong> This piece was created by [artist/culture] during [era/event].</p>
-
-<p><strong>Provenance.</strong> [History of ownership or discovery].</p>
-```
-
-### **Crafting Material with Uses**
-```html
-<p><em>Physical description of the material.</em></p>
-<hr>
-
-<p><strong>Crafting Uses.</strong> This material can be used to craft or enhance items with the following properties:</p>
-<ul>
-<li>Property one</li>
-<li>Property two</li>
-</ul>
-
-<p><strong>Harvesting.</strong> A creature can harvest this material with a successful [[/check nature 15 format=long]] or appropriate tool check.</p>
-```
-
-### **Magical Component**
-```html
-<p><em>Physical description.</em></p>
-<hr>
-
-<p><strong>Spell Component.</strong> This item can serve as the material component for the following spells:</p>
-<ul>
-<li><em>spell name</em> (consumed/not consumed)</li>
-</ul>
-```
-
-### **Story Hook Item**
-```html
-<p><em>Physical description.</em></p>
-<hr>
-
-<p><strong>Inscription.</strong> The item bears the following text: <em>"Quoted inscription here."</em></p>
-
-<p><strong>History.</strong> A successful [[/check history 15 format=long]] reveals [historical information].</p>
-```
-
----
-
----
-</details>
-
-<details>
-<summary><strong>✨ Strict Spell Template</strong></summary>
-
-# Strict_Spell_Template_v2.md
-
-## INSTRUCTIONS
-
-**How to use this template:**
-- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
-- Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
-- For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
-
-**Batching multiple items:**
-Combine different item types in one block by stacking top-level keys:
-```text
-SPELL:
-  ITEM:
-    Name: "Fireball"
-    # additional fields omitted in this batching example
-WEAPON:
-  ITEM:
-    Name: "Staff of Fire"
-    # additional fields omitted in this batching example
-```
-For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```text
-SPELL:
-  ITEM:
-    Name: "Fireball"
-    # additional fields omitted in this batching example
----
-SPELL:
-  ITEM:
-    Name: "Lightning Bolt"
-    # additional fields omitted in this batching example
-```
-You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
-
-**For LLM generation:**
-- Output ONLY the yaml code block. No commentary before or after.
-- Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
-- Booleans: `true` or `false` (lowercase, no quotes).
-- Required scalar fields that do not apply: use the literal string `n/a`.
-- **Omit conditional sections entirely** (e.g., MATERIALS, AREA) when their condition is not met. Do not fill omitted sections with `n/a` values.
-- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
-- Do not include template comments (`# ...`) in the final YAML output.
-- Do not omit individual fields from required sections just because their value is `n/a`.
-- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
-- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
-
-**Default assumptions when source text is silent:**
-- Ability: `n/a` unless the spell uses a fixed ability override.
-- Preparation Method: `spell`; Prepared: `true` unless explicitly at-will, innate, ritual-only, or pact magic.
-- Activation Condition: `n/a` unless a trigger or special condition is stated.
-- Duration Concentration: `false` unless concentration is explicitly required.
-- Uses Spent: `0`; Uses Max: `n/a` unless the spell item tracks limited uses outside normal spell slots.
-- RECOVERY: `[]` when no limited-use recovery applies.
-- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
-- Chat Description: `n/a` unless special chat flavor is needed.
-
----
-
-```yaml
-SPELL:
-  ITEM:
-    Name: "[text]"
-    Level: "[0|1|2|3|4|5|6|7|8|9]"
-    School: "[abj|con|div|enc|evo|ill|nec|trs]"
-    Ability: "[str|dex|con|int|wis|cha|n/a]"
-
-  COMPONENTS:
-    Vocal: "[true|false]"
-    Somatic: "[true|false]"
-    Material: "[true|false]"
-
-  MATERIALS:
-    # (Required only if Material is true)
-    Value: "[text]"
-    Cost: "[integer]"
-    Supply: "[integer]"
-    Consumed: "[true|false]"
-
-  PREPARATION:
-    Method: "[atwill|innate|ritual|pact|spell]"
-    Prepared: "[true|false]"
-
-  ACTIVATION:
-    Type: "[action|bonus|reaction|minute|hour|day|special]"
-    Value: "[integer]"
-    Condition: "[text|n/a]"
-
-  RANGE:
-    Units: "[self|touch|spec|any|ft|mi|m|km]"
-    Value: "[integer|n/a]"
-
-  DURATION:
-    Units: "[inst|spec|turn|round|minute|hour|day|month|year|disp|dstr|perm]"
-    Value: "[integer|n/a]"
-    Concentration: "[true|false]"
-
-  TARGETS:
-    Type: "[self|ally|enemy|creature|object|space|creatureOrObject|any|willing]"
-    Count: "[integer|n/a]"
-    Choice: "[true|false]"
-    Special: "[text|n/a]"
-
-  AREA:
-    # (Required only if spell has an area of effect)
-    Shape: "[cone|cube|cylinder|radius|line|sphere|circle|square|wall]"
-    Size: "[integer]"
-    Units: "[ft|mi|m|km]"
-    Count: "[integer|n/a]"
-    Width: "[integer|n/a]"
-    Height: "[integer|n/a]"
-    Contiguous: "[true|false|n/a]"
-
-  USAGE:
-    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
-    # Uses Max = total number of charges the item can hold.
-    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
-    Uses Spent: "[integer|n/a]"
-    Uses Max: "[integer|n/a]"
-
-  RECOVERY: []
-    # Optional, repeatable. Use [] when there is no recovery.
-    # If Uses Max > 0, replace [] with one or more entries:
-    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
-    #   Type: "[recoverAll|loseAll|formula]"
-    #   Formula: "[text|n/a]"
-
-  DESCRIPTION:
-    Description: |
-      [multiline HTML content containing Enrichers]
-
-  UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "[text|n/a]"
-    Unidentified Description: |
-      [multiline HTML content]
-
-  CHAT_FLAVOR:
-    Chat Description: |
-      [multiline text content]
-
-```
-## OPTIONAL ADVANCED SECTIONS
-
-Do not include `effects:` or `Activities:` in normal output. Add them only when the user explicitly asks for passive Active Effects or extra activities beyond the base item behavior.
-
-When requested, append them after `CHAT_FLAVOR`:
-
-```yaml
-  effects:
-    # Passive Active Effects applied to the actor when the item is equipped, attuned, or otherwise active.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry follows the EFFECT template format.
-
-  Activities:
-    # Extra activities only. Most base item behavior is generated by the dnd5e system.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry starts with a dash and has one ACTIVITY_* key.
-```
-
----
-
-## **FIELD REFERENCE**
-
-### **Spellcasting Ability Override**
-Use `Ability` in the `ITEM` section to override the class spellcasting ability for this specific spell. Useful for racial or feat-granted spells that use a fixed ability (e.g., `cha` for Tiefling spells, `int` for Eldritch Knight spells). Set to `n/a` to use the class default.
-
-| Value | Ability |
-|-------|---------|
-| `str` | Strength |
-| `dex` | Dexterity |
-| `con` | Constitution |
-| `int` | Intelligence |
-| `wis` | Wisdom |
-| `cha` | Charisma |
-| `n/a` | Use class default |
-
----
-
-### **Spell Schools**
-| Key | School |
-|-----|--------|
-| `abj` | Abjuration |
-| `con` | Conjuration |
-| `div` | Divination |
-| `enc` | Enchantment |
-| `evo` | Evocation |
-| `ill` | Illusion |
-| `nec` | Necromancy |
-| `trs` | Transmutation |
-
-### **Preparation Methods**
-| Method | Description |
-|--------|-------------|
-| `atwill` | At Will (always available, no slot needed) |
-| `innate` | Innate (uses per day, not spell slots) |
-| `ritual` | Ritual (adds ritual property, always prepared) |
-| `pact` | Pact Magic (Warlock slot) |
-| `spell` | Standard spellbook/prepared spell |
-
-Legacy `prepared` is still accepted for backward compatibility, but new templates should use `spell`.
-
-### **Activation Types**
-| Type | Description |
-|------|-------------|
-| `action` | Action |
-| `bonus` | Bonus Action |
-| `reaction` | Reaction |
-| `minute` | Minutes (use Value for count) |
-| `hour` | Hours (use Value for count) |
-| `day` | Days |
-| `special` | Special |
-
-### **Range Units**
-| Unit | Description |
-|------|-------------|
-| `self` | Self (no range value needed) |
-| `touch` | Touch |
-| `spec` | Special |
-| `any` | Unlimited / Any distance |
-| `ft` | Feet |
-| `mi` | Miles |
-| `m` | Meters |
-| `km` | Kilometers |
-
-### **Duration Units**
-| Unit | Description |
-|------|-------------|
-| `inst` | Instantaneous |
-| `spec` | Special |
-| `turn` | Turn |
-| `round` | Rounds |
-| `minute` | Minutes |
-| `hour` | Hours |
-| `day` | Days |
-| `month` | Months |
-| `year` | Years |
-| `disp` | Until dispelled |
-| `dstr` | Until dispelled or triggered |
-| `perm` | Permanent |
-
-### **Target Types**
-| Type | Description |
-|------|-------------|
-| `self` | Self |
-| `ally` | Ally |
-| `enemy` | Enemy |
-| `creature` | Any creature |
-| `object` | Object |
-| `space` | Space/point |
-| `creatureOrObject` | Creature or Object |
-| `any` | Any target |
-| `willing` | Willing creature |
-
-### **Area Shapes**
-| Shape | Description |
-|-------|-------------|
-| `cone` | Cone |
-| `cube` | Cube |
-| `cylinder` | Cylinder |
-| `radius` | Radius/burst |
-| `line` | Line |
-| `sphere` | Sphere |
-| `circle` | Circle |
-| `square` | Square |
-| `wall` | Wall |
-
-### **Area Advanced Fields**
-| Field | Description | Example |
-|-------|-------------|---------|
-| `Count` | Number of separate template areas | *Conjure Animals* (multiple zones) |
-| `Width` | Width of the area (for line/wall shapes) | *Wall of Fire* width |
-| `Height` | Height of the area (for cylinder/wall shapes) | *Cloudkill* height |
-| `Contiguous` | Whether multiple templates must be adjacent | `true` or `false` |
-
-These fields are optional and only needed for spells with unusual area geometry. Most spells only need `Shape`, `Size`, and `Units`.
-
-### **Recovery Periods**
-| Period | Description |
-|--------|-------------|
-| `lr` | Long Rest |
-| `sr` | Short Rest |
-| `day` | Daily (any time) |
-| `dawn` | At dawn |
-| `dusk` | At dusk |
-| `recharge` | Roll d6 at dawn; recharge on X+ |
-
-### **Recovery Types**
-| Type | Formula | Result |
-|------|---------|--------|
-| `recoverAll` | n/a | Regain all uses |
-| `loseAll` | n/a | Lose all remaining uses |
-| `formula` | Dice (e.g., `1d4+1`) | Regain rolled amount |
-| `formula` | Number (e.g., `5`) | For recharge: regain all on d6 ≥ 5 |
-
----
-
-## **ENRICHER REFERENCE**
-
-### **Saving Throws**
-```html
-[[/save dex]]                          → [Dexterity]
-[[/save dex 15]]                       → [DC 15 Dexterity]
-[[/save dex dc=@spell.dc]]             → [DC {spell DC} Dexterity]
-[[/save dex 15 format=long]]           → [DC 15 Dexterity] saving throw
-[[/save str dex 15]]                   → [DC 15 Strength or Dexterity]
-[[/save]]                              → Auto-links to item's save activity
-```
-
-### **Concentration Saves**
-```html
-[[/concentration]]                     → [Concentration]
-[[/concentration 10]]                  → [DC 10 Concentration]
-[[/concentration ability=cha]]         → Uses Charisma instead of default
-```
-
-### **Damage Rolls**
-```html
-[[/damage 8d6 fire]]                   → [8d6] fire
-[[/damage 8d6 fire average]]           → 28 (8d6) fire
-[[/damage 8d6 fire format=long]]       → [8d6] fire damage
-[[/damage 2d6 fire & 1d6 necrotic average]]  → 7 (2d6) fire plus 3 (1d6) necrotic
-[[/damage 1d10 bludgeoning slashing]]  → Choice of damage type on roll
-[[/damage 1d6 + @mod fire average]]    → Includes ability modifier
-[[/damage]]                            → Auto-links to item's damage activity
-[[/damage twoHanded]]                  → Uses two-handed attack mode
-[[/damage format=extended]]            → "Hit: [Xd6] fire damage" (NPC statblocks)
-```
-
-### **Healing**
-```html
-[[/heal 2d8 + @mod]]                   → [2d8 + @mod] healing
-[[/heal 2d8 + @mod average]]           → 9 + MOD (2d8 + @mod) healing
-[[/heal 10 temp]]                      → [10] temporary hit points
-[[/heal]]                              → Auto-links to item's heal activity
-```
-
-### **Attack Rolls**
-```html
-[[/attack]]                            → Auto-links to item's attack activity
-[[/attack +5]]                         → Fixed +5 to hit (traps, etc.)
-[[/attack extended]]                   → "Melee Attack Roll: [+X], reach 15 ft"
-[[/attack 5 thrown]]                   → Uses thrown attack mode
-```
-
-### **Ability/Skill Checks**
-```html
-[[/check dex]]                         → [Dexterity]
-[[/check dex 15]]                      → [DC 15 Dexterity]
-[[/check dex 15 format=long]]          → [DC 15 Dexterity] check
-[[/check perception]]                  → [Wisdom (Perception)]
-[[/check str athletics 15]]            → [DC 15 Strength (Athletics)]
-[[/check acrobatics athletics 15]]     → Choice of skill
-[[/check perception 15 passive format=long]] → passive Wisdom (Perception) score of 15 or higher
-```
-
-### **Condition & Rule References**
-```html
-&Reference[prone]                      → Prone (with tooltip & link)
-&Reference[blinded]                    → Blinded
-&Reference[restrained]                 → Restrained
-&Reference[incapacitated]              → Incapacitated
-&Reference[Difficult Terrain]          → Difficult Terrain
-&Reference[prone apply=false]          → No "apply condition" button
-```
-
-### **Dynamic Lookups**
-```html
-[[lookup @name]]                       → Creature's name
-[[lookup @name lowercase]]             → creature's name
-[[lookup @details.type.config.label]]  → Creature type (e.g., "Fiend")
-[[lookup @abilities.con.mod]]          → Constitution modifier
-[[lookup @spell.dc]]                   → Spell save DC
-[[lookup @name]]{the creature}         → Fallback text if no actor
-```
-
----
-
-## **HTML PATTERNS**
-
-### **Flavor Text Block**
-```html
-<p><em>Descriptive flavor text in italics...</em></p>
-<hr>
-```
-
-### **Blockquote for Lore**
-```html
-<blockquote>"A mystical quote or ancient saying."</blockquote>
-```
-
-### **Standard Effect Block**
-```html
-<p>Each creature in the area must make a [[/save dex dc=@spell.dc format=long]]. On a failed save, a creature takes [[/damage 8d6 fire average]] and is &Reference[prone]. On a successful save, a creature takes half damage and isn't knocked prone.</p>
-```
-
-### **Bulleted Mechanics (Complex Spells)**
-```html
-<ul>
-<li><strong>Save:</strong> [[/save con dc=@spell.dc]]</li>
-<li><strong>Damage:</strong> [[/damage 6d10 force average]]</li>
-<li><strong>Failure:</strong> Target is &Reference[restrained] until the start of your next turn.</li>
-<li><strong>Success:</strong> Half damage, no additional effects.</li>
-</ul>
-```
-
-### **Higher Levels Section**
-```html
-<section class="secret" id="upcast">
-<p><strong>At Higher Levels.</strong> When you cast this spell using a spell slot of Xth level or higher, the damage increases by [[/damage 1d6 fire]] for each slot level above X.</p>
-</section>
-```
-
-### **Concentration Reminder**
-```html
-<p><strong>Maintaining Concentration.</strong> If you take damage while concentrating on this spell, you must succeed on a [[/concentration]] saving throw or the spell ends.</p>
-```
-
----
-
-</details>
-
-<details>
-<summary><strong>⚒️ Strict Tool Template</strong></summary>
-
-# Strict_Tool_Template_v3.md
-
-## INSTRUCTIONS
-
-**How to use this template:**
-- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
-- Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
-- For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
-
-**Batching multiple items:**
-Combine different item types in one block by stacking top-level keys:
-```text
-TOOL:
-  ITEM:
-    Name: "Thieves' Tools"
-    # additional fields omitted in this batching example
-WEAPON:
-  ITEM:
-    Name: "Longsword +1"
-    # additional fields omitted in this batching example
-```
-For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```text
-TOOL:
-  ITEM:
-    Name: "Thieves' Tools"
-    # additional fields omitted in this batching example
----
-TOOL:
-  ITEM:
-    Name: "Herbalism Kit"
-    # additional fields omitted in this batching example
-```
-You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
-
-**For LLM generation:**
-- Output ONLY the yaml code block. No commentary before or after.
-- Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
-- Booleans: `true` or `false` (lowercase, no quotes).
-- Required scalar fields that do not apply: use the literal string `n/a`.
-- **Omit conditional sections entirely** (e.g., ATTUNEMENT) when their condition is not met. Do not fill omitted sections with `n/a` values.
-- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
-- Do not include template comments (`# ...`) in the final YAML output.
-- Do not omit individual fields from required sections just because their value is `n/a`.
-- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
-- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
-
-**Default assumptions when source text is silent:**
-- Quantity: `1`
-- Identified: `true`
-- Equipped: `false`
-- Rarity: `n/a` for mundane or unspecified items.
-- Price Value: `0`; Price Denomination: `gp`
-- Weight Value: `0` when negligible or not listed; Weight Units: `lb`
-- Uses Spent: `0`; Uses Max: `n/a` unless the item tracks charges or uses.
-- RECOVERY: `[]` when no charge recovery applies.
-- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
-- Chat Description: `n/a` unless special chat flavor is needed.
-
----
-
-```yaml
-TOOL:
-  ITEM:
-    Name: "[text]"
-    Rarity: "[common|uncommon|rare|veryRare|legendary|artifact|n/a]"
-    Tool Type: "[art|game|music|n/a]"
-    # Use n/a for disguise/forgery/herbalism/navigator/poisoner/thieves tools.
-    Base Tool: "[e.g. alchemist, smith, thief, lute, dice - see list below]"
-
-  INVENTORY:
-    Quantity: "[integer]"
-    Identified: "[true|false]"
-    Equipped: "[true|false]"
-
-  COST_AND_WEIGHT:
-    Price Value: "[number]"
-    Price Denomination: "[pp|gp|ep|sp|cp]"
-    Weight Value: "[number]"
-    Weight Units: "[lb|tn|kg|Mg]"
-
-  PROPERTIES:
-    Magical: "[true|false]"
-    Tool Bonus: "[integer|n/a]"
+    Magical: true
 
   ATTUNEMENT:
-    # (Required only if Magical is true)
-    Attunement: "[none|required|optional]"
-    Attunement By: "[text|n/a]"
-
-  ABILITY_CHECK:
-    Proficient: "[Automatic|0|0.5|1|2]"
-    Ability: "[str|dex|con|int|wis|cha|n/a]"
+    Attunement: none
+    Attunement By: n/a
 
   USAGE:
-    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
-    # Uses Max = total number of charges the item can hold.
-    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
-    Uses Spent: "[integer|n/a]"
-    Uses Max: "[integer|n/a]"
+    Uses Spent: 0
+    Uses Max: 1
+    Destroy on Empty: true
 
   RECOVERY: []
-    # Optional, repeatable. Use [] when there is no recovery.
-    # If Uses Max > 0, replace [] with one or more entries:
-    # - Period: "[lr|sr|day|dawn|dusk|recharge]"
-    #   Type: "[recoverAll|loseAll|formula]"
-    #   Formula: "[text|n/a]"
 
   DESCRIPTION:
     Description: |
-      [multiline HTML content containing Enrichers]
+      <p>This golden potion fizzes with tiny motes of warm light.</p>
+      <p>When [[lookup @name]]{the creature} drinks it, they regain [[/heal 2d4 + 2 average]] hit points and can breathe underwater and in smoke-filled air for 1 hour.</p>
+      <p>During that hour, [[lookup @name]]{the creature} sheds dim sunlight in a 5-foot radius.</p>
 
   UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "[text|n/a]"
+    Unidentified Name: "Golden Fizzing Potion"
     Unidentified Description: |
-      [multiline HTML content]
+      <p>A sealed vial of golden liquid with bubbles that rise like sparks.</p>
 
   CHAT_FLAVOR:
     Chat Description: |
-      [multiline text content]
-
+      [[lookup @name]]{The creature} drinks a potion bright as sunrise.
 ```
-## OPTIONAL ADVANCED SECTIONS
-
-Do not include `effects:` or `Activities:` in normal output. Add them only when the user explicitly asks for passive Active Effects or extra activities beyond the base item behavior.
-
-When requested, append them after `CHAT_FLAVOR`:
-
-```yaml
-  effects:
-    # Passive Active Effects applied to the actor when the item is equipped, attuned, or otherwise active.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry follows the EFFECT template format.
-
-  Activities:
-    # Extra activities only. Most base item behavior is generated by the dnd5e system.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry starts with a dash and has one ACTIVITY_* key.
-```
-
----
-
-## **FIELD REFERENCE**
-
-### **Tool Types & Base Tool IDs**
-| Type | Base Tool IDs |
-|------|---------------|
-| `art` | `alchemist`, `brewer`, `calligrapher`, `carpenter`, `cartographer`, `cobbler`, `cook`, `glassblower`, `jeweler`, `leatherworker`, `mason`, `painter`, `potter`, `smith`, `tinker`, `weaver`, `woodcarver` |
-| `game` | `dice`, `card`, `chess` |
-| `music` | `bagpipes`, `drum`, `dulcimer`, `flute`, `horn`, `lute`, `lyre`, `panflute`, `shawm`, `viol` |
-| `n/a` or blank | `disg`, `forg`, `herb`, `navg`, `pois`, `thief` |
-
-Legacy short artisan IDs such as `alch` and `calli` are still accepted for backward compatibility, but new templates should use the full IDs below.
-
-### **Artisan Tools Reference**
-| ID | Tool Name |
-|----|-----------|
-| `alchemist` | Alchemist's Supplies |
-| `brewer` | Brewer's Supplies |
-| `calligrapher` | Calligrapher's Supplies |
-| `carpenter` | Carpenter's Tools |
-| `cartographer` | Cartographer's Tools |
-| `cobbler` | Cobbler's Tools |
-| `cook` | Cook's Utensils |
-| `glassblower` | Glassblower's Tools |
-| `jeweler` | Jeweler's Tools |
-| `leatherworker` | Leatherworker's Tools |
-| `mason` | Mason's Tools |
-| `painter` | Painter's Supplies |
-| `potter` | Potter's Tools |
-| `smith` | Smith's Tools |
-| `tinker` | Tinker's Tools |
-| `weaver` | Weaver's Tools |
-| `woodcarver` | Woodcarver's Tools |
-
-### **Other Tools Reference**
-| ID | Tool Name |
-|----|-----------|
-| `disg` | Disguise Kit |
-| `forg` | Forgery Kit |
-| `herb` | Herbalism Kit |
-| `navg` | Navigator's Tools |
-| `pois` | Poisoner's Kit |
-| `thief` | Thieves' Tools |
-
-### **Recovery Periods**
-| Period | Description |
-|--------|-------------|
-| `lr` | Long Rest |
-| `sr` | Short Rest |
-| `day` | Daily (any time) |
-| `dawn` | At dawn |
-| `dusk` | At dusk |
-| `recharge` | Roll d6 at dawn; recharge on X+ |
-
-### **Recharge Values**
-| Formula | Display |
-|---------|---------|
-| `6` | Recharge 6 |
-| `5` | Recharge 5-6 |
-| `4` | Recharge 4-6 |
-| `3` | Recharge 3-6 |
-| `2` | Recharge 2-6 |
-
----
-
-## **ENRICHER REFERENCE**
-
-### **Saving Throws**
-```html
-[[/save wis 15]]                       → [DC 15 Wisdom]
-[[/save con 13 format=long]]           → [DC 13 Constitution] saving throw
-[[/save cha 14]]                       → [DC 14 Charisma]
-[[/save dex wis 15]]                   → [DC 15 Dexterity or Wisdom]
-```
-
-### **Damage Rolls**
-```html
-[[/damage 2d6 fire]]                   → [2d6] fire
-[[/damage 2d6 fire average]]           → 7 (2d6) fire
-[[/damage 1d8 + @mod thunder average]] → Includes ability modifier
-```
-
-### **Healing**
-```html
-[[/heal 2d4 + 2]]                      → [2d4 + 2] healing
-[[/heal 2d4 + 2 average]]              → 7 (2d4 + 2) healing
-[[/heal 5 temp]]                       → [5] temporary hit points
-```
-
-### **Ability/Tool Checks**
-```html
-[[/check thieves 15]]                  → [DC 15 Dexterity (Thieves' Tools)]
-[[/check alchemist 14 format=long]]    → [DC 14 Intelligence (Alchemist's Supplies)] check
-[[/check performance 12]]              → [DC 12 Charisma (Performance)]
-[[/check sleightofhand 13]]            → [DC 13 Dexterity (Sleight of Hand)]
-[[/tool smith 15]]                     → [DC 15 Strength (Smith's Tools)]
-```
-
-### **Condition & Rule References**
-```html
-&Reference[frightened]                 → Frightened (with tooltip)
-&Reference[charmed]                    → Charmed
-&Reference[poisoned]                   → Poisoned
-&Reference[deafened]                   → Deafened
-&Reference[incapacitated]              → Incapacitated
-&Reference[invisible]                  → Invisible
-```
-
-### **Dynamic Lookups**
-```html
-[[lookup @name]]                       → Creature's name
-[[lookup @abilities.cha.mod]]          → Charisma modifier
-[[lookup @attributes.prof]]            → Proficiency bonus
-```
-
----
-
-## **HTML PATTERNS**
-
-### **Standard Tool Description**
-```html
-<p><em>Brief flavor description of the tool's appearance.</em></p>
-<hr>
-
-<p>Proficiency with these tools lets you add your proficiency bonus to any ability checks you make using them.</p>
-```
-
-### **Magical Tool with Bonus**
-```html
-<p><em>Flavor description.</em></p>
-<hr>
-
-<p>You have a +X bonus to ability checks made using these tools.</p>
-```
-
-### **Charge-Based Tool**
-```html
-<p><em>Flavor description.</em></p>
-<hr>
-
-<p>This item has X charges. While using it, you can expend charges to activate the following abilities:</p>
-<ul>
-<li><strong>Ability Name (1 Charge):</strong> Effect description.</li>
-<li><strong>Ability Name (2 Charges):</strong> Effect description.</li>
-</ul>
-<p>The item regains 1d4 expended charges daily at dawn.</p>
-```
-
-### **Area Effect (Musical Instruments)**
-```html
-<p><strong>Haunting Melody (1 Charge).</strong> As an action, you can play the instrument and expend 1 charge. Each creature of your choice within 30 feet that can hear you must succeed on a [[/save wis 15 format=long]] or become &Reference[frightened] of you for 1 minute. A creature can repeat the saving throw at the end of each of its turns, ending the effect on itself on a success.</p>
-```
-
-### **Crafting Enhancement**
-```html
-<p><strong>Master's Touch.</strong> When you use these tools to craft an item during downtime, you complete the work in half the normal time.</p>
-```
-
-### **Proficiency Requirement**
-```html
-<p>You must be proficient with [tool type] to use this item's magical properties.</p>
-```
-
----
 
 </details>
 
+<a id="validated-yaml-moonwell-bag"></a>
+
+<details>
+<summary><strong>🎒 Moonwell Bag (`CONTAINER`)</strong></summary>
+
+
+```yaml
+CONTAINER:
+  ITEM:
+    Name: "Moonwell Bag"
+    Rarity: uncommon
+
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+    Equipped: false
+
+  COST_AND_WEIGHT:
+    Price Value: 300
+    Price Denomination: gp
+    Weight Value: 2
+    Weight Units: lb
+
+  PROPERTIES:
+    Magical: true
+    Weightless Contents: true
+
+  ATTUNEMENT:
+    Attunement: none
+    Attunement By: n/a
+
+  CAPACITY:
+    Item Count: 12
+    Weight Capacity Value: 120
+    Weight Capacity Units: lb
+    Volume Capacity Value: 12
+    Volume Capacity Units: cubicFoot
+
+  CURRENCY_CONTENTS:
+    Platinum: 0
+    Gold: 20
+    Electrum: 0
+    Silver: 12
+    Copper: 0
+
+  DESCRIPTION:
+    Description: |
+      <p>This silver-threaded bag feels cool even in direct sunlight.</p>
+      <p>The bag can hold up to 120 pounds, not exceeding a volume of 12 cubic feet, and its contents do not add to the carrier's encumbrance.</p>
+      <p><strong>Moonwell Pocket.</strong> As an action, [[lookup @name]]{the creature} can whisper the name of a stored item to retrieve it without searching.</p>
+      <p><strong>Overfilled.</strong> If the bag is overloaded, it ruptures and spills moonlit mist into the nearest unoccupied space.</p>
+
+  UNIDENTIFIED_DESCRIPTION:
+    Unidentified Name: "Silver-Threaded Bag"
+    Unidentified Description: |
+      <p>A soft travel bag stitched with silver thread and tiny pearl toggles.</p>
+
+  CHAT_FLAVOR:
+    Chat Description: |
+      [[lookup @name]]{The creature} reaches into a cold shimmer of moonlight.
+```
+
+</details>
+
+<a id="validated-yaml-starfall-opal"></a>
+
+<details>
+<summary><strong>💎 Starfall Opal (`LOOT`)</strong></summary>
+
+
+```yaml
+LOOT:
+  ITEM:
+    Name: "Starfall Opal"
+    Rarity: rare
+    Loot Type: gem
+
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+    Equipped: false
+
+  COST_AND_WEIGHT:
+    Price Value: 750
+    Price Denomination: gp
+    Weight Value: 0
+    Weight Units: lb
+
+  PROPERTIES:
+    Magical: true
+
+  DESCRIPTION:
+    Description: |
+      <p>This dark opal holds a silver streak like a falling star.</p>
+      <p><strong>Diviner's Lens.</strong> A spellcaster can use the opal as a focus for divination rituals. A creature examining it can identify the omen trapped inside with a [[/check arcana 15 format=long]].</p>
+      <p><strong>Celestial Residue.</strong> The gem is warm near sources of &Reference[radiant] damage and cold near sources of &Reference[necrotic] damage.</p>
+
+  UNIDENTIFIED_DESCRIPTION:
+    Unidentified Name: "Dark Opal"
+    Unidentified Description: |
+      <p>A polished black opal with a pale streak deep beneath its surface.</p>
+
+  CHAT_FLAVOR:
+    Chat Description: |
+      The opal catches the light like a tiny falling star.
+```
+
+</details>
+
+<a id="validated-yaml-lantern-mote"></a>
+
+<details>
+<summary><strong>✨ Lantern Mote (`SPELL`)</strong></summary>
+
+
+```yaml
+SPELL:
+  ITEM:
+    Name: "Lantern Mote"
+    Level: 1
+    School: evo
+    Ability: n/a
+
+  COMPONENTS:
+    Vocal: true
+    Somatic: true
+    Material: true
+
+  MATERIALS:
+    Value: "a firefly wing sealed in amber"
+    Cost: 0
+    Supply: 1
+    Consumed: false
+
+  PREPARATION:
+    Method: spell
+    Prepared: true
+
+  ACTIVATION:
+    Type: action
+    Value: 1
+    Condition: n/a
+
+  RANGE:
+    Units: ft
+    Value: 60
+
+  DURATION:
+    Units: minute
+    Value: 10
+    Concentration: false
+
+  TARGETS:
+    Type: space
+    Count: 1
+    Choice: false
+    Special: n/a
+
+  AREA:
+    Shape: sphere
+    Size: 10
+    Units: ft
+    Count: n/a
+    Width: n/a
+    Height: n/a
+    Contiguous: n/a
+
+  USAGE:
+    Uses Spent: 0
+    Uses Max: n/a
+
+  RECOVERY: []
+
+  DESCRIPTION:
+    Description: |
+      <p>[[lookup @name]]{The creature} creates a tiny floating mote of warm light at a point they can see within range.</p>
+      <p>The mote sheds bright light in a 10-foot radius and dim light for an additional 10 feet. Invisible creatures in the bright light shimmer with a faint outline but are not revealed automatically.</p>
+      <p>When the spell ends, one creature of the caster's choice in the bright light gains [[/heal 1d4 temp average]] temporary hit points.</p>
+      <section class="secret" id="upcast"><p><strong>At Higher Levels.</strong> When [[lookup @name]]{the creature} casts this spell using a spell slot of 2nd level or higher, the bright-light radius increases by 5 feet for each slot level above 1st.</p></section>
+
+  UNIDENTIFIED_DESCRIPTION:
+    Unidentified Name: n/a
+    Unidentified Description: |
+      n/a
+
+  CHAT_FLAVOR:
+    Chat Description: |
+      [[lookup @name]]{The creature} releases a small sun-colored mote.
+```
+
+</details>
+
+<a id="validated-yaml-cartographers-quillcase"></a>
+
+<details>
+<summary><strong>⚒️ Cartographer's Quillcase (`TOOL`)</strong></summary>
+
+
+```yaml
+TOOL:
+  ITEM:
+    Name: "Cartographer's Quillcase"
+    Rarity: uncommon
+    Tool Type: art
+    Base Tool: cartographer
+
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+    Equipped: false
+
+  COST_AND_WEIGHT:
+    Price Value: 75
+    Price Denomination: gp
+    Weight Value: 1
+    Weight Units: lb
+
+  PROPERTIES:
+    Magical: true
+    Tool Bonus: 1
+
+  ATTUNEMENT:
+    Attunement: none
+    Attunement By: n/a
+
+  ABILITY_CHECK:
+    Proficient: Automatic
+    Ability: wis
+
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 3
+
+  RECOVERY:
+    - Period: dawn
+      Type: recoverAll
+      Formula: n/a
+
+  DESCRIPTION:
+    Description: |
+      <p>This lacquered case contains enchanted inks, folding rulers, waxed vellum, and a silver nib that points toward true north.</p>
+      <p>While using these tools, [[lookup @name]]{the creature} has a +1 bonus to ability checks made with them.</p>
+      <p><strong>True-North Mark.</strong> [[lookup @name]]{The creature} can expend 1 charge while drawing a map to mark one safe route they can see. For the next 24 hours, checks to follow that route can use [[/check survival 13 format=long]] or [[/check cartographer 13 format=long]].</p>
+
+  UNIDENTIFIED_DESCRIPTION:
+    Unidentified Name: "Lacquered Quillcase"
+    Unidentified Description: |
+      <p>A travel-worn case filled with precise mapping tools and unusually bright ink.</p>
+
+  CHAT_FLAVOR:
+    Chat Description: |
+      [[lookup @name]]{The creature} sketches a line that refuses to point anywhere but true north.
+```
+
+</details>
+
+<a id="validated-mixed-batch-example"></a>
+
+<details>
+<summary><strong>📦 Mixed-Type Batch Example</strong></summary>
+
+
+```yaml
+WEAPON:
+  ITEM:
+    Name: "Stormglass Rapier"
+    Rarity: rare
+    Weapon Type: martialM
+    Base Weapon: rapier
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+    Equipped: false
+  COST_AND_WEIGHT:
+    Price Value: 2500
+    Price Denomination: gp
+    Weight Value: 2
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+    Finesse: true
+  ATTUNEMENT:
+    Attunement: required
+    Magic Bonus: 1
+  RANGE:
+    Reach: 5
+  DAMAGE:
+    Damage Formula: "1d8[piercing] + 1d6[lightning]"
+    Damage Type: piercing
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 3
+  RECOVERY:
+    - Period: dawn
+      Type: formula
+      Formula: "1d3"
+  DESCRIPTION:
+    Description: |
+      <p>A blue crystal dueling blade that crackles before a storm. When [[lookup @name]]{the creature} hits with it, the target takes an extra [[/damage 1d6 lightning average]].</p>
+
+CONSUMABLE:
+  ITEM:
+    Name: "Potion of Sunlit Breath"
+    Rarity: uncommon
+    Consumable Type: potion
+  COST_AND_WEIGHT:
+    Price Value: 125
+    Price Denomination: gp
+    Weight Value: 0.5
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 1
+    Destroy on Empty: true
+  RECOVERY: []
+  DESCRIPTION:
+    Description: |
+      <p>For 1 hour, [[lookup @name]]{the creature} can breathe underwater and in smoke-filled air.</p>
+  CHAT_FLAVOR:
+    Chat Description: |
+      [[lookup @name]]{The creature} drinks a potion bright as sunrise.
+
+LOOT:
+  ITEM:
+    Name: "Starfall Opal"
+    Rarity: rare
+    Loot Type: gem
+  COST_AND_WEIGHT:
+    Price Value: 750
+    Price Denomination: gp
+    Weight Value: 0
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+  DESCRIPTION:
+    Description: |
+      <p>This dark opal holds a silver streak like a falling star. A creature examining it can identify the omen trapped inside with a [[/check arcana 15 format=long]].</p>
+```
+
+</details>
+
+<a id="validated-same-type-batch-example"></a>
+
+<details>
+<summary><strong>🔁 Same-Type Batch Example</strong></summary>
+
+
+```yaml
+WEAPON:
+  ITEM:
+    Name: "Stormglass Rapier"
+    Rarity: rare
+    Weapon Type: martialM
+    Base Weapon: rapier
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+    Equipped: false
+  COST_AND_WEIGHT:
+    Price Value: 2500
+    Price Denomination: gp
+    Weight Value: 2
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+    Finesse: true
+  ATTUNEMENT:
+    Attunement: required
+    Magic Bonus: 1
+  RANGE:
+    Reach: 5
+  DAMAGE:
+    Damage Formula: "1d8[piercing] + 1d6[lightning]"
+    Damage Type: piercing
+  MASTERY:
+    Mastery: vex
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 3
+  RECOVERY:
+    - Period: dawn
+      Type: formula
+      Formula: "1d3"
+  DESCRIPTION:
+    Description: |
+      <p>A blue crystal dueling blade that crackles before a storm. When [[lookup @name]]{the creature} hits with it, the target takes an extra [[/damage 1d6 lightning average]].</p>
 ---
+WEAPON:
+  ITEM:
+    Name: "Whisperpin Dagger"
+    Rarity: uncommon
+    Weapon Type: simpleM
+    Base Weapon: dagger
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+    Equipped: false
+  COST_AND_WEIGHT:
+    Price Value: 600
+    Price Denomination: gp
+    Weight Value: 1
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+    Finesse: true
+    Light: true
+    Thrown: true
+    Returning: true
+  ATTUNEMENT:
+    Attunement: none
+    Attunement By: n/a
+    Magic Bonus: 1
+  RANGE:
+    Reach: 5
+    Range Normal: 20
+    Range Long: 60
+    Range Units: ft
+  DAMAGE:
+    Damage Formula: "1d4"
+    Damage Type: piercing
+  MASTERY:
+    Mastery: nick
+  PROFICIENCY:
+    Proficient: Automatic
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 2
+  RECOVERY:
+    - Period: dusk
+      Type: recoverAll
+      Formula: n/a
+  DESCRIPTION:
+    Description: |
+      <p>A matte-black returning dagger that drinks in nearby sound.</p>
+      <p>When [[lookup @name]]{the creature} hits with this weapon, they can expend 1 charge to force the target to make a [[/save wis 13 format=long]] or be unable to speak above a whisper until the end of its next turn.</p>
+  CHAT_FLAVOR:
+    Chat Description: |
+      [[lookup @name]]{The creature} throws a blade that returns without a sound.
+```
+
+</details>
+
+<a id="template-reference"></a>
+
+### dnd5e Description Features
+
+`Description` and `Chat Description` fields preserve Foundry/dnd5e text features for Foundry to resolve when displayed. You can use dnd5e enrichers like `[[/damage 1d6 fire average]]`, roll-data formulas like `@prof`, dynamic lookups like `[[lookup @name]]{the creature}`, System HTML classes, and pass-through document links like `@UUID[...]` or `@Embed[...]`.
+
+Use dynamic name lookups for active narration and chat flavor, such as `[[lookup @name]]{The creature} drinks the potion.` or `When [[lookup @name]]{the creature} hits with this weapon...`. Keep passive rules text natural.
+
+Optional companion: **Token Name Lookup** can make the same stock dnd5e `[[lookup @name]]` text prefer concrete token names for aliases, disguises, and token inventory views. Items remain fully compatible without that module; dnd5e simply resolves the lookup to the actor name.
+
+### Template Downloads
+
+The full strict templates live as real module files under `templates/YAML Templates/`. Use those files as the source of truth; the README keeps only validated examples so the docs do not drift.
+
+After installing the module, the same files are available locally in your Foundry data folder:
+
+```text
+modules/5e-item-importer/templates/YAML Templates/
+```
+
+| Template | View in Repo | Raw Download |
+| --- | --- | --- |
+| Weapon | [Strict Weapon Template](templates/YAML%20Templates/Strict%20Weapon%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Weapon%20Template.md) |
+| Consumable | [Strict Consumable Template](templates/YAML%20Templates/Strict%20Consumable%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Consumable%20Template.md) |
+| Container | [Strict Container Template](templates/YAML%20Templates/Strict%20Container%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Container%20Template.md) |
+| Equipment | [Strict Equipment Template](templates/YAML%20Templates/Strict%20Equipment%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Equipment%20Template.md) |
+| Loot | [Strict Loot Template](templates/YAML%20Templates/Strict%20Loot%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Loot%20Template.md) |
+| Spell | [Strict Spell Template](templates/YAML%20Templates/Strict%20Spell%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Spell%20Template.md) |
+| Tool | [Strict Tool Template](templates/YAML%20Templates/Strict%20Tool%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Tool%20Template.md) |
+
+For import-ready examples, use the [validated custom YAML examples](#validated-custom-yaml-examples), the [mixed-type batch example](#validated-mixed-batch-example), and the [same-type batch example](#validated-same-type-batch-example) above.
+
+---
+
+<a id="common-issues"></a>
 
 ## Common Issues
 
@@ -2353,17 +958,62 @@ Legacy short artisan IDs such as `alch` and `calli` are still accepted for backw
 > Natural Parsing is still being worked on.
 
 **Icons aren't matching automatically.**
-> Go to Module Settings and enable **"Match Icons from Compendiums"**. Note: This feature works best with standard D&D 5e item names (e.g., "Longsword", "Potion of Healing"). Im hoping to include randomized compedium images in the near future
+> Go to Module Settings and enable **"Match Icons from Compendiums"**. Note: This feature works best when the item name includes a recognizable D&D 5e base item or item type (e.g., "Stormglass Rapier", "Emberguard Half Plate", "Potion of Sunlit Breath"). I'm hoping to include randomized compendium images in the near future
 
 **Description is empty.**
 > If using Natural Language: Ensure there is a n/a line between the stat block and the description.
-> If using Strict Format: Ensure the description is between `Description:` and `===END DESCRIPTION===`.
+> If using Strict Format: Use the YAML block form `Description: |` and indent the HTML description beneath it, as shown in the validated examples and template files.
 
 ---
 
+<a id="community"></a>
+
+## Community
+
+- **Report bugs** — [open an issue](https://github.com/GnollStack/5e-Item-Importer/issues) with your Foundry version, module version, steps to reproduce, console logs, and screenshots or short clips when useful.
+- **Request features** — tell me what happened at your table and what you wish the module could do.
+- **Star the repo** — if the module is useful at your table, a star helps other GMs find it.
+- **Watch releases** — follow the repo for updates, compatibility notes, and new feature releases.
+
+---
+
+<a id="contributing"></a>
+
+## Contributing
+
+Bug reports, feature ideas, reproduction notes, documentation fixes, and localization ideas are welcome.
+
+I am not generally accepting unsolicited code PRs for features, refactors, architecture, or behavior changes. This is still my module and my codebase; I will decide how features are designed and implemented unless I explicitly say otherwise.
+
+- **Bug reports** — include Foundry version, module version, a console log, and the steps to reproduce. Screenshots or short clips help a lot.
+- **Feature requests** — tell me what happened at your table and what you wish the module could do.
+- **Pull requests** — please do not open code PRs unless I ask for one. Open an issue with the idea instead.
+- **Code ownership** — core implementation, architecture, and release decisions remain with GnollStack unless stated otherwise.
+- **Translations and docs** — typo fixes, wording suggestions, and localization ideas are welcome by issue first. I do not have a public translation setup yet, so I will fold useful wording in myself.
+
+Submitted ideas may be adapted, declined, or implemented by GnollStack. Any accepted contribution or submitted project material may be released under the same EULA as the rest of the module.
+
+---
+
+<a id="ai-use"></a>
+
+## AI-Assisted Development
+
+This module is developed and maintained with the help of AI-assisted tools for coding, debugging, documentation, and testing.
+
+I care about the quality, behavior, performance, security, and long-term maintainability of this module, and I take full responsibility for what ships. AI assistance does not replace review, testing, debugging, or security and design judgment.
+
+AI is used here as a tool under my direction to make Foundry better and allow for long term mod support while still having a life outside of building and maintaining my free and premium modules.
+
+If you are uncomfortable using software developed with AI-assisted tools, this module is not for you.
+
+---
+
+<a id="support-development"></a>
+
 ## 🥩 Support Development
 
-This module represents **many hours** of developement.
+This module represents **many hours** of development.
 
 **If this module enhanced your immersion, consider treating me to a steak, much better than coffee!**
 
@@ -2374,6 +1024,8 @@ This module represents **many hours** of developement.
 > *"Thanks for the support! It helps me maintain support for the module and puts a nice steak on the table."*
 
 ---
+
+<a id="license-permissions"></a>
 
 ## ⚖️ License & Permissions
 
@@ -2397,5 +1049,11 @@ For licensing inquiries or permission slips:
 * *Please do not open GitHub Issues for commercial licensing discussions. But feel free to contact me via Discord or Email*
 
 ---
-**Author:** [GnollStack](https://github.com/GnollStack)
-**Compatibility:** Foundry VTT v13 / dnd5e 5.2.x+
+
+<div align="center">
+
+**Author:** [GnollStack](https://github.com/GnollStack) · **Compatibility:** Foundry VTT v13+ (verified v13.351)
+
+[⬆ Back to Top](#5e-item-importer)
+
+</div>

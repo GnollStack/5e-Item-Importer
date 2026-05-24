@@ -8,6 +8,12 @@
 - Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
 
+**dnd5e Description Features:**
+- `DESCRIPTION.Description` and `CHAT_FLAVOR.Chat Description` preserve Foundry/dnd5e text features for Foundry to resolve when displayed.
+- You can use dnd5e enrichers such as `[[/damage 1d6 fire average]]`, roll-data formulas such as `@prof` or `@abilities.str.mod`, dynamic lookups such as `[[lookup @name]]{the creature}`, System HTML classes, and pass-through document links such as `@UUID[...]` or `@Embed[...]`.
+- Use stock dnd5e `[[lookup @name]]` text for active narration and chat flavor: sentence start `[[lookup @name]]{The creature} drinks the potion.`; mid-sentence `When [[lookup @name]]{the creature} hits with this weapon...`. This normally resolves to the actor name; the optional Token Name Lookup companion can prefer token aliases at render time without changing item syntax.
+- Keep passive rules text natural. Do not force dynamic name lookups into every description.
+
 **Batching multiple items:**
 Combine different item types in one block by stacking top-level keys:
 ```text
@@ -291,17 +297,17 @@ When requested, append them after `CHAT_FLAVOR`:
 
 ### **Reactive Armor (Damage Reduction)**
 ```html
-<p><strong>Reactive Defense.</strong> When you take damage from a source you can see, you can use your reaction to reduce that damage by [[/damage 1d10 + @abilities.con.mod average]].</p>
+<p><strong>Reactive Defense.</strong> When [[lookup @name]]{the creature} takes damage from a source they can see, they can use their reaction to reduce that damage by [[/damage 1d10 + @abilities.con.mod average]].</p>
 ```
 
 ### **Aura Effect**
 ```html
-<p><strong>Aura of Protection.</strong> While you wear this item, you and friendly creatures within 10 feet of you have advantage on saving throws against being &Reference[frightened].</p>
+<p><strong>Aura of Protection.</strong> While [[lookup @name]]{the creature} wears this item, they and friendly creatures within 10 feet of them have advantage on saving throws against being &Reference[frightened].</p>
 ```
 
 ### **Charge-Based Ability**
 ```html
-<p>This item has X charges. While wearing it, you can expend 1 or more charges to use the following abilities:</p>
+<p>This item has X charges. While wearing it, [[lookup @name]]{the creature} can expend 1 or more charges to use the following abilities:</p>
 <ul>
 <li><strong>Ability Name (1 Charge):</strong> Effect description.</li>
 <li><strong>Ability Name (2 Charges):</strong> Effect description.</li>
@@ -311,12 +317,12 @@ When requested, append them after `CHAT_FLAVOR`:
 
 ### **Resistance/Immunity**
 ```html
-<p><strong>Elemental Ward.</strong> While wearing this armor, you have resistance to fire damage.</p>
+<p><strong>Elemental Ward.</strong> While [[lookup @name]]{the creature} wears this armor, they have resistance to fire damage.</p>
 ```
 
 ### **Triggered Effect**
 ```html
-<p><strong>Retribution.</strong> When a creature within 5 feet of you hits you with a melee attack, you can use your reaction to deal [[/damage 2d6 lightning average]] to the attacker.</p>
+<p><strong>Retribution.</strong> When a creature within 5 feet of [[lookup @name]]{the creature} hits them with a melee attack, they can use their reaction to deal [[/damage 2d6 lightning average]] to the attacker.</p>
 ```
 
 ---

@@ -1,0 +1,123 @@
+name: Bug report
+description: Report a reproducible issue with 5e Item Importer.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Clear reproduction details and the exact item text are the fastest path to a fix.
+
+  - type: input
+    id: foundry-version
+    attributes:
+      label: Foundry VTT version
+      description: Include the full version number if possible.
+      placeholder: "Example: v13.351"
+    validations:
+      required: true
+
+  - type: input
+    id: dnd5e-version
+    attributes:
+      label: D&D 5e system version
+      description: You can find this in Foundry's Game Systems tab or setup screen.
+      placeholder: "Example: 5.2.5"
+    validations:
+      required: true
+
+  - type: input
+    id: module-version
+    attributes:
+      label: 5e Item Importer version
+      description: You can find this in Foundry's Manage Modules or the module manifest.
+      placeholder: "Example: 13.9.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: workflow
+    attributes:
+      label: Import workflow
+      description: Which part of the importer is involved?
+      options:
+        - Natural Language
+        - Strict YAML
+        - Batch import
+        - Activities / effects handoff
+        - Icon matching
+        - Import window / UI
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: active-modules
+    attributes:
+      label: Active related modules
+      description: List modules that may affect dnd5e items, activities, effects, automation, icons, or item sheets.
+      placeholder: |
+        Example:
+        - 5e Activity Importer
+        - DAE
+        - Midi-QOL
+        - Automated Animations
+
+  - type: textarea
+    id: source-text
+    attributes:
+      label: Exact item text or YAML
+      description: Paste the exact text you imported. If it is long, include the smallest version that reproduces the issue.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Tell me exactly what you clicked or configured before the issue happened.
+      placeholder: |
+        1. Open the Items directory...
+        2. Click Import Item...
+        3. Paste...
+        4. Click Parse / Import...
+        5. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What item data, item type, activity, icon, or import result did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console logs or diagnostics
+      description: Paste relevant console output, parser errors, MCP diagnostics, or validation output here.
+      render: text
+
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots, clips, or related settings
+      description: Add screenshots, short clips, or notes about relevant importer settings.
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else you want to add?
+      description: Use this space naturally if the form did not quite fit your situation.

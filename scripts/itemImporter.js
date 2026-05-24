@@ -6,11 +6,11 @@
  * (like from PDFs, websites, or homebrew documents) into Foundry VTT.
  */
 
-import { MODULE_NAME, MODULE_TITLE, registerSettings, YAML_ITEM_KEYS, YAML_KEY_REGEXES, isFeatureEnabled } from "./itemConfig.js";
+import { MODULE_NAME, MODULE_TITLE, registerSettings, isFeatureEnabled } from "./itemConfig.js";
 import { ItemUtils } from "./itemUtils.js";
 import { ItemWindow } from "./itemWindow.js";
-import { getParserForText } from './strictItemParsers/strictParserDispatcher.js';
-import { NaturalItemParser } from './naturalItemParser.js';
+import { createDiagnosticsApi } from "./debugApi.js";
+import { parseItemText } from "./parserRouting.js";
 
 /**
  * Initialize module
@@ -32,19 +32,12 @@ Hooks.on("init", () => {
  * Allows other modules or macros to use the importer programmatically
  */
 function registerAPI() {
-    // Create a 'parse' function that routes to the correct parser.
-    // YAML strict templates go to YamlItemParser; everything else to NaturalItemParser.
-    const parse = (text) => {
-        try {
-            const stripped = text.replace(/^```(?:yaml|markdown)?\s*\n?/i, '').replace(/\n?```\s*$/, '');
-            const isYaml = YAML_ITEM_KEYS.some(key => YAML_KEY_REGEXES[key].test(stripped));
-            const parser = isYaml ? getParserForText(text) : new NaturalItemParser();
-            return parser.parse(text);
-        } catch (error) {
-            ItemUtils.error("API parse error", error);
-            return { success: false, item: null, errors: [error.message], warnings: [] };
-        }
-    };
+    const parse = (text, options = {}) => parseItemText(text, options);
+
+    const diagnostics = createDiagnosticsApi({
+        parse,
+        openWindow: () => ItemWindow.renderWindow()
+    });
 
     game.modules.get(MODULE_NAME).api = {
         // Expose utility functions
@@ -64,6 +57,9 @@ function registerAPI() {
 
         // Open the import window
         openWindow: () => ItemWindow.renderWindow(),
+
+        // MCP Server Diagnostics
+        diagnostics,
 
         // Version info
         version: game.modules.get(MODULE_NAME).version,
@@ -281,6 +277,11 @@ if (typeof window !== "undefined") {
             return game.modules.get(MODULE_NAME)?.api;
         },
 
+        // MCP Server Diagnostics
+        get diagnostics() {
+            return game.modules.get(MODULE_NAME)?.api?.diagnostics;
+        },
+
         // Quick access to settings
         get settings() {
             return {
@@ -326,6 +327,7 @@ ItemImporter.api             - Get module API
 ItemImporter.settings        - View current settings
 ItemImporter.toggleDebug()   - Toggle debug mode
 ItemImporter.version()       - Show version
+ItemImporter.diagnostics     - MCP Server Diagnostics
 ItemImporter.test            - Test utilities
 
 Test Commands:

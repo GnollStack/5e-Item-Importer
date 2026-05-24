@@ -284,14 +284,16 @@ export class ItemData {
         icon = await getRandomWeaponIcon(
           this.baseWeapon,
           this.weaponType,
-          this.name
+          this.name,
+          options
         );
         break;
       case "equipment":
         icon = await getRandomEquipmentIcon(
           this.baseEquipment,
           this.armorType,
-          this.name
+          this.name,
+          options
         );
         break;
       case "consumable":
@@ -299,27 +301,30 @@ export class ItemData {
           this.consumableType,
           this.ammunitionType,
           this.poisonType,
-          this.name
+          this.name,
+          options
         );
         break;
       case "tool":
         icon = await getRandomToolIcon(
           this.toolType,
           this.baseToolItem,
-          this.name
+          this.name,
+          options
         );
         break;
       case "container":
-        icon = await getRandomContainerIcon(this.name);
+        icon = await getRandomContainerIcon(this.name, options);
         break;
       case "loot":
-        icon = await getRandomLootIcon(this.lootType, this.name);
+        icon = await getRandomLootIcon(this.lootType, this.name, options);
         break;
       case "spell":
         icon = await getRandomSpellIcon(
           this.spellSchool,
           this.spellLevel,
-          this.name
+          this.name,
+          options
         );
         break;
     }
@@ -335,7 +340,7 @@ export class ItemData {
 
     // 3. Fall back to system icon search
     if (!icon && game.settings.get(MODULE_NAME, "matchIcons")) {
-      icon = await ItemUtils.findSystemIcon(this.name, this.type);
+      icon = await ItemUtils.findSystemIcon(this.name, this.type, options);
 
       if (icon) {
         ItemUtils.log("Found system icon:", icon);
@@ -371,7 +376,7 @@ export class ItemData {
   #applyUsesData(logLabel = "uses") {
     if (!this.uses) return;
 
-    this.setProperty("system.uses.max", this.uses.max.toString());
+    this.setProperty("system.uses.max", this.uses.max);
     this.setProperty("system.uses.spent", this.uses.value ?? 0);
     ItemUtils.log(`${logLabel} uses set to`, this.uses);
 
@@ -410,10 +415,13 @@ export class ItemData {
         // New formula-based damage (from strict parser)
         // Use custom formula mode for maximum flexibility
 
-        // Ensure types is always an array
+        // Ensure types is always an array. Typed custom formulas can carry
+        // their own damage types, so an empty array is valid here.
         const types = Array.isArray(this.damage.type)
           ? this.damage.type
-          : [this.damage.type];
+          : this.damage.type
+            ? [this.damage.type]
+            : [];
 
         this.setProperty("system.damage.base", {
           number: null,
@@ -1271,6 +1279,22 @@ export class ItemData {
         itemData.folder = folderId;
       }
 
+      let preparedActivityResults = options.parsedActivityResults ?? null;
+      let preParsedActivityIssues = [];
+      if (this.pendingActivities.length > 0 && this.shouldReplaceGeneratedDefaultActivities()) {
+        const prepared = await this.collectActivityResults(preparedActivityResults);
+        if (prepared.results) {
+          preparedActivityResults = prepared.results;
+          preParsedActivityIssues = prepared.issues;
+
+          const successfulActivityTypes = ItemData.getSuccessfulActivityTypes(preparedActivityResults);
+          if (ItemData.preventGeneratedDefaultActivity(itemData, successfulActivityTypes)) {
+            const defaultType = ItemData.DEFAULT_ACTIVITY_BY_ITEM_TYPE[itemData.type];
+            ItemUtils.log(`Preventing generated default ${defaultType} activity because inline activities already provide one.`);
+          }
+        }
+      }
+
       // Create the item
       const createdItem = await CONFIG.Item.documentClass.create(itemData);
 
@@ -1280,7 +1304,8 @@ export class ItemData {
         // Apply inline activities/effects if present
         let activityResults = { addedActivities: 0, addedEffects: 0, issues: [] };
         if (this.pendingActivities.length > 0) {
-          activityResults = await this.applyActivities(createdItem, options.parsedActivityResults);
+          activityResults = await this.applyActivities(createdItem, preparedActivityResults);
+          activityResults.issues.unshift(...preParsedActivityIssues);
           for (const issue of activityResults.issues) {
             ItemUtils.warn(`Activity/Effect issue: ${issue}`);
           }
@@ -1335,6 +1360,86 @@ export class ItemData {
 
   static EFFECT_DEFAULT_ICON = "icons/svg/combat.svg";
 
+  static DEFAULT_ACTIVITY_BY_ITEM_TYPE = {
+    weapon: "attack",
+    tool: "check",
+  };
+
+  /**
+   * Determine whether the module should suppress dnd5e's generated baseline
+   * activity when an inline activity supplies the same primary activity type.
+   *
+   * @returns {boolean}
+   */
+  shouldReplaceGeneratedDefaultActivities() {
+    try {
+      return game.settings.get(MODULE_NAME, "replaceGeneratedDefaultActivities");
+    } catch (error) {
+      return true;
+    }
+  }
+
+  /**
+   * Collect successful activity types from Activity Importer parse results.
+   *
+   * @param {Array<object>|null} results - Activity Importer parse results
+   * @returns {Set<string>}
+   */
+  static getSuccessfulActivityTypes(results) {
+    return new Set(
+      (Array.isArray(results) ? results : [])
+        .filter(result => result?.success && result.resultType !== "effect" && result.activityType)
+        .map(result => result.activityType)
+    );
+  }
+
+  /**
+   * Check whether a generated dnd5e baseline should be suppressed.
+   *
+   * @param {string} itemType - Foundry item type
+   * @param {Set<string>} parsedActivityTypes - Successfully parsed inline activity types
+   * @returns {boolean}
+   */
+  static shouldSuppressGeneratedDefaultActivity(itemType, parsedActivityTypes) {
+    const defaultType = ItemData.DEFAULT_ACTIVITY_BY_ITEM_TYPE[itemType];
+    return !!defaultType && !!parsedActivityTypes?.has?.(defaultType);
+  }
+
+  /**
+   * Mark item source data as current dnd5e data before document creation.
+   * dnd5e creates generated weapon/tool activities as a migration for
+   * legacy-looking item data; setting the current system version prevents that
+   * migration without sending null deletion markers through ActivityField.
+   *
+   * @param {object} itemData - Candidate item source data
+   * @returns {object}
+   */
+  static markAsCurrentDnd5eSource(itemData) {
+    itemData._stats = {
+      ...(itemData._stats ?? {}),
+      coreVersion: game.version,
+      systemId: game.system.id,
+      systemVersion: game.system.version
+    };
+    itemData.system ??= {};
+    itemData.system.activities ??= {};
+    return itemData;
+  }
+
+  /**
+   * Suppress dnd5e's generated baseline activity when inline activity data is
+   * already replacing that primary activity.
+   *
+   * @param {object} itemData - Candidate item source data
+   * @param {Set<string>} parsedActivityTypes - Successfully parsed inline activity types
+   * @returns {boolean} True if source data was marked to skip baseline generation
+   */
+  static preventGeneratedDefaultActivity(itemData, parsedActivityTypes) {
+    if (!ItemData.shouldSuppressGeneratedDefaultActivity(itemData?.type, parsedActivityTypes)) return false;
+    ItemData.markAsCurrentDnd5eSource(itemData);
+    return true;
+  }
+
   /**
    * Check if an icon path resolves to an actual file.
    * If not, replace with the fallback.
@@ -1353,6 +1458,48 @@ export class ItemData {
   }
 
   /**
+   * Parse pending inline activities and effects using Activity Importer.
+   *
+   * @param {Array<Object>|null} [parsedResults=null] - Pre-parsed activity results with resolved UUIDs
+   * @returns {Promise<{results: Array<Object>|null, issues: string[]}>}
+   */
+  async collectActivityResults(parsedResults = null) {
+    if (Array.isArray(parsedResults) && parsedResults.length > 0) return { results: parsedResults, issues: [] };
+
+    const issues = [];
+    if (!game.modules.get("5e-activity-importer")?.active) {
+      issues.push("5e-activity-importer module is not active. Skipping inline activities/effects.");
+      return { results: null, issues };
+    }
+
+    let parseAllBlocksYaml;
+    try {
+      ({ parseAllBlocksYaml } = await import("/modules/5e-activity-importer/scripts/activityParsers/yamlParser.js"));
+    } catch (err) {
+      issues.push(`Could not load activity parser: ${err.message}`);
+      return { results: null, issues };
+    }
+
+    const allResults = [];
+    for (const pending of this.pendingActivities) {
+      try {
+        const yamlText = jsyaml.dump(pending.rawData);
+        const results = parseAllBlocksYaml(yamlText);
+        for (const result of results) {
+          if (!result.success) {
+            issues.push(`Failed to parse ${pending.name || pending.key}: ${result.errors?.join(", ") || "Unknown error"}`);
+          }
+          allResults.push(result);
+        }
+      } catch (err) {
+        issues.push(`Error parsing ${pending.name || pending.key}: ${err.message}`);
+      }
+    }
+
+    return { results: allResults, issues };
+  }
+
+  /**
    * Apply inline activities and effects to a created Foundry item.
    * If pre-parsed results (with resolved UUIDs) are provided, uses those directly.
    * Otherwise dynamically imports the activity parser from the 5e-activity-importer module.
@@ -1366,47 +1513,11 @@ export class ItemData {
     let addedActivities = 0;
     let addedEffects = 0;
 
-    // Check if activity importer is active
-    if (!game.modules.get("5e-activity-importer")?.active) {
-      issues.push("5e-activity-importer module is not active. Skipping inline activities/effects.");
-      return { addedActivities, addedEffects, issues };
-    }
+    const prepared = await this.collectActivityResults(parsedResults);
+    issues.push(...prepared.issues);
+    if (!prepared.results) return { addedActivities, addedEffects, issues };
 
-    // Determine which results to use: pre-parsed (with resolved UUIDs) or fresh parse
-    let allResults;
-    if (parsedResults && parsedResults.length > 0) {
-      // Use pre-parsed results directly (UUIDs already resolved by drop zones)
-      allResults = parsedResults;
-    } else {
-      // Fallback: parse from raw YAML data (original behavior)
-      let parseAllBlocksYaml;
-      try {
-        const mod = await import("/modules/5e-activity-importer/scripts/activityParsers/yamlParser.js");
-        parseAllBlocksYaml = mod.parseAllBlocksYaml;
-        if (typeof parseAllBlocksYaml !== "function") {
-          throw new Error("Expected export parseAllBlocksYaml(text) was not found.");
-        }
-      } catch (err) {
-        issues.push(`Could not load activity parser: ${err.message}`);
-        return { addedActivities, addedEffects, issues };
-      }
-
-      allResults = [];
-      for (const pending of this.pendingActivities) {
-        try {
-          const yamlText = jsyaml.dump(pending.rawData);
-          const results = parseAllBlocksYaml(yamlText);
-          for (const result of results) {
-            if (!result.success) {
-              issues.push(`Failed to parse ${pending.key} "${pending.name}": ${result.errors.join(', ')}`);
-            }
-          }
-          allResults.push(...results);
-        } catch (err) {
-          issues.push(`Error parsing ${pending.key} "${pending.name}": ${err.message}`);
-        }
-      }
-    }
+    const allResults = prepared.results;
 
     // Apply each parsed result to the created item
     const itemSupportsActivities = !!createdItem.system?.activities;

@@ -43,18 +43,21 @@ export const ITEM_TEMPLATES = [
     Versatile Formula: "1d10"
     Versatile Damage Type: slashing
 
+  MASTERY:
+    Mastery: sap
+
   DESCRIPTION:
     Description: |
       You have a +1 bonus to attack and damage rolls made with this magic weapon.`
     },
     {
         id: "armor",
-        label: "Magic Armor",
+        label: "Wondrous Item",
         text: `EQUIPMENT:
   ITEM:
     Name: "Cloak of Protection"
     Rarity: uncommon
-    Equipment Type: trinket
+    Equipment Type: wondrous
     Base Equipment: n/a
 
   INVENTORY:
@@ -62,9 +65,9 @@ export const ITEM_TEMPLATES = [
     Identified: true
 
   COST_AND_WEIGHT:
-    Price Value: 3500
+    Price Value: 400
     Price Denomination: gp
-    Weight Value: 1
+    Weight Value: 2
     Weight Units: lb
 
   PROPERTIES:
@@ -75,7 +78,7 @@ export const ITEM_TEMPLATES = [
 
   DESCRIPTION:
     Description: |
-      You gain a +1 bonus to AC and saving throws while you wear this cloak.`
+      While wearing this cloak, [[lookup @name]]{the creature} gains a +1 bonus to AC and saving throws.`
     },
     {
         id: "potion",
@@ -99,9 +102,14 @@ export const ITEM_TEMPLATES = [
   PROPERTIES:
     Magical: true
 
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 1
+    Destroy on Empty: true
+
   DESCRIPTION:
     Description: |
-      You regain 2d4 + 2 hit points when you drink this potion. The potion's red liquid glimmers when agitated.`
+      [[lookup @name]]{The creature} regains [[/heal 2d4 + 2 average]] hit points when they drink this potion. The potion's red liquid glimmers when agitated.`
     },
     {
         id: "tool",
@@ -118,9 +126,9 @@ export const ITEM_TEMPLATES = [
     Identified: true
 
   COST_AND_WEIGHT:
-    Price Value: 25
+    Price Value: 50
     Price Denomination: gp
-    Weight Value: 1
+    Weight Value: 8
     Weight Units: lb
 
   PROPERTIES:
@@ -147,9 +155,9 @@ export const ITEM_TEMPLATES = [
     Identified: true
 
   COST_AND_WEIGHT:
-    Price Value: 4000
+    Price Value: 400
     Price Denomination: gp
-    Weight Value: 15
+    Weight Value: 5
     Weight Units: lb
 
   PROPERTIES:
@@ -174,7 +182,7 @@ export const ITEM_TEMPLATES = [
         label: "Loot/Gear",
         text: `LOOT:
   ITEM:
-    Name: "Ruby of the War Mage"
+    Name: "Ruby"
     Rarity: common
     Loot Type: gem
 
@@ -189,11 +197,11 @@ export const ITEM_TEMPLATES = [
     Weight Units: lb
 
   PROPERTIES:
-    Magical: true
+    Magical: false
 
   DESCRIPTION:
     Description: |
-      Etched with eldritch runes, this 1-inch-diameter ruby allows you to use a simple or martial weapon as a spellcasting focus for your spells.`
+      A clear red gemstone about one inch across, suitable as treasure or a spell component.`
     },
     {
         id: "batch",
@@ -211,6 +219,8 @@ export const ITEM_TEMPLATES = [
   ATTUNEMENT:
     Attunement: none
     Magic Bonus: 1
+  MASTERY:
+    Mastery: vex
   RANGE:
     Reach: 5
   DAMAGE:
@@ -237,9 +247,13 @@ CONSUMABLE:
     Weight Units: lb
   PROPERTIES:
     Magical: true
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 1
+    Destroy on Empty: true
   DESCRIPTION:
     Description: |
-      You regain 4d4 + 4 hit points when you drink this potion.
+      [[lookup @name]]{The creature} regains 4d4 + 4 hit points when they drink this potion.
 
 LOOT:
   ITEM:
@@ -258,8 +272,8 @@ LOOT:
       A pouch containing 50 gold coins.`
     },
     {
-        id: "weapon-with-activities",
-        label: "Weapon with Activities",
+        id: "mixed-damage-weapon",
+        label: "Mixed Damage Weapon",
         text: `WEAPON:
   ITEM:
     Name: "Flame Tongue Longsword"
@@ -288,88 +302,18 @@ LOOT:
     Reach: 5
 
   DAMAGE:
-    Damage Formula: "1d8"
+    Damage Formula: "1d8[slashing] + 2d6[fire]"
     Damage Type: slashing
 
   VERSATILE_DAMAGE:
-    Versatile Formula: "1d10"
+    Versatile Formula: "1d10[slashing] + 2d6[fire]"
     Versatile Damage Type: slashing
+
+  MASTERY:
+    Mastery: sap
 
   DESCRIPTION:
     Description: |
-      You can use a bonus action to speak this magic sword's command word, causing flames to erupt from the blade. These flames shed bright light in a 40-foot radius and dim light for an additional 40 feet. While the sword is ablaze, it deals an extra 2d6 fire damage to any target it hits. The flames last until you use a bonus action to speak the command word again or until you drop or sheathe the sword.
-
-  Activities:
-    - ACTIVITY_ATTACK:
-        ACTIVITY:
-          Name: "Flame Tongue Strike"
-          Icon: "n/a"
-
-        CHAT_FLAVOR:
-          Chat Description: |
-            A fiery slash with the Flame Tongue.
-
-        ATTACK:
-          Attack Type: "melee"
-          Attack Class: "weapon"
-
-        ACTIVATION:
-          Activation Type: "action"
-          Activation Cost: 1
-          Condition: "n/a"
-          Override Activation: false
-
-        DURATION:
-          Duration Time: "inst"
-          Concentration: false
-
-        RANGE:
-          Range: true
-          Range Units: "ft"
-          Range Value: 5
-          Special Range: "n/a"
-
-        TARGETS:
-          Target Type: "creature"
-          Target Amount: 1
-          Special Targeting: "n/a"
-          Choose Targets: false
-          Template Type: "n/a"
-
-        ATTACK_DETAILS:
-          Attack Ability: "str"
-          To Hit Bonus: "n/a"
-          Flat To Hit: false
-          Critical Threshold: "n/a"
-
-        ATTACK_DAMAGE:
-          Include Base Damage: true
-          Extra Critical Damage: "n/a"
-          DAMAGE_PARTS:
-            - Custom Damage Formula: true
-              Damage Formula: "2d6"
-              Damage Type: "fire"
-              Damage Scaling: "No Scaling"
-
-    - EFFECT:
-        DETAILS:
-          Name: "Flame Tongue Active"
-          Icon Tint Color: "n/a"
-          Effect Suspended: false
-          Apply Effect to Actor: true
-          Status Conditions: "n/a"
-          Separate Status Conditions: "n/a"
-
-        EFFECT_DESCRIPTION:
-          Effect Description: |
-            The Flame Tongue sword is ablaze, shedding bright light in a 40-foot radius.
-
-        DURATION:
-          Effect Duration (Seconds): "n/a"
-          Effect Start Time: "n/a"
-          Effect Duration (combat) Rounds: "n/a"
-          Effect Duration (combat) Turns: "n/a"
-          Effect Start (combat) Rounds: "n/a"
-          Effect Start (combat) Turns: "n/a"`
+      [[lookup @name]]{The creature} can use a bonus action to speak this magic sword's command word, causing flames to erupt from the blade. These flames shed bright light in a 40-foot radius and dim light for an additional 40 feet. While the sword is ablaze, it deals an extra [[/damage 2d6 fire average]] to any target it hits. The flames last until [[lookup @name]]{the creature} uses a bonus action to speak the command word again or until they drop or sheathe the sword.`
     }
 ];
