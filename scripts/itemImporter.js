@@ -70,7 +70,8 @@ function registerAPI() {
                 name: MODULE_NAME,
                 title: MODULE_TITLE,
                 version: game.modules.get(MODULE_NAME).version,
-                debug: game.settings.get(MODULE_NAME, "debug")
+                debug: game.settings.get(MODULE_NAME, "debug"),
+                enableMcpDiagnostics: game.settings.get(MODULE_NAME, "enableMcpDiagnostics")
             };
         }
     };
@@ -286,6 +287,7 @@ if (typeof window !== "undefined") {
         get settings() {
             return {
                 debug: game.settings.get(MODULE_NAME, "debug"),
+                enableMcpDiagnostics: game.settings.get(MODULE_NAME, "enableMcpDiagnostics"),
                 showParseResults: game.settings.get(MODULE_NAME, "showParseResults"),
                 autoParse: game.settings.get(MODULE_NAME, "autoParse"),
                 matchIcons: game.settings.get(MODULE_NAME, "matchIcons"),

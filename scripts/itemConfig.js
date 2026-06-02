@@ -3,7 +3,8 @@
  * Handles module settings, constants, and configuration options
  */
 
-export const MODULE_NAME = "5e-item-importer";
+export const MODULE_ID = "5e-item-importer";
+export const MODULE_NAME = MODULE_ID;
 export const MODULE_TITLE = "5e Item Importer";
 
 /** Valid YAML top-level item type keys for strict parser detection */
@@ -19,9 +20,9 @@ export const YAML_KEY_REGEXES = Object.fromEntries(
  */
 export function registerSettings() {
     // Debug Mode - Show detailed logging and parsing information
-    game.settings.register(MODULE_NAME, "debug", {
-        name: "Debug Mode",
-        hint: "Enable detailed logging in the console for troubleshooting. Useful for development and reporting issues.",
+    game.settings.register(MODULE_ID, "debug", {
+        name: "Debug Logging",
+        hint: "Advanced troubleshooting logs for parser and MCP diagnostics workflows. Leave this disabled unless you are intentionally debugging or reporting an issue.",
         scope: "client",
         config: true,
         type: Boolean,
@@ -31,8 +32,17 @@ export function registerSettings() {
         }
     });
 
+    game.settings.register(MODULE_ID, "enableMcpDiagnostics", {
+        name: "Enable MCP Diagnostics",
+        hint: "Advanced GM-only diagnostics for Foundry MCP Bridge workflows, including confirmed test fixture automation. Leave this disabled during normal play unless you are intentionally debugging or testing this module.",
+        scope: "world",
+        config: true,
+        type: Boolean,
+        default: false,
+    });
+
     // Show Parse Results - Display parsed data before import
-    game.settings.register(MODULE_NAME, "showParseResults", {
+    game.settings.register(MODULE_ID, "showParseResults", {
         name: "Show Parse Results",
         hint: "Display the parsed item data in console before importing. Helpful for debugging parsing issues.",
         scope: "client",
@@ -42,7 +52,7 @@ export function registerSettings() {
     });
 
     // Show YAML Normalization Warnings - Surface auto-fix diagnostics
-    game.settings.register(MODULE_NAME, "showNormalizationWarnings", {
+    game.settings.register(MODULE_ID, "showNormalizationWarnings", {
         name: "Show YAML Normalization Warnings",
         hint: "When enabled, warnings appear whenever the parser auto-fixes common YAML mistakes (smart quotes, leading tabs, missing space after colon, BOM). Useful for debugging template or LLM-prompt issues. Off by default since fix-ups are silent and safe.",
         scope: "client",
@@ -52,7 +62,7 @@ export function registerSettings() {
     });
 
     // Auto-parse - Automatically parse text as user types
-    game.settings.register(MODULE_NAME, "autoParse", {
+    game.settings.register(MODULE_ID, "autoParse", {
         name: "Auto-Parse on Input",
         hint: "Automatically parse the item text as you type (with a short delay). Disable if you prefer manual parsing.",
         scope: "client",
@@ -62,7 +72,7 @@ export function registerSettings() {
     });
 
     // Auto-parse delay
-    game.settings.register(MODULE_NAME, "autoParseDelay", {
+    game.settings.register(MODULE_ID, "autoParseDelay", {
         name: "Auto-Parse Delay (ms)",
         hint: "Milliseconds to wait after typing stops before auto-parsing. Higher values reduce CPU usage.",
         scope: "client",
@@ -77,7 +87,7 @@ export function registerSettings() {
     });
 
     // Compendium Priority - For looking up similar items
-    game.settings.register(MODULE_NAME, "compendiums", {
+    game.settings.register(MODULE_ID, "compendiums", {
         name: "Compendium Priority",
         hint: "Internal setting for compendium search priority",
         scope: "client",
@@ -87,7 +97,7 @@ export function registerSettings() {
     });
 
     // Default item type when not detected
-    game.settings.register(MODULE_NAME, "defaultItemType", {
+    game.settings.register(MODULE_ID, "defaultItemType", {
         name: "Default Item Type",
         hint: "The item type to use when the parser can't determine it from the text.",
         scope: "client",
@@ -105,7 +115,7 @@ export function registerSettings() {
     });
 
     // Icon matching - Try to find matching icons from compendiums
-    game.settings.register(MODULE_NAME, "matchIcons", {
+    game.settings.register(MODULE_ID, "matchIcons", {
         name: "Match Icons from Compendiums",
         hint: "Automatically search compendiums for matching item icons based on item name.",
         scope: "client",
@@ -115,7 +125,7 @@ export function registerSettings() {
     });
 
     // Create identified items by default
-    game.settings.register(MODULE_NAME, "createIdentified", {
+    game.settings.register(MODULE_ID, "createIdentified", {
         name: "Create Items as Identified",
         hint: "Mark imported items as identified by default.",
         scope: "client",
@@ -125,7 +135,7 @@ export function registerSettings() {
     });
 
     // Use Semantic Random Icons
-    game.settings.register(MODULE_NAME, "useSemanticIcons", {
+    game.settings.register(MODULE_ID, "useSemanticIcons", {
         name: "Use Semantic Random Icons",
         hint: "Assign random icons from dnd5e system folders based on item identity (e.g., a longsword gets a random sword icon). Takes priority over compendium icon matching.",
         scope: "client",
@@ -135,7 +145,7 @@ export function registerSettings() {
     });
 
     // Parse currency from descriptions
-    game.settings.register(MODULE_NAME, "parseCurrency", {
+    game.settings.register(MODULE_ID, "parseCurrency", {
         name: "Parse Currency Values",
         hint: "Attempt to extract currency values (gp, sp, cp, etc.) from item descriptions.",
         scope: "client",
@@ -145,7 +155,7 @@ export function registerSettings() {
     });
 
     // Parse weight from descriptions
-    game.settings.register(MODULE_NAME, "parseWeight", {
+    game.settings.register(MODULE_ID, "parseWeight", {
         name: "Parse Weight Values",
         hint: "Attempt to extract weight values from item descriptions.",
         scope: "client",
@@ -155,7 +165,7 @@ export function registerSettings() {
     });
 
     // Strict parsing mode
-    game.settings.register(MODULE_NAME, "strictParsing", {
+    game.settings.register(MODULE_ID, "strictParsing", {
         name: "Strict Parsing Mode",
         hint: "Require more precise formatting. Disable for more lenient parsing of homebrew or non-standard formats.",
         scope: "client",
@@ -165,7 +175,7 @@ export function registerSettings() {
     });
 
     // Store the last imported item type for quick re-use
-    game.settings.register(MODULE_NAME, "lastImportedType", {
+    game.settings.register(MODULE_ID, "lastImportedType", {
         name: "Last Imported Type",
         scope: "client",
         config: false,
@@ -174,7 +184,7 @@ export function registerSettings() {
     });
 
     // Preserve formatting in descriptions
-    game.settings.register(MODULE_NAME, "preserveFormatting", {
+    game.settings.register(MODULE_ID, "preserveFormatting", {
         name: "Preserve Description Formatting",
         hint: "Maintain paragraph breaks and basic formatting in item descriptions.",
         scope: "client",
@@ -184,7 +194,7 @@ export function registerSettings() {
     });
 
     // Integrate with 5e Activity Importer
-    game.settings.register(MODULE_NAME, "integrateWithActivityImporter", {
+    game.settings.register(MODULE_ID, "integrateWithActivityImporter", {
         name: "Merge with Activity Importer Dropdown",
         hint: "When enabled and the 5e Activity Importer module is active, the 'Import Item' button will appear as an option inside the Activity Importer's dropdown instead of as a separate button.",
         scope: "client",
@@ -193,7 +203,7 @@ export function registerSettings() {
         default: true,
     });
 
-    game.settings.register(MODULE_NAME, "replaceGeneratedDefaultActivities", {
+    game.settings.register(MODULE_ID, "replaceGeneratedDefaultActivities", {
         name: "Replace Generated Default Activities",
         hint: "When importing inline activities, prevent dnd5e from adding its generated weapon/tool default if the imported activities already include that same primary activity type. Disable this to keep both the generated default and imported activities.",
         scope: "client",
@@ -203,7 +213,7 @@ export function registerSettings() {
     });
 
     // Track if welcome message has been shown (internal)
-    game.settings.register(MODULE_NAME, "hasShownWelcome", {
+    game.settings.register(MODULE_ID, "hasShownWelcome", {
         name: "Has Shown Welcome",
         scope: "client",
         config: false,

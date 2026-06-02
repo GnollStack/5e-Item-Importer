@@ -9,6 +9,12 @@ import { MODULE_NAME, MODULE_TITLE, getPacks, CurrencyRates } from "./itemConfig
  * Logging prefix for consistency
  */
 const LOG_PREFIX = `${MODULE_TITLE} |`;
+const UNSAFE_PROPERTY_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
+function splitPropertyPath(path) {
+    if (typeof path !== "string") return [];
+    return path.split(".").filter(Boolean);
+}
 
 /**
  * Main utilities class
@@ -790,14 +796,44 @@ export class ItemUtils {
      * Safely set a property on an object using dot notation
      */
     static setProperty(obj, path, value) {
-        return foundry.utils.setProperty(obj, path, value);
+        if (!obj || typeof obj !== "object") return false;
+
+        const parts = splitPropertyPath(path);
+        if (!parts.length) return false;
+
+        let target = obj;
+        for (const key of parts.slice(0, -1)) {
+            if (UNSAFE_PROPERTY_KEYS.has(key)) return false;
+            if (!target[key] || typeof target[key] !== "object") {
+                target[key] = {};
+            }
+            target = target[key];
+        }
+
+        const last = parts.at(-1);
+        if (UNSAFE_PROPERTY_KEYS.has(last)) return false;
+
+        target[last] = value;
+        return true;
     }
 
     /**
      * Safely get a property from an object using dot notation
      */
     static getProperty(obj, path) {
-        return foundry.utils.getProperty(obj, path);
+        if (!obj || typeof obj !== "object") return undefined;
+
+        const parts = splitPropertyPath(path);
+        if (!parts.length) return undefined;
+
+        let target = obj;
+        for (const key of parts) {
+            if (UNSAFE_PROPERTY_KEYS.has(key)) return undefined;
+            if (target === null || target === undefined || typeof target !== "object") return undefined;
+            target = target[key];
+        }
+
+        return target;
     }
 
     /**

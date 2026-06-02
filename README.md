@@ -7,7 +7,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer?label=Latest%20Release&style=flat-square)](https://github.com/GnollStack/5e-Item-Importer/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/total?style=flat-square&color=green)](https://github.com/GnollStack/5e-Item-Importer/releases)
 [![Downloads@latest](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/total?style=flat-square)](https://github.com/GnollStack/5e-Item-Importer/releases/latest)
-[![Foundry VTT](https://img.shields.io/badge/Foundry-v13-orange?style=flat-square)](https://foundryvtt.com)
+[![Foundry VTT](https://img.shields.io/badge/Foundry-v14-orange?style=flat-square)](https://foundryvtt.com)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20a%20Steak-FF5E5B?style=flat-square&logo=ko-fi&logoColor=white)](https://ko-fi.com/gnollstack)
 
 *For GMs who want D&D 5e items imported from text instead of typed by hand.*
@@ -101,8 +101,10 @@ https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.j
 
 | Requirement | Version |
 | --- | --- |
-| Foundry VTT | v13+ (verified through v13.351) |
-| D&D 5e System | v5.1.10+ (verified through v5.2.5) |
+| Foundry VTT | v14+ (verified through v14.363) |
+| D&D 5e System | v5.3.3+ (verified through v5.3.3) |
+
+This release line intentionally targets Foundry VTT v14 and dnd5e v5.3.x. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.
 
 ---
 
@@ -966,6 +968,32 @@ For import-ready examples, use the [validated custom YAML examples](#validated-c
 
 ---
 
+<a id="advanced-mcp-diagnostics"></a>
+
+## Advanced MCP Diagnostics
+
+5e Item Importer exposes an allowlisted diagnostics API for Foundry MCP Bridge at:
+
+```js
+game.modules.get("5e-item-importer").api.diagnostics.actions
+```
+
+These controls are advanced GM-only debugging tools. Normal GMs can leave them disabled during play.
+
+Diagnostics require all of these gates:
+
+- Active GM user
+- **Debug Logging** (`debug`)
+- **Enable MCP Diagnostics** (`enableMcpDiagnostics`)
+
+Read-only diagnostics include status, settings validation, asset validation, compact client snapshots, parser text validation, activity handoff analysis, world item inspection, opening the import window, and structured smoke tests. Smoke tests are expected to stay read-only and report before/after world document counts.
+
+Confirmed fixture automation is available under the same **Enable MCP Diagnostics** gate. `runAutomation` and `cleanupFixtures` also require `confirmMutation: true`. Fixture cleanup only deletes world Items whose names start with `5E-ITEM-IMPORTER-MCP-FIXTURE` and that also carry this module's `mcpAutomationFixture` flag.
+
+For hard refresh testing, the MCP bridge `reload-foundry-client` tool is the main refresh path. The module-level `refreshClient` action is inherently available when diagnostics gates are open and additionally requires `confirmRefresh: true`.
+
+---
+
 <a id="community"></a>
 
 ## Community
@@ -1052,7 +1080,7 @@ For licensing inquiries or permission slips:
 
 <div align="center">
 
-**Author:** [GnollStack](https://github.com/GnollStack) · **Compatibility:** Foundry VTT v13+ (verified v13.351)
+**Author:** [GnollStack](https://github.com/GnollStack) · **Compatibility:** Foundry VTT v14+ (verified v14.363)
 
 [⬆ Back to Top](#5e-item-importer)
 

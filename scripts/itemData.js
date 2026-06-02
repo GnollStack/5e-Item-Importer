@@ -1,6 +1,6 @@
 /**
  * 5e Item Importer - Item Data Model
- * Represents parsed item data and transforms it to Foundry V13 format
+ * Represents parsed item data and transforms it to dnd5e item data.
  */
 
 import jsyaml from './vendor/js-yaml.mjs';
@@ -173,18 +173,18 @@ export class ItemData {
    * Set a property on the Foundry item data
    */
   setProperty(path, value) {
-    return foundry.utils.setProperty(this.#dnd5e, path, value);
+    return ItemUtils.setProperty(this.#dnd5e, path, value);
   }
 
   /**
    * Get a property from the Foundry item data
    */
   getProperty(path) {
-    return foundry.utils.getProperty(this.#dnd5e, path);
+    return ItemUtils.getProperty(this.#dnd5e, path);
   }
 
   /**
-   * Transform parsed data to Foundry V13 item structure
+   * Transform parsed data to Foundry dnd5e item structure
    */
   async buildFoundryData(options = {}) {
     ItemUtils.log("Building Foundry data for:", this.name);
