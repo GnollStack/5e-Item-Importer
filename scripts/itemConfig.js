@@ -144,32 +144,46 @@ export function registerSettings() {
         default: true,
     });
 
-    // Parse currency from descriptions
-    game.settings.register(MODULE_ID, "parseCurrency", {
-        name: "Parse Currency Values",
-        hint: "Attempt to extract currency values (gp, sp, cp, etc.) from item descriptions.",
+    game.settings.register(MODULE_ID, "compendiumImageMode", {
+        name: "Compendium Image Selection",
+        hint: "Choose the best deterministic image match, or randomize among top-scoring compendium candidates.",
         scope: "client",
         config: true,
+        type: String,
+        choices: {
+            deterministic: "Best deterministic match",
+            random: "Random top match"
+        },
+        default: "deterministic"
+    });
+
+    // Legacy no-op settings remain registered so existing world/client data and
+    // macros can read them, but are hidden until they control parser behavior.
+    game.settings.register(MODULE_ID, "parseCurrency", {
+        name: "Parse Currency Values (Legacy)",
+        hint: "Legacy compatibility setting. Currency parsing is currently determined by the selected input format.",
+        scope: "client",
+        config: false,
         type: Boolean,
         default: true,
     });
 
     // Parse weight from descriptions
     game.settings.register(MODULE_ID, "parseWeight", {
-        name: "Parse Weight Values",
-        hint: "Attempt to extract weight values from item descriptions.",
+        name: "Parse Weight Values (Legacy)",
+        hint: "Legacy compatibility setting. Weight parsing is currently determined by the selected input format.",
         scope: "client",
-        config: true,
+        config: false,
         type: Boolean,
         default: true,
     });
 
     // Strict parsing mode
     game.settings.register(MODULE_ID, "strictParsing", {
-        name: "Strict Parsing Mode",
-        hint: "Require more precise formatting. Disable for more lenient parsing of homebrew or non-standard formats.",
+        name: "Strict Parsing Mode (Legacy)",
+        hint: "Legacy compatibility setting. Parser routing now chooses strict YAML, lightweight YAML, or natural text automatically.",
         scope: "client",
-        config: true,
+        config: false,
         type: Boolean,
         default: false,
     });
@@ -183,12 +197,32 @@ export function registerSettings() {
         default: ""
     });
 
+    // Client-local reusable input presets. These are intentionally not shared
+    // with the world so each user controls their own drafting shortcuts.
+    game.settings.register(MODULE_ID, "savedPresets", {
+        name: "Saved Item Import Presets",
+        scope: "client",
+        config: false,
+        type: Object,
+        default: {}
+    });
+
+    // Last selected import destination. Permission and availability are always
+    // revalidated when the window opens and immediately before persistence.
+    game.settings.register(MODULE_ID, "lastDestination", {
+        name: "Last Item Import Destination",
+        scope: "client",
+        config: false,
+        type: Object,
+        default: { kind: "world", folderId: null }
+    });
+
     // Preserve formatting in descriptions
     game.settings.register(MODULE_ID, "preserveFormatting", {
-        name: "Preserve Description Formatting",
-        hint: "Maintain paragraph breaks and basic formatting in item descriptions.",
+        name: "Preserve Description Formatting (Legacy)",
+        hint: "Legacy compatibility setting. Description formatting is preserved by the active parser.",
         scope: "client",
-        config: true,
+        config: false,
         type: Boolean,
         default: true,
     });
@@ -581,10 +615,10 @@ export class PerformanceMonitor {
  * Feature flags for experimental features
  */
 export const FeatureFlags = {
-    EXPORT_TO_TEXT: false,        // Export items back to text format
-    TEMPLATE_SYSTEM: false,       // Planned: Save and reuse item templates
-    AI_SUGGESTIONS: false,        // Planned: AI-powered parsing suggestions
-    CUSTOM_PROPERTIES: false      // Planned: Support for custom item properties
+    EXPORT_TO_TEXT: true,         // Export items back to strict YAML
+    TEMPLATE_SYSTEM: true,        // Client-local saved item templates
+    AI_SUGGESTIONS: true,         // Deterministic local parser insights
+    CUSTOM_PROPERTIES: true       // Allowlisted module-flag custom properties
 };
 
 /**

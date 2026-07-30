@@ -74,11 +74,13 @@ export function renderBatchComparisonSummary(comparisons) {
     let totalMatches = 0;
     let totalMismatches = 0;
     let totalMissing = 0;
+    let totalExtra = 0;
 
     for (const comp of comparisons) {
         totalMatches += comp.diffReport.matches;
         totalMismatches += comp.diffReport.mismatches.length;
         totalMissing += comp.diffReport.missing.length;
+        totalExtra += comp.diffReport.extra.length;
     }
 
     html += `<div class="ii-comparison-summary">`;
@@ -89,7 +91,10 @@ export function renderBatchComparisonSummary(comparisons) {
     if (totalMissing > 0) {
         html += `<div class="ii-comparison-stat missing"><i class="fas fa-question-circle"></i> ${totalMissing} Missing</div>`;
     }
-    if (totalMismatches === 0 && totalMissing === 0) {
+    if (totalExtra > 0) {
+        html += `<div class="ii-comparison-stat extra"><i class="fas fa-plus-circle"></i> ${totalExtra} Extra</div>`;
+    }
+    if (totalMismatches === 0 && totalMissing === 0 && totalExtra === 0) {
         html += `<div class="ii-comparison-stat all-good"><i class="fas fa-thumbs-up"></i> All Items Match!</div>`;
     }
     html += `</div>`;
@@ -100,13 +105,14 @@ export function renderBatchComparisonSummary(comparisons) {
         const hasIssues = dr.mismatches.length > 0 || dr.missing.length > 0 || dr.extra.length > 0;
         const statusClass = hasIssues ? "has-issues" : "all-match";
         const statusIcon = hasIssues ? "fa-exclamation-triangle" : "fa-check-circle";
+        const issueCount = dr.mismatches.length + dr.missing.length + dr.extra.length;
 
         html += `<div class="ii-comparison-batch-item ${statusClass}">
             <div class="ii-comparison-batch-item-header">
                 <i class="fas ${statusIcon}"></i>
                 <span class="ii-comparison-batch-item-name">${esc(comp.label)}</span>
                 <span class="ii-comparison-batch-item-stats">
-                    ${dr.matches} match${dr.matches !== 1 ? "es" : ""}${hasIssues ? `, ${dr.mismatches.length + dr.missing.length} issue${dr.mismatches.length + dr.missing.length !== 1 ? "s" : ""}` : ""}
+                    ${dr.matches} match${dr.matches !== 1 ? "es" : ""}${hasIssues ? `, ${issueCount} issue${issueCount !== 1 ? "s" : ""}` : ""}
                 </span>
             </div>`;
 
@@ -120,6 +126,11 @@ export function renderBatchComparisonSummary(comparisons) {
             for (const m of dr.missing) {
                 html += `<div class="ii-comparison-issue-compact">
                     <span>${esc(m.label)}:</span> ${esc(stripHtml(m.expected))} &rarr; <em>(not found)</em>
+                </div>`;
+            }
+            for (const m of dr.extra) {
+                html += `<div class="ii-comparison-issue-compact">
+                    <span>${esc(m.label)}:</span> <em>(not in template)</em> &rarr; ${esc(stripHtml(m.actual))}
                 </div>`;
             }
             html += `</div>`;

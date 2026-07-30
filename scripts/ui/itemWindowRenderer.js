@@ -4,6 +4,7 @@
  */
 
 import { ItemUtils } from "../itemUtils.js";
+import { localize } from "./itemWorkflowServices.js";
 
 /** Shorthand for HTML escaping */
 const esc = (str) => ItemUtils.escapeHtml(str);
@@ -92,18 +93,22 @@ export function getPreviewIcon(item) {
 export function getQuickStats(item) {
     const stats = [];
 
-    if (item.cost > 0) {
-        const costDisplay = item.costDisplay || item.getCostValue();
+    const costDisplay = item.costDisplay ?? item.getCostValue?.() ?? item.cost;
+    const numericCost = Number(costDisplay);
+    const hasCost = Number.isFinite(numericCost)
+        ? numericCost > 0
+        : typeof costDisplay === "string" && !!costDisplay.trim() && costDisplay.trim() !== "0";
+    if (item.type !== "spell" && hasCost) {
         const denom = item.costDenomination || "gp";
         stats.push({ icon: "fa-coins", value: `${costDisplay} ${denom}`, label: "Cost" });
     }
 
-    if (item.weight > 0) {
+    if (item.type !== "spell" && item.weight > 0) {
         const unitDisplay = item.weightUnits === "lb" ? "lb." : item.weightUnits;
         stats.push({ icon: "fa-weight-hanging", value: `${item.weight} ${unitDisplay}`, label: "Weight" });
     }
 
-    if (item.quantity > 1) {
+    if (item.type !== "spell" && item.quantity > 1) {
         stats.push({ icon: "fa-layer-group", value: item.quantity, label: "Qty" });
     }
 
@@ -306,7 +311,12 @@ export function getSpecialProperties(item) {
     }
 
     if (item.uses && item.uses.max) {
-        props.push({ label: "Uses", value: `${item.uses.value ?? 0}/${item.uses.max}` });
+        const spent = Number(item.uses.value ?? 0);
+        const max = Number(item.uses.max);
+        const value = Number.isFinite(spent) && Number.isFinite(max)
+            ? `${Math.max(0, max - spent)}/${max}`
+            : `${item.uses.value ?? 0} spent / ${item.uses.max}`;
+        props.push({ label: "Uses", value });
     }
 
     if (item.recovery && item.recovery.length > 0) {
@@ -314,7 +324,7 @@ export function getSpecialProperties(item) {
         props.push({ label: "Recovery", value: recoveryText });
     }
 
-    if (item.attunementRequirement) {
+    if (item.type !== "spell" && item.attunementRequirement) {
         props.push({ label: "Attunement", value: item.attunementRequirement, fullWidth: true });
     }
 
@@ -375,6 +385,59 @@ export function renderSection(icon, title, properties) {
     return html;
 }
 
+function renderSuggestedAutomation(item, itemIndex = "") {
+    const suggestions = (item?.pendingActivities || [])
+        .map((entry, pendingIndex) => ({ entry, pendingIndex }))
+        .filter(({ entry }) => entry?._synthesized);
+    if (!suggestions.length) return "";
+    return `<div class="ii-suggested-automation" role="group" aria-label="${esc(localize("II.Suggestions.AutomationTitle", "Suggested Automation (review before import)"))}">
+      ${suggestions.map(({ entry, pendingIndex }) => `<div class="ii-suggestion-row">
+        <span><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> ${esc(entry.name || entry.key)}</span>
+        <button type="button" data-action="removeSuggestedAutomation" data-item-index="${itemIndex}" data-pending-index="${pendingIndex}"
+          aria-label="${esc(localize("II.Suggestions.RemoveNamed", "Remove suggested automation: {name}", { name: entry.name || entry.key }))}">
+          <i class="fas fa-times" aria-hidden="true"></i> ${esc(localize("II.Actions.Remove", "Remove"))}
+        </button>
+      </div>`).join("")}
+    </div>`;
+}
+
+function renderWorkflowInsights(result) {
+    const workflow = result?._workflow;
+    if (!workflow) return "";
+    const insights = workflow.insights || {};
+    const suggestions = Array.isArray(insights.suggestions) ? insights.suggestions : [];
+    const confidence = Number(insights.confidence?.overall);
+    const provenance = Array.isArray(insights.provenance) ? insights.provenance : [];
+    const iconCandidates = Array.isArray(workflow.iconCandidates) ? workflow.iconCandidates : [];
+    const selectedIcon = workflow.selectedIconCandidate;
+    const animation = workflow.animation?.selected;
+    const custom = workflow.customProperties;
+    const customCount = (Array.isArray(custom?.registered) ? custom.registered.length : 0)
+        + Object.keys(custom?.metadata || custom?.values || {}).length;
+
+    return `<div class="ii-section ii-insights-section">
+      <div class="ii-section-header">
+        <i class="fas fa-magnifying-glass-chart ii-section-icon" aria-hidden="true"></i>
+        <span class="ii-section-title">${esc(localize("II.Insights.Title", "Local Parse Insights"))}</span>
+        <i class="fas fa-chevron-down ii-section-toggle" aria-hidden="true"></i>
+      </div>
+      <div class="ii-section-content">
+        <div class="ii-insight-summary">
+          ${Number.isFinite(confidence) ? `<span><strong>${esc(localize("II.Insights.Confidence", "Confidence"))}:</strong> ${Math.round(confidence * 100)}%</span>` : ""}
+          ${insights.parser ? `<span><strong>${esc(localize("II.Insights.Parser", "Parser"))}:</strong> ${esc(insights.parser)}</span>` : ""}
+          ${provenance.length ? `<span><strong>${esc(localize("II.Insights.Fields", "Traced fields"))}:</strong> ${provenance.length}</span>` : ""}
+        </div>
+        ${suggestions.length ? `<ul class="ii-insight-suggestions">${suggestions.slice(0, 12).map(suggestion =>
+            `<li class="severity-${esc(suggestion.severity || "info")}">${esc(suggestion.message || suggestion)}</li>`
+        ).join("")}</ul>` : `<p class="hint">${esc(localize("II.Insights.NoSuggestions", "No local review suggestions."))}</p>`}
+        ${selectedIcon ? `<p class="ii-insight-choice"><strong>${esc(localize("II.Preview.IconCandidates", "Compendium Image Candidates"))}:</strong>
+          ${esc(selectedIcon.name)} (${Math.round(Number(selectedIcon.score || 0) * 100)}%, ${iconCandidates.length} shown)</p>` : ""}
+        ${animation ? `<p class="ii-insight-choice"><strong>${esc(localize("II.Preview.Animation", "AutoAnimations Preview"))}:</strong> ${esc(animation.label || animation.id)}</p>` : ""}
+        ${customCount ? `<p class="ii-insight-choice"><strong>${esc(localize("II.Preview.CustomProperties", "Custom Properties"))}:</strong> ${customCount}</p>` : ""}
+      </div>
+    </div>`;
+}
+
 /**
  * Render the item card preview
  * @param {ItemData} item - The parsed item
@@ -393,13 +456,15 @@ export function renderItemCard(item, result) {
     html += `<div class="ii-card-title-block">`;
     html += `<h3 class="ii-card-name">${esc(item.name)}</h3>`;
     html += `<div class="ii-card-subtitle">`;
-    html += `<span class="ii-card-type-badge type-${item.type}"><i class="fas ${typeIcon}"></i> ${formatType(item.type)}</span>`;
-    html += `<span class="ii-card-rarity rarity-${item.rarity}">${formatRarity(item.rarity)}</span>`;
+    html += `<span class="ii-card-type-badge type-${esc(item.type)}"><i class="fas ${esc(typeIcon)}"></i> ${esc(formatType(item.type))}</span>`;
+    if (item.type !== "spell") {
+        html += `<span class="ii-card-rarity rarity-${esc(item.rarity)}">${esc(formatRarity(item.rarity))}</span>`;
+    }
 
     if (item.isMagical) {
         html += `<span class="ii-card-magical"><i class="fas fa-sparkles"></i> Magical</span>`;
     }
-    if (item.attunement && item.attunement !== "none" && item.attunement !== "") {
+    if (item.type !== "spell" && item.attunement && item.attunement !== "none" && item.attunement !== "") {
         html += `<span class="ii-card-attunement"><i class="fas fa-link"></i> Attunement</span>`;
     }
 
@@ -411,13 +476,15 @@ export function renderItemCard(item, result) {
         html += `<div class="ii-card-stats">`;
         stats.forEach(stat => {
             html += `<div class="ii-stat-item">
-        <i class="fas ${stat.icon}"></i>
-        <span class="ii-stat-value">${stat.value}</span>
-        <span class="ii-stat-label">${stat.label}</span>
+        <i class="fas ${esc(stat.icon)}"></i>
+        <span class="ii-stat-value">${esc(stat.value)}</span>
+        <span class="ii-stat-label">${esc(stat.label)}</span>
       </div>`;
         });
         html += `</div>`;
     }
+
+    html += renderWorkflowInsights(result);
 
     // Card Body with Sections
     html += `<div class="ii-card-body">`;
@@ -468,6 +535,8 @@ export function renderItemCard(item, result) {
         <i class="fas fa-chevron-down ii-section-toggle"></i>
       </div>
       <div class="ii-section-content">`;
+
+        html += renderSuggestedAutomation(item);
 
         // Check if activity importer is active (safely handle non-Foundry environments)
         const activityImporterActive = typeof game !== 'undefined' && game.modules?.get?.("5e-activity-importer")?.active;
@@ -529,6 +598,7 @@ export function renderItemCard(item, result) {
  * @returns {string} HTML string
  */
 export function renderBatchSummary(results, selectedItems) {
+    const types = [...new Set(results.successes.map(result => result.item?.type).filter(Boolean))].sort();
     let html = `<div class="ii-item-card">`;
 
     // Header for batch
@@ -573,19 +643,46 @@ export function renderBatchSummary(results, selectedItems) {
             </div>
           </div>
 
+          <div class="ii-batch-filter-controls" role="search">
+            <label for="ii-batch-filter">${esc(localize("II.Batch.Filter", "Filter ready Items"))}</label>
+            <input id="ii-batch-filter" type="search" placeholder="${esc(localize("II.Batch.FilterPlaceholder", "Search by name..."))}">
+            <label for="ii-batch-type-filter">${esc(localize("II.Batch.Type", "Type"))}</label>
+            <select id="ii-batch-type-filter">
+              <option value="">${esc(localize("II.Batch.AllTypes", "All types"))}</option>
+              ${types.map(type => `<option value="${esc(type)}">${esc(formatType(type))}</option>`).join("")}
+            </select>
+            <span id="ii-batch-filter-count" role="status" aria-live="polite"></span>
+          </div>
+
           <div class="ii-batch-grid">`;
 
         results.successes.forEach((res, index) => {
             const icon = getPreviewIcon(res.item);
-            const isSelected = selectedItems.has(index);
-            html += `<div class="ii-batch-item success selectable${isSelected ? " selected" : ""}" data-index="${index}">
-        <input type="checkbox" class="ii-batch-checkbox" data-index="${index}"${isSelected ? " checked" : ""}>
+            const hasUnresolvedUuids = !!res.item?._hasUnresolvedUuids;
+            const isSelected = !hasUnresolvedUuids && selectedItems.has(index);
+            const selectionClass = hasUnresolvedUuids ? " uuid-blocked" : " selectable";
+            const duplicateMode = ["create", "update", "merge", "skip"].includes(res._duplicateMode) ? res._duplicateMode : "";
+            html += `<div class="ii-batch-item success${selectionClass}${isSelected ? " selected" : ""}" data-index="${index}"
+        data-search-name="${esc(String(res.item.name || "").toLocaleLowerCase())}" data-item-type="${esc(res.item.type || "")}">
+        <input type="checkbox" class="ii-batch-checkbox" data-index="${index}" aria-label="${esc(localize("II.Batch.SelectNamed", "Select {name}", { name: res.item.name }))}"${isSelected ? " checked" : ""}${hasUnresolvedUuids ? " disabled" : ""}>
         <div class="ii-batch-item-icon-wrapper">
-          <img src="${icon}" alt="">
+          <img src="${esc(icon)}" alt="">
         </div>
         <div class="ii-batch-item-info">
           <div class="ii-batch-item-name">${esc(res.item.name)}</div>
-          <div class="ii-batch-item-type">${formatType(res.item.type)} • ${formatRarity(res.item.rarity)}</div>
+          <div class="ii-batch-item-type">${esc(formatType(res.item.type))}${res.item.type === "spell" ? "" : ` &bull; ${esc(formatRarity(res.item.rarity))}`}</div>
+          ${hasUnresolvedUuids ? '<div class="ii-parse-warning">Resolve inline activity UUIDs to select this item.</div>' : ""}
+          <label class="ii-entry-mode-label">
+            ${esc(localize("II.Batch.DuplicatePolicy", "Duplicate policy"))}
+            <select class="ii-entry-mode" data-index="${index}" aria-label="${esc(localize("II.Batch.DuplicatePolicyFor", "Duplicate policy for {name}", { name: res.item.name }))}">
+              <option value=""${duplicateMode === "" ? " selected" : ""}>${esc(localize("II.Batch.UseGlobalPolicy", "Use global policy"))}</option>
+              <option value="create"${duplicateMode === "create" ? " selected" : ""}>${esc(localize("II.Duplicates.Create", "Create another Item"))}</option>
+              <option value="update"${duplicateMode === "update" ? " selected" : ""}>${esc(localize("II.Duplicates.Update", "Update incoming fields"))}</option>
+              <option value="merge"${duplicateMode === "merge" ? " selected" : ""}>${esc(localize("II.Duplicates.Merge", "Conservative merge"))}</option>
+              <option value="skip"${duplicateMode === "skip" ? " selected" : ""}>${esc(localize("II.Duplicates.Skip", "Skip duplicate"))}</option>
+            </select>
+          </label>
+          ${renderSuggestedAutomation(res.item, index)}
         </div>
       </div>`;
         });

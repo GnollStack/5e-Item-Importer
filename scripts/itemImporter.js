@@ -1,16 +1,24 @@
 /**
  * 5e Item Importer
  * Main entry point for the module
- * 
+ *
  * This module allows you to import D&D 5e items from text format
  * (like from PDFs, websites, or homebrew documents) into Foundry VTT.
  */
 
-import { MODULE_NAME, MODULE_TITLE, registerSettings, isFeatureEnabled } from "./itemConfig.js";
+import { MODULE_NAME, MODULE_TITLE, registerSettings } from "./itemConfig.js";
 import { ItemUtils } from "./itemUtils.js";
 import { ItemWindow } from "./itemWindow.js";
 import { createDiagnosticsApi } from "./debugApi.js";
 import { parseItemText } from "./parserRouting.js";
+import { createItemImporterApi } from "./ui/itemPublicApi.js";
+import { renderAttunementRequirement } from "./ui/itemAttunementNote.js";
+import {
+    exportCoreItemYaml,
+    exportFullItemYaml,
+    getActivityCapabilities
+} from "./ui/itemFeatureAdapters.js";
+import { copyText, downloadText, listActorDestinations, localize } from "./ui/itemWorkflowServices.js";
 
 /**
  * Initialize module
@@ -33,62 +41,37 @@ Hooks.on("init", () => {
  */
 function registerAPI() {
     const parse = (text, options = {}) => parseItemText(text, options);
-
     const diagnostics = createDiagnosticsApi({
         parse,
         openWindow: () => ItemWindow.renderWindow()
     });
-
-    game.modules.get(MODULE_NAME).api = {
-        // Expose utility functions
+    const module = game.modules.get(MODULE_NAME);
+    module.api = createItemImporterApi({
         utils: ItemUtils,
-
-        // Programmatic import now uses our new strict 'parse' function
-        parse: parse,
-        import: async (text, folderId) => {
-            try {
-                const result = parse(text);
-                return result?.item ? await result.item.createItem5e(folderId) : null;
-            } catch (error) {
-                ItemUtils.error("API import error", error);
-                return null;
-            }
-        },
-
-        // Open the import window
         openWindow: () => ItemWindow.renderWindow(),
-
-        // MCP Server Diagnostics
         diagnostics,
-
-        // Version info
-        version: game.modules.get(MODULE_NAME).version,
-
-        // Module info
-        info: () => {
-            return {
-                name: MODULE_NAME,
-                title: MODULE_TITLE,
-                version: game.modules.get(MODULE_NAME).version,
-                debug: game.settings.get(MODULE_NAME, "debug"),
-                enableMcpDiagnostics: game.settings.get(MODULE_NAME, "enableMcpDiagnostics")
-            };
-        }
-    };
-
-    ItemUtils.log("Module API registered", game.modules.get(MODULE_NAME).api);
+        version: module.version,
+        info: () => ({
+            name: MODULE_NAME,
+            title: MODULE_TITLE,
+            version: module.version,
+            debug: game.settings.get(MODULE_NAME, "debug"),
+            enableMcpDiagnostics: game.settings.get(MODULE_NAME, "enableMcpDiagnostics")
+        })
+    });
+    ItemUtils.log("Module API registered", module.api);
 }
 
 /**
  * Add standalone Import Item button to the Items Directory footer
  */
 function _addStandaloneButton(element) {
-    if (element.querySelector("#ii-main-button")) return;
+    if (element.querySelector("[data-ii-directory-control='true']")) return;
 
     ItemUtils.log("Adding Item Importer button to Items Directory");
 
     const importButton = document.createElement("button");
-    importButton.id = "ii-main-button";
+    importButton.dataset.iiDirectoryControl = "true";
     importButton.setAttribute("type", "button");
     importButton.classList.add("ii-directory-btn");
     importButton.innerHTML = `<i class="fas fa-file-import"></i> Import Item`;
@@ -114,7 +97,7 @@ function _addStandaloneButton(element) {
  */
 Hooks.on("renderItemDirectory", (app, html, data) => {
     // Only add button if user has permission to create items
-    if (!game.user.hasPermission("ITEM_CREATE")) {
+    if (!game.user.hasPermission("ITEM_CREATE") && listActorDestinations().length === 0) {
         return;
     }
 
@@ -127,7 +110,9 @@ Hooks.on("renderItemDirectory", (app, html, data) => {
     if (activityImporterActive && integrateWithActivityImporter) {
         // Defer injection until all renderItemDirectory hooks have fired
         setTimeout(() => {
-            const dropdown = element.querySelector("#ai-main-button-group .ai-directory-dropdown");
+            const dropdown = element.querySelector(
+                "[data-ai-directory-controls='true'] .ai-directory-dropdown, #ai-main-button-group .ai-directory-dropdown"
+            );
             if (!dropdown) {
                 // Activity importer dropdown not found — fall back to standalone button
                 _addStandaloneButton(element);
@@ -232,36 +217,207 @@ function showWelcomeMessage() {
     });
 }
 
-/**
- * Add context menu option to items (gated behind feature flag)
- */
-if (isFeatureEnabled('EXPORT_TO_TEXT')) {
-    Hooks.on("getItemDirectoryEntryContext", (html, contextOptions) => {
-        contextOptions.push({
-            name: "Export to Text",
-            icon: '<i class="fas fa-file-export"></i>',
-            condition: () => true,
-            callback: (li) => {
-                const item = game.items.get(li.data("documentId"));
-                if (item) {
-                    exportItemToText(item);
-                }
-            }
-        });
-    });
+/** Resolve a world Item from Foundry v14 or legacy context-menu arguments. */
+const EXPORTABLE_ITEM_TYPES = new Set(["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"]);
+
+function isExportableItem(item) {
+    return item?.documentName === "Item" && EXPORTABLE_ITEM_TYPES.has(item.type);
 }
 
-/**
- * Export item to text format (future feature)
- */
-function exportItemToText(item) {
-    ItemUtils.log("Exporting item to text", item);
-    ui.notifications.info(`${MODULE_TITLE} | Export feature coming soon!`);
+function contextEntryId(target) {
+    const element = target?.[0] ?? target;
+    const entry = element?.closest?.("[data-entry-id], [data-document-id]") ?? element;
+    return entry?.dataset?.documentId
+        ?? entry?.dataset?.entryId
+        ?? target?.data?.("documentId")
+        ?? target?.data?.("entryId")
+        ?? null;
+}
 
-    if (game.settings.get(MODULE_NAME, "debug")) {
-        console.log("Item data:", item.toObject());
+function resolveContextItem(target, app = null) {
+    if (target?.documentName === "Item") return target;
+    const id = contextEntryId(target);
+    if (!id) return null;
+    return app?.collection?.index?.get?.(id)
+        ?? app?.collection?.get?.(id)
+        ?? game.items.get(id)
+        ?? null;
+}
+
+async function resolveContextDocument(target, app = null) {
+    if (target?.documentName === "Item") return target;
+    const id = contextEntryId(target);
+    if (id && typeof app?.collection?.getDocument === "function") {
+        return app.collection.getDocument(id);
+    }
+    return resolveContextItem(target, app);
+}
+
+function isExportableContextItem(target, app = null) {
+    const item = resolveContextItem(target, app);
+    return isExportableItem(item)
+        || (!item?.documentName && EXPORTABLE_ITEM_TYPES.has(item?.type));
+}
+
+function hasFullExportSupport() {
+    return getActivityCapabilities().fullSerialization;
+}
+
+function exportFilename(item, mode) {
+    const name = item?.name || "5e-item";
+    return mode === "core" ? `${name}.core.yaml` : `${name}.yaml`;
+}
+
+async function copyCoreYaml(item) {
+    if (!isExportableItem(item)) return;
+    try {
+        await copyText(await exportCoreItemYaml(item));
+        ui.notifications.info(localize(
+            "II.Notifications.CoreExportCopied",
+            "Copied core Item YAML. Activities and Active Effects were excluded."
+        ));
+    } catch (error) {
+        ui.notifications.error(error?.message || String(error));
     }
 }
+
+async function downloadCoreYaml(item) {
+    if (!isExportableItem(item)) return;
+    try {
+        const yaml = await exportCoreItemYaml(item);
+        downloadText(yaml, exportFilename(item, "core"));
+    } catch (error) {
+        ui.notifications.error(error?.message || String(error));
+    }
+}
+
+async function copyFullYaml(item) {
+    if (!isExportableItem(item) || !hasFullExportSupport()) return;
+    try {
+        await copyText(await exportFullItemYaml(item));
+        ui.notifications.info(localize(
+            "II.Notifications.FullExportCopied",
+            "Copied full Item YAML with Activities and Active Effects."
+        ));
+    } catch (error) {
+        ui.notifications.error(error?.message || String(error));
+    }
+}
+
+async function downloadFullYaml(item) {
+    if (!isExportableItem(item) || !hasFullExportSupport()) return;
+    try {
+        const yaml = await exportFullItemYaml(item);
+        downloadText(yaml, exportFilename(item, "full"));
+    } catch (error) {
+        ui.notifications.error(error?.message || String(error));
+    }
+}
+
+Hooks.on("getItemContextOptions", (app, contextOptions) => {
+    if (contextOptions.some(option => option.iiItemExporter)) return;
+    contextOptions.push(
+        {
+            iiItemExporter: true,
+            label: localize("II.Export.CopyCore", "Copy Core Item YAML"),
+            icon: "fas fa-copy",
+            visible: target => isExportableContextItem(target, app),
+            onClick: async (_event, target) => copyCoreYaml(await resolveContextDocument(target, app))
+        },
+        {
+            iiItemExporter: true,
+            label: localize("II.Export.DownloadCore", "Download Core Item YAML"),
+            icon: "fas fa-download",
+            visible: target => isExportableContextItem(target, app),
+            onClick: async (_event, target) => downloadCoreYaml(await resolveContextDocument(target, app))
+        },
+        {
+            iiItemExporter: true,
+            label: localize("II.Export.CopyFull", "Copy Full Item YAML"),
+            icon: "fas fa-bolt",
+            visible: target => hasFullExportSupport() && isExportableContextItem(target, app),
+            onClick: async (_event, target) => copyFullYaml(await resolveContextDocument(target, app))
+        },
+        {
+            iiItemExporter: true,
+            label: localize("II.Export.DownloadFull", "Download Full Item YAML"),
+            icon: "fas fa-file-export",
+            visible: target => hasFullExportSupport() && isExportableContextItem(target, app),
+            onClick: async (_event, target) => downloadFullYaml(await resolveContextDocument(target, app))
+        }
+    );
+});
+
+// Compatibility for Foundry releases/modules still dispatching legacy directory hooks.
+Hooks.on("getItemDirectoryEntryContext", (_html, contextOptions) => {
+    if (contextOptions.some(option => option.iiItemExporter)) return;
+    contextOptions.push(
+        {
+            iiItemExporter: true,
+            name: localize("II.Export.CopyCore", "Copy Core Item YAML"),
+            icon: '<i class="fas fa-copy"></i>',
+            condition: target => isExportableItem(resolveContextItem(target)),
+            callback: target => copyCoreYaml(resolveContextItem(target))
+        },
+        {
+            iiItemExporter: true,
+            name: localize("II.Export.DownloadCore", "Download Core Item YAML"),
+            icon: '<i class="fas fa-download"></i>',
+            condition: target => isExportableItem(resolveContextItem(target)),
+            callback: target => downloadCoreYaml(resolveContextItem(target))
+        },
+        {
+            iiItemExporter: true,
+            name: localize("II.Export.CopyFull", "Copy Full Item YAML"),
+            icon: '<i class="fas fa-bolt"></i>',
+            condition: target => hasFullExportSupport() && isExportableItem(resolveContextItem(target)),
+            callback: target => copyFullYaml(resolveContextItem(target))
+        },
+        {
+            iiItemExporter: true,
+            name: localize("II.Export.DownloadFull", "Download Full Item YAML"),
+            icon: '<i class="fas fa-file-export"></i>',
+            condition: target => hasFullExportSupport() && isExportableItem(resolveContextItem(target)),
+            callback: target => downloadFullYaml(resolveContextItem(target))
+        }
+    );
+});
+
+Hooks.on("dnd5e.getItemContextOptions", (item, contextOptions) => {
+    if (!isExportableItem(item) || contextOptions.some(option => option.iiItemExporter)) return;
+    contextOptions.push(
+        {
+            iiItemExporter: true,
+            name: localize("II.Export.CopyCore", "Copy Core Item YAML"),
+            icon: '<i class="fas fa-copy"></i>',
+            condition: () => true,
+            callback: () => copyCoreYaml(item)
+        },
+        {
+            iiItemExporter: true,
+            name: localize("II.Export.DownloadCore", "Download Core Item YAML"),
+            icon: '<i class="fas fa-download"></i>',
+            condition: () => true,
+            callback: () => downloadCoreYaml(item)
+        },
+        {
+            iiItemExporter: true,
+            name: localize("II.Export.CopyFull", "Copy Full Item YAML"),
+            icon: '<i class="fas fa-bolt"></i>',
+            condition: () => hasFullExportSupport(),
+            callback: () => copyFullYaml(item)
+        },
+        {
+            iiItemExporter: true,
+            name: localize("II.Export.DownloadFull", "Download Full Item YAML"),
+            icon: '<i class="fas fa-file-export"></i>',
+            condition: () => hasFullExportSupport(),
+            callback: () => downloadFullYaml(item)
+        }
+    );
+});
+
+Hooks.on("renderItemSheet5e", renderAttunementRequirement);
 
 /**
  * Console command helpers for development

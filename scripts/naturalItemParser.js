@@ -15,6 +15,9 @@ import { MODULE_NAME } from "./itemConfig.js";
 import { getParserForText } from "./strictItemParsers/strictParserDispatcher.js";
 import { ItemRegex } from "./itemRegex.js";
 import jsyaml from "./vendor/js-yaml.mjs";
+import { ITEM_YAML_SCHEMA_KEY, ITEM_YAML_SCHEMA_VERSION } from "./strictItemParsers/itemSchemaVersion.js";
+import { deriveParseProvenance } from "./itemParseInsights.js";
+import { synthesizeNaturalAutomation } from "./naturalAutomationSynthesis.js";
 
 function getDefaultIdentifiedSetting() {
   if (typeof game === "undefined") return true;
@@ -29,12 +32,14 @@ function inferVersatileFormula(formula) {
 }
 
 export class NaturalItemParser {
-  constructor() {
+  constructor(options = {}) {
+    this.options = options;
     this.errors = [];
     this.warnings = [];
     this.text = "";
     this.confidence = {}; // Track confidence scores for extracted fields
     this.trace = null;
+    this.extractedQuantity = null;
   }
 
   // Base armor data lookup table for inheriting properties
@@ -148,6 +153,12 @@ export class NaturalItemParser {
       const extracted = this.extractAllFields(this.text);
       this.trace.extractedFields = extracted;
       this.trace.confidence = { ...this.confidence };
+      this.trace.provenance = deriveParseProvenance({
+        text: this.text,
+        extractedFields: extracted,
+        confidence: this.confidence,
+        parser: "NaturalItemParser"
+      });
 
       // Step 2: Build strict template from extracted data
       ItemUtils.log(
@@ -169,11 +180,51 @@ export class NaturalItemParser {
       this.trace.errors = result.errors ?? [];
       this.trace.warnings = result.warnings ?? [];
 
+      const automation = synthesizeNaturalAutomation(this.text, {
+        name: extracted.name,
+        itemType: extracted.itemType
+      });
+      this.trace.automation = {
+        ...automation,
+        enabledForImport: this.options.synthesizeAutomation === true
+      };
+      if (this.options.synthesizeAutomation === true
+          && result.success && result.item && automation.pendingActivities.length > 0) {
+        const validatedEntries = automation.validation.available
+          ? automation.pendingActivities.filter((entry) =>
+              automation.validation.results.some((checked) =>
+                checked.valid && checked.key === entry.key && checked.name === entry.name
+              )
+            )
+          : automation.pendingActivities;
+        const existing = Array.isArray(result.item.pendingActivities)
+          ? result.item.pendingActivities
+          : [];
+        const signatures = new Set(existing.map((entry) =>
+          `${entry.key}|${entry.name}|${JSON.stringify(entry.rawData)}`
+        ));
+        for (const entry of validatedEntries) {
+          const signature = `${entry.key}|${entry.name}|${JSON.stringify(entry.rawData)}`;
+          if (!signatures.has(signature)) {
+            existing.push(entry);
+            signatures.add(signature);
+          }
+        }
+        result.item.pendingActivities = existing;
+        if (automation.validation.available && !automation.validation.valid) {
+          result.warnings = [
+            ...(result.warnings ?? []),
+            ...automation.validation.errors.map((message) => `Skipped invalid synthesized automation: ${message}`)
+          ];
+        }
+      }
+
       // Add our warnings to the result
       if (this.warnings.length > 0) {
         result.warnings = [...result.warnings, ...this.warnings];
-        this.trace.warnings = result.warnings;
       }
+      this.trace.errors = result.errors ?? [];
+      this.trace.warnings = result.warnings ?? [];
 
       ItemUtils.log("NaturalItemParser: Natural language parsing completed");
       return result;
@@ -240,20 +291,27 @@ export class NaturalItemParser {
   extractAllFields(text) {
     ItemUtils.log("NaturalItemParser: Extracting fields...");
 
+    // Resolve the broad item category and concrete base/subtype first. Later
+    // extractors use these values to avoid treating rules prose as base stats.
+    const itemType = this.guessItemType(text);
+    const baseWeapon = itemType === 'weapon' ? this.extractBaseWeapon(text) : null;
+    const consumableType = itemType === 'consumable' ? this.extractConsumableType(text) : null;
+
     const extracted = {
       // Universal fields
       name: this.extractName(text),
-      itemType: this.guessItemType(text),
+      itemType,
       rarity: this.extractRarity(text),
       cost: this.extractCost(text),
       weight: this.extractWeight(text),
       description: this.extractDescription(text),
       quantity: this.extractQuantity(text),
+      uses: this.extractUses(text),
 
       // Weapon-specific
       weaponType: this.extractWeaponType(text),
-      baseWeapon: this.extractBaseWeapon(text),
-      damage: this.extractDamage(text),
+      baseWeapon,
+      damage: this.extractDamage(text, { baseWeapon }),
       versatileDamage: this.extractVersatileDamage(text),
       properties: this.extractProperties(text),
       mastery: this.extractMastery(text),
@@ -275,6 +333,21 @@ export class NaturalItemParser {
       toolBonus: this.extractToolBonus(text),
       toolAbility: this.extractToolAbility(text),
       toolProficiency: this.extractToolProficiency(text),
+
+      // Consumable-specific
+      consumableType,
+      ammunitionType:
+        consumableType === 'ammo' ? this.extractAmmunitionType(text) : null,
+      ammunitionProperties:
+        consumableType === 'ammo'
+          ? this.extractAmmunitionProperties(text)
+          : null,
+      poisonType:
+        consumableType === 'poison' ? this.extractPoisonType(text) : null,
+      scrollProperties:
+        consumableType === 'scroll'
+          ? this.extractScrollProperties(text)
+          : null,
 
       // Container-specific
       containerCapacity: this.extractContainerCapacity(text),
@@ -356,7 +429,7 @@ export class NaturalItemParser {
     };
 
     data.INVENTORY = {
-      Quantity: extracted.quantity || 1,
+      Quantity: extracted.quantity ?? 1,
       Identified: getDefaultIdentifiedSetting(),
       Equipped: false,
     };
@@ -376,7 +449,10 @@ export class NaturalItemParser {
     this.buildTypeSpecificSections(itemType, extracted, data);
 
     // Wrap in top-level type key and serialize to YAML
-    const doc = { [typeKey]: data };
+    const doc = {
+      [ITEM_YAML_SCHEMA_KEY]: ITEM_YAML_SCHEMA_VERSION,
+      [typeKey]: data
+    };
     return jsyaml.dump(doc, { lineWidth: -1 });
   }
 
@@ -424,22 +500,22 @@ buildWeaponSections(extracted, data) {
     const baseProps = baseData.properties || [];
     data.PROPERTIES = {
       Adamantine: props.adamantine || false,
-      Ammunition: props.ammunition ?? baseProps.includes("ammunition"),
-      Finesse: props.finesse ?? baseProps.includes("finesse"),
+      Ammunition: props.ammunition || baseProps.includes("ammunition"),
+      Finesse: props.finesse || baseProps.includes("finesse"),
       Firearm: props.firearm || false,
       Focus: props.focus || false,
-      Heavy: props.heavy ?? baseProps.includes("heavy"),
-      Light: props.light ?? baseProps.includes("light"),
-      Loading: props.loading ?? baseProps.includes("loading"),
+      Heavy: props.heavy || baseProps.includes("heavy"),
+      Light: props.light || baseProps.includes("light"),
+      Loading: props.loading || baseProps.includes("loading"),
       Magical: extracted.isMagical,
-      Reach: props.reach ?? baseProps.includes("reach"),
+      Reach: props.reach || baseProps.includes("reach"),
       Reload: props.reload || false,
       Returning: props.returning || false,
       Silvered: props.silvered || false,
-      Special: props.special ?? baseProps.includes("special"),
-      Thrown: props.thrown ?? baseProps.includes("thrown"),
-      "Two-Handed": props.twoHanded ?? baseProps.includes("twoHanded"),
-      Versatile: props.versatile ?? baseProps.includes("versatile"),
+      Special: props.special || baseProps.includes("special"),
+      Thrown: props.thrown || baseProps.includes("thrown"),
+      "Two-Handed": props.twoHanded || baseProps.includes("twoHanded"),
+      Versatile: props.versatile || baseProps.includes("versatile"),
     };
 
     // Damage section
@@ -457,7 +533,7 @@ buildWeaponSections(extracted, data) {
     };
 
     // Versatile damage section
-    const hasVersatile = props.versatile ?? baseProps.includes("versatile");
+    const hasVersatile = props.versatile || baseProps.includes("versatile");
     const versatileDamage =
       extracted.versatileDamage?.formula ||
       baseData.versatile ||
@@ -492,7 +568,7 @@ buildWeaponSections(extracted, data) {
     if (extracted.isMagical && extracted.attunement?.required) {
       data.ATTUNEMENT = {
         Attunement: "required",
-        "Attunement By": extracted.attunement.byClass || "n/a",
+        "Attunement By": extracted.attunement.restriction || "n/a",
         "Magic Bonus": extracted.magicBonus || 0,
       };
     } else if (extracted.magicBonus !== null && extracted.magicBonus !== undefined) {
@@ -535,7 +611,7 @@ buildWeaponSections(extracted, data) {
     if (extracted.isMagical && extracted.attunement?.required) {
       data.ATTUNEMENT = {
         Attunement: "required",
-        "Attunement By": extracted.attunement.byClass || "n/a",
+        "Attunement By": extracted.attunement.restriction || "n/a",
       };
     }
 
@@ -552,8 +628,8 @@ buildWeaponSections(extracted, data) {
 
     // Usage section
     data.USAGE = {
-      "Uses Spent": extracted.uses?.current || 0,
-      "Uses Max": extracted.uses?.max || 0,
+      "Uses Spent": extracted.uses?.spent ?? extracted.uses?.current ?? 0,
+      "Uses Max": extracted.uses?.max ?? 0,
     };
   }
 
@@ -573,7 +649,7 @@ buildWeaponSections(extracted, data) {
     if (extracted.isMagical && extracted.attunement?.required) {
       data.ATTUNEMENT = {
         Attunement: "required",
-        "Attunement By": extracted.attunement.byClass || "n/a",
+        "Attunement By": extracted.attunement.restriction || "n/a",
       };
     }
 
@@ -612,8 +688,10 @@ buildWeaponSections(extracted, data) {
    * Build consumable-specific sections (stub for now)
    */
   buildConsumableSections(extracted, data) {
+    const consumableType = extracted.consumableType || "potion";
+
     // Add type-specific field to ITEM section
-    data.ITEM["Consumable Type"] = extracted.consumableType || "potion";
+    data.ITEM["Consumable Type"] = consumableType;
 
     // Properties section
     data.PROPERTIES = {
@@ -624,12 +702,12 @@ buildWeaponSections(extracted, data) {
     if (extracted.isMagical && extracted.attunement?.required) {
       data.ATTUNEMENT = {
         Attunement: "required",
-        "Attunement By": extracted.attunement.byClass || "n/a",
+        "Attunement By": extracted.attunement.restriction || "n/a",
       };
     }
 
     // Ammunition properties (only if type is ammo)
-    if (extracted.consumableType === "ammo") {
+    if (consumableType === "ammo") {
       const ammoProps = extracted.ammunitionProperties || {};
       data.AMMUNITION_PROPERTIES = {
         "Ammunition Type": extracted.ammunitionType || "arrow",
@@ -644,28 +722,28 @@ buildWeaponSections(extracted, data) {
     }
 
     // Poison properties (only if type is poison)
-    if (extracted.consumableType === "poison") {
+    if (consumableType === "poison") {
       data.POISON_PROPERTIES = {
         "Poison Type": extracted.poisonType || "injury",
       };
     }
 
     // Scroll properties (only if type is scroll)
-    if (extracted.consumableType === "scroll") {
+    if (consumableType === "scroll") {
       const scrollProps = extracted.scrollProperties || {};
       data.SCROLL_PROPERTIES = {
         Concentration: scrollProps.concentration || false,
         Somatic: scrollProps.somatic || false,
-        Verbal: scrollProps.verbal || false,
+        Vocal: scrollProps.vocal || false,
         Ritual: scrollProps.ritual || false,
       };
     }
 
     // Usage section
     data.USAGE = {
-      "Uses Spent": extracted.uses?.current || 0,
-      "Uses Max": extracted.uses?.max || 0,
-      "Destroy on Empty": false,
+      "Uses Spent": extracted.uses?.spent ?? extracted.uses?.current ?? 0,
+      "Uses Max": extracted.uses?.max ?? 0,
+      "Destroy on Empty": extracted.uses?.destroyOnEmpty ?? false,
     };
   }
 
@@ -696,7 +774,7 @@ buildWeaponSections(extracted, data) {
     if (extracted.isMagical && extracted.attunement?.required) {
       data.ATTUNEMENT = {
         Attunement: "required",
-        "Attunement By": extracted.attunement.byClass || "n/a",
+        "Attunement By": extracted.attunement.restriction || "n/a",
         "Magic Bonus": extracted.magicBonus || 0,
       };
     }
@@ -721,10 +799,10 @@ buildWeaponSections(extracted, data) {
       Proficient: "Automatic",
     };
 
-    // Usage section (default to no uses)
+    // Usage section
     data.USAGE = {
-      "Uses Spent": 0,
-      "Uses Max": 0,
+      "Uses Spent": extracted.uses?.spent ?? extracted.uses?.current ?? 0,
+      "Uses Max": extracted.uses?.max ?? 0,
     };
   }
 
@@ -773,6 +851,20 @@ buildWeaponSections(extracted, data) {
       }
     }
 
+    // Quantity suffixes are a special kind of parenthetical, so preserve them
+    // before the generic name cleanup removes other annotations.
+    const quantityInName = this.extractQuantityFromName(name);
+    if (quantityInName.name !== name) {
+      name = quantityInName.name;
+      if (quantityInName.quantity !== null) {
+        this.extractedQuantity = quantityInName.quantity;
+      } else if (quantityInName.invalidQuantity !== null) {
+        this.addWarning(
+          `Ignored invalid quantity "${quantityInName.invalidQuantity}"; quantity must be a non-negative integer.`
+        );
+      }
+    }
+
     // Clean up common patterns
     name = name.replace(/^([^()\n]+?)(?:\s*[\(\[].*)?$/, "$1"); // Remove parenthetical
     name = name.replace(
@@ -780,15 +872,6 @@ buildWeaponSections(extracted, data) {
       ""
     ); // Remove rarity
     name = name.trim();
-
-    // Extract quantity from name if present
-    const quantityInName = this.extractQuantityFromName(name);
-    if (quantityInName.name !== name) {
-      name = quantityInName.name;
-      if (!this.extractedQuantity) {
-        this.extractedQuantity = quantityInName.quantity;
-      }
-    }
 
     ItemUtils.log(`NaturalItemParser: Extracted name: "${name}"`);
     this.confidence.name = 0.95;
@@ -799,36 +882,74 @@ buildWeaponSections(extracted, data) {
    * Extract quantity from item name (e.g., "Arrow (20)" -> {name: "Arrow", quantity: 20})
    */
   extractQuantityFromName(name) {
-    // Try patterns from ItemRegex
-    let match = name.match(ItemRegex.quantity);
-    if (match) {
+    const buildQuantityResult = (match, pattern) => {
+      const value = Number(match[1]);
+      const valid = Number.isSafeInteger(value) && value >= 0;
       return {
-        name: name.replace(ItemRegex.quantity, "").trim(),
-        quantity: parseInt(match[1]),
+        name: name.replace(pattern, "").trim(),
+        quantity: valid ? value : null,
+        invalidQuantity: valid ? null : match[1],
       };
+    };
+
+    // Recognize malformed numeric suffixes too, so fractional/unsafe values are
+    // removed from the name and reported instead of being partially coerced.
+    const parentheticalQuantity = /\((\d+(?:\.\d+)?)\)\s*$/;
+    let match = name.match(parentheticalQuantity);
+    if (match) return buildQuantityResult(match, parentheticalQuantity);
+
+    // Try patterns from ItemRegex
+    match = name.match(ItemRegex.quantity);
+    if (match) {
+      return buildQuantityResult(match, ItemRegex.quantity);
     }
 
     match = name.match(ItemRegex.quantityX);
     if (match) {
-      return {
-        name: name.replace(ItemRegex.quantityX, "").trim(),
-        quantity: parseInt(match[1]),
-      };
+      return buildQuantityResult(match, ItemRegex.quantityX);
     }
 
     match = name.match(ItemRegex.quantityMultiple);
     if (match) {
-      return {
-        name: name.replace(ItemRegex.quantityMultiple, "").trim(),
-        quantity: parseInt(match[1]),
-      };
+      return buildQuantityResult(match, ItemRegex.quantityMultiple);
     }
 
-    return { name, quantity: null };
+    return { name, quantity: null, invalidQuantity: null };
   }
 
   guessItemType(text) {
-    const lowerText = text.toLowerCase();
+    const lines = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const labeledTypeLine = lines.find((line) => /^type\s*:/i.test(line));
+    const declaredType = (labeledTypeLine || lines[1] || "")
+      .replace(/^type\s*:\s*/i, "")
+      .trim();
+
+    // A declared stat-block type is stronger evidence than a keyword in the
+    // description (for example, a potion that mentions a weapon).
+    const declaredTypes = [
+      { pattern: /^weapon\b/i, type: "weapon" },
+      { pattern: /^(?:armor|armour)\b/i, type: "equipment" },
+      { pattern: /^(?:wondrous item|ring)\b/i, type: "equipment" },
+      {
+        pattern: /^(?:potion|scroll|wand|rod|ammunition|ammo|poison|food|drink|trinket|consumable)\b/i,
+        type: "consumable",
+      },
+      { pattern: /^tool\b/i, type: "tool" },
+      { pattern: /^(?:container|bag|pouch|chest|box)\b/i, type: "container" },
+    ];
+
+    for (const declared of declaredTypes) {
+      if (declared.pattern.test(declaredType)) {
+        ItemUtils.log(
+          `NaturalItemParser: Detected declared item type: ${declared.type}`
+        );
+        this.confidence.itemType = 0.98;
+        return declared.type;
+      }
+    }
 
     // Use ItemRegex helper methods for better detection
     // Check in order of specificity
@@ -902,7 +1023,7 @@ buildWeaponSections(extracted, data) {
           if (category.includes("tool")) return "tool";
           if (category.includes("container") || category.includes("bag"))
             return "container";
-          if (category.includes("wondrous")) return "loot";
+          if (category.includes("wondrous")) return "equipment";
         }
       }
     }
@@ -918,6 +1039,186 @@ buildWeaponSections(extracted, data) {
     );
     this.confidence.itemType = 0.3;
     return defaultType;
+  }
+
+  /**
+   * Determine a dnd5e consumable subtype from the item header first, then
+   * conservatively fall back to the full text.
+   */
+  extractConsumableType(text) {
+    const lines = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const labeledTypeLine = lines.find((line) => /^type\s*:/i.test(line));
+    const definitions = [
+      { type: "ammo", pattern: ItemRegex.ammunitionType },
+      { type: "scroll", pattern: ItemRegex.scrollType },
+      { type: "wand", pattern: ItemRegex.wandType },
+      { type: "rod", pattern: ItemRegex.rodType },
+      { type: "poison", pattern: ItemRegex.poisonType },
+      { type: "food", pattern: ItemRegex.foodType },
+      { type: "trinket", pattern: ItemRegex.trinketType },
+      { type: "potion", pattern: ItemRegex.potionType },
+    ];
+
+    const detect = (candidate) => {
+      const matches = definitions
+        .map((definition, priority) => {
+          const match = candidate.match(definition.pattern);
+          return match
+            ? { ...definition, priority, index: match.index ?? 0 }
+            : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.index - b.index || a.priority - b.priority);
+      return matches[0]?.type ?? null;
+    };
+
+    const declaredTypeLine = labeledTypeLine || (/^(?:consumable|potion|scroll|wand|rod|ammunition|ammo|poison|food|drink|trinket)\b/i.test(lines[1] || "")
+      ? lines[1]
+      : "");
+    const detectedFromText = detect(text);
+    // An explicit type line is stronger than a subtype-looking word in the
+    // item name (for example, "Poison Wand" declared as "Wand, rare").
+    const consumableType = detect(declaredTypeLine) || detect(lines[0] || "") || detectedFromText || "potion";
+    this.confidence.consumableType = consumableType === "potion" && !detectedFromText
+      ? 0.35
+      : 0.9;
+    ItemUtils.log(
+      `NaturalItemParser: Found consumable type: ${consumableType}`
+    );
+    return consumableType;
+  }
+
+  extractAmmunitionType(text) {
+    const match = text.match(ItemRegex.ammunitionSubtype) || text.match(/\b(?:bullets?|needles?)\b/i);
+    if (!match) return null;
+
+    const value = match[0].toLowerCase();
+    const ammunitionType = value.includes("sling")
+      ? "slingBullet"
+      : value.includes("energy")
+        ? "energyCell"
+        : value.includes("needle")
+          ? "blowgunNeedle"
+          : value.includes("bolt")
+            ? "crossbowBolt"
+            : value.includes("bullet")
+              ? "firearmBullet"
+              : "arrow";
+
+    this.confidence.ammunitionType = 0.95;
+    return ammunitionType;
+  }
+
+  extractAmmunitionProperties(text) {
+    const explicitDamage = text.match(
+      /(?:^|\n)\s*(?:damage|extra damage)\s*:\s*(\d+d\d+(?:\s*[+\-]\s*\d+)?)\s+(acid|bludgeoning|cold|fire|force|lightning|necrotic|piercing|poison|psychic|radiant|slashing|thunder)\b/i
+    );
+    return {
+      adamantine: ItemRegex.ammunitionPropertyAdamantine.test(text),
+      silvered: ItemRegex.ammunitionPropertySilvered.test(text),
+      returning: ItemRegex.ammunitionPropertyReturning.test(text),
+      magicBonus: this.extractMagicBonus(text) ?? 0,
+      damageFormula: explicitDamage?.[1]?.replace(/\s+/g, "") ?? null,
+      damageType: explicitDamage?.[2]?.toLowerCase() ?? null,
+      damageReplace: ItemRegex.replaceDamage.test(text),
+    };
+  }
+
+  extractPoisonType(text) {
+    const match = text.match(
+      /\b(contact|ingested|inhaled|injury)\s+poison\b|\bpoison\s*\((contact|ingested|inhaled|injury)\)/i
+    );
+    const poisonType = (match?.[1] || match?.[2] || "injury").toLowerCase();
+    this.confidence.poisonType = match ? 0.95 : 0.4;
+    return poisonType;
+  }
+
+  extractScrollProperties(text) {
+    const components = text.match(/\bcomponents?\s*:\s*([vsm,\s]+)/i)?.[1] || "";
+    const componentTokens = new Set(
+      components
+        .toUpperCase()
+        .split(/[\s,]+/)
+        .filter(Boolean)
+    );
+
+    return {
+      concentration: /\bconcentration\b/i.test(text),
+      somatic: componentTokens.has("S") || /\bsomatic\b/i.test(text),
+      vocal:
+        componentTokens.has("V") || /\b(?:vocal|verbal)\b/i.test(text),
+      ritual: /\britual\b/i.test(text),
+    };
+  }
+
+  /**
+   * Extract limited-use state. ItemData uses `value` as uses already spent, so
+   * natural items start at zero spent unless the source explicitly reports a
+   * current/maximum pair.
+   */
+  extractUses(text) {
+    const destroyOnEmpty =
+      ItemRegex.autoDestroy.test(text) || ItemRegex.singleUse.test(text);
+    let max = 0;
+    let spent = 0;
+
+    const countToken = "([+\\-]?\\d+(?:\\.\\d+)?)";
+    const tokenStart = "(?:^|[^A-Za-z0-9_.])";
+    const tokenEnd = "(?![\\d.])";
+    const currentAndMax = text.match(new RegExp(
+      `${tokenStart}${countToken}\\s+charges?[^\\n]{0,120}?(?:maximum|max)(?:\\s+of)?\\s+${countToken}${tokenEnd}`,
+      "i"
+    ));
+    const parseChargeCount = (raw) => {
+      const value = Number(raw);
+      if (!Number.isSafeInteger(value) || value < 0) {
+        this.addWarning(
+          `Ignored invalid charge count "${raw}"; charges must be non-negative integers.`
+        );
+        return null;
+      }
+      return value;
+    };
+
+    if (currentAndMax) {
+      const current = parseChargeCount(currentAndMax[1]);
+      const parsedMax = parseChargeCount(currentAndMax[2]);
+      if (current !== null && parsedMax !== null) {
+        max = parsedMax;
+        if (current > max) {
+          this.addWarning(
+            `Ignored current charge count ${current} because it exceeds maximum ${max}.`
+          );
+          max = 0;
+        } else {
+          spent = max - current;
+        }
+      }
+    } else {
+      const charges = text.match(new RegExp(
+        `\\b(?:has|have|contains?)\\s+${countToken}${tokenEnd}\\s+charges?\\b`,
+        "i"
+      ));
+      const maximum = text.match(
+        /(?:(?:maximum|max)(?:\s+of)?|up to)\s+([+\-]?\d+(?:\.\d+)?)(?![\d.])\s+charges?\b/i
+      );
+      const trailingMaximum = text.match(
+        /(?:^|[^A-Za-z0-9_.])([+\-]?\d+(?:\.\d+)?)(?![\d.])\s+charges?\s+(?:maximum|max)\b/i
+      );
+      const maxRaw = maximum?.[1] ?? trailingMaximum?.[1] ?? charges?.[1];
+      if (maxRaw !== undefined) {
+        const parsedMax = parseChargeCount(maxRaw);
+        if (parsedMax !== null) max = parsedMax;
+      }
+    }
+
+    if (max === 0 && ItemRegex.singleUse.test(text)) max = 1;
+    if (max > 0) this.confidence.uses = 0.9;
+
+    return { spent, max, destroyOnEmpty };
   }
 
   extractRarity(text) {
@@ -1119,17 +1420,31 @@ buildWeaponSections(extracted, data) {
   }
 
   extractQuantity(text) {
+    if (Number.isSafeInteger(this.extractedQuantity)) {
+      ItemUtils.log(
+        `NaturalItemParser: Found quantity in item name: ${this.extractedQuantity}`
+      );
+      this.confidence.quantity = 0.95;
+      return this.extractedQuantity;
+    }
+
     // Look for explicit quantity patterns
     const patterns = [
-      /quantity[:\s]+(\d+)/i,
-      /amount[:\s]+(\d+)/i,
-      /(\d+)\s*(?:items?|pieces?|units?)/i,
+      /\bquantity(?:\s*:|\s+)\s*([+\-]?\d+(?:\.\d+)?)(?![\d.])/i,
+      /\bamount(?:\s*:|\s+)\s*([+\-]?\d+(?:\.\d+)?)(?![\d.])/i,
+      /(?:^|[^A-Za-z0-9_.])([+\-]?\d+(?:\.\d+)?)(?![\d.])\s*(?:items?|pieces?|units?)\b/i,
     ];
 
     for (const pattern of patterns) {
       const match = text.match(pattern);
       if (match) {
-        const quantity = parseInt(match[1], 10);
+        const quantity = Number(match[1]);
+        if (!Number.isSafeInteger(quantity) || quantity < 0) {
+          this.addWarning(
+            `Ignored invalid quantity "${match[1]}"; quantity must be a non-negative integer.`
+          );
+          return 1;
+        }
         ItemUtils.log(`NaturalItemParser: Found quantity: ${quantity}`);
         this.confidence.quantity = 0.85;
         return quantity;
@@ -1254,9 +1569,43 @@ buildWeaponSections(extracted, data) {
     return null;
   }
 
-  extractDamage(text) {
+  extractDamage(text, { baseWeapon = null } = {}) {
+    const explicitDamageLine = text.match(
+      /(?:^|\n)\s*(?:base\s+)?damage\s*:\s*([^\n]+)/i
+    );
+
+    // Known base weapons already have authoritative base damage. Rules prose
+    // such as "deals an extra 2d6 fire damage" must not replace that value.
+    if (baseWeapon && !explicitDamageLine) {
+      ItemUtils.log(
+        `NaturalItemParser: Using ${baseWeapon} base damage; no explicit Damage field found`
+      );
+      return null;
+    }
+
+    const damageSource = explicitDamageLine?.[1] || text;
+    const isSecondaryDamageAt = (index, length) => {
+      if (explicitDamageLine) return false;
+      const prefix = damageSource.slice(Math.max(0, index - 80), index);
+      const suffix = damageSource.slice(index + length, index + length + 30);
+      return (
+        /\b(?:extra|additional|bonus|plus)\s*$/i.test(prefix) ||
+        /\b(?:target|creature|it)\s+(?:takes?|suffers?)\s+(?:an?\s+)?(?:extra\s+)?$/i.test(prefix) ||
+        /^\s+(?:extra|additional|bonus)\b/i.test(suffix)
+      );
+    };
+
     // Use ItemRegex pattern with named groups
-    const match = text.match(ItemRegex.damage);
+    const match = damageSource.match(ItemRegex.damage);
+
+    if (match && !explicitDamageLine) {
+      if (isSecondaryDamageAt(match.index ?? 0, match[0].length)) {
+        ItemUtils.log(
+          "NaturalItemParser: Ignoring additional/effect damage as base weapon damage"
+        );
+        return null;
+      }
+    }
 
     if (
       match &&
@@ -1298,8 +1647,15 @@ buildWeaponSections(extracted, data) {
 
     // Fallback: try to find ANY dice pattern, even without damage type
     const diceOnlyPattern = /(\d+)d(\d+)(?:\s*([+\-])\s*(\d+))?/i;
-    const diceMatch = text.match(diceOnlyPattern);
+    const diceMatch = damageSource.match(diceOnlyPattern);
     if (diceMatch) {
+      if (isSecondaryDamageAt(diceMatch.index ?? 0, diceMatch[0].length)) {
+        ItemUtils.log(
+          "NaturalItemParser: Ignoring additional/effect damage as base weapon damage"
+        );
+        return null;
+      }
+
       // Try to infer damage type from context or item type
       let damageType = "bludgeoning"; // default
 
@@ -1368,6 +1724,18 @@ buildWeaponSections(extracted, data) {
     if (/simple\s+ranged/i.test(text)) {
       ItemUtils.log("NaturalItemParser: Found weapon type: simpleR");
       return "simpleR";
+    }
+    if (/\bsiege(?:\s+weapon)?\b|\bweapon\s*\(\s*siege\s*\)/i.test(text)) {
+      ItemUtils.log("NaturalItemParser: Found weapon type: siege");
+      return "siege";
+    }
+    if (/\bnatural(?:\s+weapon|\s+attack)\b|\bweapon\s*\(\s*natural\s*\)/i.test(text)) {
+      ItemUtils.log("NaturalItemParser: Found weapon type: natural");
+      return "natural";
+    }
+    if (/\bimprovised(?:\s+weapon)?\b|\bweapon\s*\(\s*improvised\s*\)/i.test(text)) {
+      ItemUtils.log("NaturalItemParser: Found weapon type: improv");
+      return "improv";
     }
 
     // Try to infer from base weapon name
@@ -1523,30 +1891,52 @@ buildWeaponSections(extracted, data) {
       versatile: false,
     };
 
-    // Define patterns for each property
-    const propertyPatterns = {
-      adamantine: /\badamantine\b/i,
+    const propertyContexts = [];
+    for (const line of text.split("\n")) {
+      const labeled = line.match(/\bpropert(?:y|ies)\s*:\s*([^\n]+)/i);
+      if (labeled?.[1]) propertyContexts.push(labeled[1]);
+
+      const sentence = line.match(
+        /\b(?:has|have|gains?|possesses?)\s+(?:the\s+)?([^.]{1,120}?)\s+propert(?:y|ies)\b/i
+      );
+      if (sentence?.[1]) propertyContexts.push(sentence[1]);
+    }
+    const propertyText = propertyContexts.join(", ");
+
+    // Standard weapon properties are accepted only from an explicit property
+    // context. This prevents prose such as "sheds bright light" or "special
+    // ability" from mutating the weapon's mechanical property set.
+    const contextualPatterns = {
       ammunition: /\bammunition\b/i,
       finesse: /\bfinesse\b/i,
-      firearm: /\bfirearm\b/i,
-      focus: /\bspellcasting focus\b/i,
       heavy: /\bheavy\b/i,
       light: /\blight\b/i,
       loading: /\bloading\b/i,
-      magical: /\bmagical?\b|\bmagic\b|\+\d+\s+(weapon|armor|sword|axe)/i,
       reach: /\breach\b/i,
       reload: /\breload\b/i,
-      returning: /\breturning\b/i,
-      silvered: /\bsilvered?\b/i,
       special: /\bspecial\b/i,
       thrown: /\bthrown\b/i,
       twoHanded: /\btwo-?handed\b/i,
       versatile: /\bversatile\b/i,
     };
+    const intrinsicPatterns = {
+      adamantine: /\badamantine\b/i,
+      firearm: /\bfirearm\b/i,
+      focus: /\bspellcasting focus\b/i,
+      magical: /\bmagical?\b|\bmagic\b|\+\d+\s+(weapon|armor|sword|axe)/i,
+      returning: /\breturning\b/i,
+      silvered: /\bsilvered?\b/i,
+    };
 
-    // Check each property
     let foundCount = 0;
-    for (const [prop, pattern] of Object.entries(propertyPatterns)) {
+    for (const [prop, pattern] of Object.entries(contextualPatterns)) {
+      if (pattern.test(propertyText)) {
+        props[prop] = true;
+        foundCount++;
+        ItemUtils.log(`NaturalItemParser: Found explicit property: ${prop}`);
+      }
+    }
+    for (const [prop, pattern] of Object.entries(intrinsicPatterns)) {
       if (pattern.test(text)) {
         props[prop] = true;
         foundCount++;
@@ -1614,12 +2004,14 @@ buildWeaponSections(extracted, data) {
       long: null,
     };
 
-    // Pattern for reach: "reach of 10 feet", "10-foot reach", "10 ft. reach"
-    const reachPattern = /(?:reach\s+of\s+)?(\d+)\s*(?:ft|feet|foot)/i;
+    // Require the reach keyword on either side of the distance. A bare
+    // distance in effect prose is not the weapon's reach.
+    const reachPattern =
+      /(?:reach(?:\s+of)?\s+(\d+)\s*(?:ft\.?|feet|foot)|\b(\d+)\s*(?:-|\s)?(?:ft\.?|feet|foot)\s+reach)\b/i;
     const reachMatch = text.match(reachPattern);
 
     if (reachMatch) {
-      range.reach = parseInt(reachMatch[1]);
+      range.reach = parseInt(reachMatch[1] || reachMatch[2]);
       ItemUtils.log(`NaturalItemParser: Found reach: ${range.reach} ft`);
     }
 
@@ -1683,9 +2075,9 @@ buildWeaponSections(extracted, data) {
           const result = {
             required: true,
             restriction:
-              byMatch && byMatch.groups && byMatch.groups.attunementBy
-                ? byMatch.groups.attunementBy.trim()
-                : null,
+              byInnerMatch?.[1]?.trim() ||
+              byMatch?.groups?.attunementBy?.trim() ||
+              null,
           };
 
           ItemUtils.log(
@@ -1717,12 +2109,12 @@ buildWeaponSections(extracted, data) {
       shield: /\bshield\b/i,
 
       // Non-armor equipment
+      wondrous: /\bwondrous item\b/i,
       clothing: /\b(?:clothing|robe|cloak|hat|boots|gloves)\b/i,
       ring: /\bring\b/i,
       rod: /\brod\b/i,
       trinket: /\b(?:trinket|bauble|curio)\b/i,
       wand: /\bwand\b/i,
-      wondrous: /\bwondrous item\b/i,
       vehicle: /\b(?:vehicle|mount|ship|cart|wagon)\b/i,
     };
 
@@ -2372,6 +2764,7 @@ buildWeaponSections(extracted, data) {
     this.warnings = [];
     this.text = "";
     this.confidence = {};
+    this.extractedQuantity = null;
   }
 
   addError(message) {

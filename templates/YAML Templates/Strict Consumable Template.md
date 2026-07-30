@@ -4,6 +4,7 @@
 
 **How to use this template:**
 - Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
+- Begin every YAML document with `SCHEMA_VERSION: 1` before the Item type key.
 - Wrap the completed YAML in a single ```` ```yaml ```` code fence.
 - Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
@@ -17,6 +18,7 @@
 **Batching multiple items:**
 Combine different item types in one block by stacking top-level keys:
 ```text
+SCHEMA_VERSION: 1
 CONSUMABLE:
   ITEM:
     Name: "Potion of Healing"
@@ -28,11 +30,13 @@ WEAPON:
 ```
 For multiple items of the **same type**, separate them with `---` (YAML document separator):
 ```text
+SCHEMA_VERSION: 1
 CONSUMABLE:
   ITEM:
     Name: "Potion of Healing"
     # additional fields omitted in this batching example
 ---
+SCHEMA_VERSION: 1
 CONSUMABLE:
   ITEM:
     Name: "Potion of Greater Healing"
@@ -76,6 +80,7 @@ You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMEN
 ---
 
 ```yaml
+SCHEMA_VERSION: 1
 CONSUMABLE:
   ITEM:
     Name: "[text]"
@@ -103,7 +108,7 @@ CONSUMABLE:
 
   AMMUNITION_PROPERTIES:
     # (Required only if Consumable Type is ammo)
-    Ammunition Type: "[arrow|bolt|dart|needle|bullet|slingbullet|energycell]"
+    Ammunition Type: "[arrow|bolt|needle|bullet|slingbullet|energycell]"
     Adamantine: "[true|false]"
     Silvered: "[true|false]"
     Returning: "[true|false]"
@@ -120,7 +125,7 @@ CONSUMABLE:
     # (Required only if Consumable Type is scroll)
     Concentration: "[true|false]"
     Somatic: "[true|false]"
-    Verbal: "[true|false]"
+    Vocal: "[true|false]"
     Ritual: "[true|false]"
 
   USAGE:

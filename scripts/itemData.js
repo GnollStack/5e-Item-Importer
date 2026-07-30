@@ -156,6 +156,10 @@ export class ItemData {
     // Inline activities/effects (from Activities: section in YAML)
     this.pendingActivities = []; // Array of { key, name, rawData }
 
+    // Allowlisted extension data. This is persisted under this module's flags,
+    // never into arbitrary dnd5e system paths.
+    this.customProperties = {};
+
     // Foundry data holder
     this.#dnd5e = {};
   }
@@ -198,6 +202,11 @@ export class ItemData {
       content: this.description,
     });
 
+    if (this.type === "container" && this.quantity !== 1) {
+      ItemUtils.warn(`Container quantity "${this.quantity}" was normalized to 1 for the current dnd5e schema.`);
+      this.quantity = 1;
+    }
+
     // Base item structure
     this.#dnd5e = {
       name: this.name,
@@ -221,7 +230,7 @@ export class ItemData {
           name: this.unidentifiedName || "",
           description: this.unidentifiedDescription || "",
         },
-        quantity: this.quantity,
+        quantity: this.type === "container" ? 1 : this.quantity,
         weight: {
           value: this.weight,
           units: this.weightUnits,
@@ -234,6 +243,17 @@ export class ItemData {
         identified: this.identified,
       },
     };
+
+    // dnd5e SpellData has description/activity fields, but not the physical,
+    // identification, rarity, or attunement templates used by inventory items.
+    if (this.type === "spell") {
+      delete this.#dnd5e.system.unidentified;
+      delete this.#dnd5e.system.quantity;
+      delete this.#dnd5e.system.weight;
+      delete this.#dnd5e.system.price;
+      delete this.#dnd5e.system.rarity;
+      delete this.#dnd5e.system.identified;
+    }
 
     // This triggers the specific builders (like buildEquipmentData)
     // which actually fill in the system.type.value and system.type.baseItem
@@ -269,10 +289,15 @@ export class ItemData {
     }
 
     // Attunement - Uses the string directly ("required", "optional", or "")
-    if (this.attunement === "none") {
-      this.setProperty("system.attunement", "");
-    } else {
-      this.setProperty("system.attunement", this.attunement || "");
+    if (this.type !== "spell") {
+      if (this.attunement === "none") {
+        this.setProperty("system.attunement", "");
+      } else {
+        this.setProperty("system.attunement", this.attunement || "");
+      }
+      if (this.attunementRequirement) {
+        this.setProperty(`flags.${MODULE_NAME}.attunementRequirement`, this.attunementRequirement);
+      }
     }
 
     // Try to find matching icon using priority: Semantic → Compendium → System
@@ -331,7 +356,33 @@ export class ItemData {
 
     // 2. Fall back to compendium search (if enabled and no semantic icon found)
     if (!icon && game.settings.get(MODULE_NAME, "matchIcons")) {
-      icon = await ItemUtils.getImgFromPackItemAsync(this.name, this.type);
+      try {
+        const core = await import("./itemCoreFeatures.js");
+        if (typeof core.collectCompendiumImageCandidates === "function"
+          && typeof core.selectCompendiumImageCandidate === "function") {
+          const mode = options.compendiumImageMode
+            ?? game.settings.get(MODULE_NAME, "compendiumImageMode")
+            ?? "deterministic";
+          const cacheKey = `${this.type}:${this.name.toLocaleLowerCase()}`;
+          const candidates = await core.collectCompendiumImageCandidates(this.name, {
+            type: this.type,
+            cacheKey,
+            useCache: true
+          });
+          this.selectedImageCandidate = core.selectCompendiumImageCandidate(candidates, {
+            deterministic: mode !== "random",
+            seed: options.compendiumImageSeed,
+            cacheKey: mode !== "random" ? cacheKey : null,
+            useCache: mode !== "random"
+          });
+          icon = this.selectedImageCandidate?.img ?? null;
+        }
+      } catch (error) {
+        ItemUtils.warn(`Compendium image selector failed: ${error?.message || error}`);
+      }
+
+      // Compatibility fallback for releases without the candidate service.
+      if (!icon) icon = await ItemUtils.getImgFromPackItemAsync(this.name, this.type);
 
       if (icon) {
         ItemUtils.log("Found compendium icon:", icon);
@@ -366,7 +417,50 @@ export class ItemData {
       }
     }
 
+    // Custom properties are module-owned and restricted to registered IDs.
+    await this.#applyCustomPropertyFlags(options);
+
     ItemUtils.log("Foundry data built", this.#dnd5e);
+  }
+
+  async #applyCustomPropertyFlags(options = {}) {
+    if (!this.customProperties || typeof this.customProperties !== "object" || Array.isArray(this.customProperties)) return;
+    let patch;
+    try {
+      const core = await import("./itemCoreFeatures.js");
+      if (typeof core.customPropertiesToItemSourcePatch !== "function") {
+        ItemUtils.warn("Custom property source adapter is unavailable; custom properties were not persisted.");
+        return;
+      }
+      patch = await Promise.resolve(core.customPropertiesToItemSourcePatch(this.customProperties, { ...options, itemType: this.type }));
+    } catch (error) {
+      ItemUtils.warn(`Custom property service unavailable: ${error?.message || error}`);
+      return;
+    }
+
+    for (const warning of patch?.warnings ?? []) ItemUtils.warn(warning);
+    for (const error of patch?.errors ?? []) ItemUtils.warn(error);
+
+    if (patch?.flags && typeof patch.flags === "object") {
+      const existingFlags = this.getProperty("flags") || {};
+      this.setProperty("flags", foundry.utils.mergeObject(existingFlags, patch.flags, {
+        inplace: false,
+        recursive: true
+      }));
+    }
+
+    if (Array.isArray(patch?.registeredPropertyIds) && patch.registeredPropertyIds.length > 0) {
+      const existing = this.getProperty("system.properties");
+      const existingIds = existing instanceof Set
+        ? [...existing]
+        : Array.isArray(existing) ? existing
+          : existing && typeof existing === "object"
+            ? Object.entries(existing).filter(([, enabled]) => !!enabled).map(([id]) => id)
+            : [];
+      const properties = new Set(existingIds);
+      for (const id of patch.registeredPropertyIds) properties.add(id);
+      this.setProperty("system.properties", properties);
+    }
   }
 
   /**
@@ -383,7 +477,8 @@ export class ItemData {
     if (this.recovery && this.recovery.length > 0) {
       const recoveryArray = this.recovery.map((rec) => {
         const config = { period: rec.period, type: rec.type };
-        if (rec.type === "formula" && rec.formula) config.formula = rec.formula;
+        // dnd5e also uses formula as the recharge threshold for recoverAll.
+        if (rec.formula) config.formula = rec.formula;
         return config;
       });
       this.setProperty("system.uses.recovery", recoveryArray);
@@ -862,7 +957,7 @@ export class ItemData {
         ItemUtils.log("Somatic component added");
       }
       if (this.verbal) {
-        props.add("verbal");
+        props.add("vocal");
         ItemUtils.log("Verbal component added");
       }
       if (this.ritual) {
@@ -929,7 +1024,7 @@ export class ItemData {
     }
 
     // Tool bonus
-    if (this.toolBonus) {
+    if (this.toolBonus !== null && this.toolBonus !== undefined && this.toolBonus !== "") {
       this.setProperty("system.bonus", this.toolBonus.toString());
       ItemUtils.log("Tool bonus set to", this.toolBonus);
     }
@@ -1237,25 +1332,278 @@ export class ItemData {
    * Convert cost to gold pieces (for display/compatibility)
    */
   costInGold() {
-    if (!this.cost) return 0;
-
-    // Cost is stored in copper pieces
-    const goldValue = this.cost / CurrencyRates.gp;
+    const displayValue = Number(this.costDisplay);
+    let goldValue;
+    if (this.costDisplay !== null && this.costDisplay !== undefined && Number.isFinite(displayValue)) {
+      const denominationRate = CurrencyRates[this.costDenomination] || CurrencyRates.gp;
+      goldValue = displayValue * denominationRate / CurrencyRates.gp;
+    } else if (this.cost) {
+      // Legacy cost is stored in copper pieces.
+      goldValue = this.cost / CurrencyRates.gp;
+    } else {
+      return 0;
+    }
 
     // Round to 2 decimal places
     return Math.round(goldValue * 100) / 100;
   }
 
+  static async createDocumentAtDestination(itemData, destination = {}) {
+    const kind = destination?.kind ?? "world";
+    const source = ItemUtils.deepClone(itemData);
+    let options = {};
+
+    if (kind === "actor") {
+      const actor = destination.actor ?? await fromUuid(destination.actorUuid);
+      if (!actor || actor.documentName !== "Actor") throw new Error("The selected Actor destination is unavailable.");
+      if (typeof actor.canUserModify === "function" && !actor.canUserModify(game.user, "update")) {
+        throw new Error("You do not have permission to add Items to the selected Actor.");
+      }
+      delete source.folder;
+      options = { parent: actor };
+    } else if (kind === "compendium") {
+      const pack = destination.packDocument ?? game.packs.get(destination.pack);
+      const isOwner = typeof pack?.testUserPermission === "function"
+        ? pack.testUserPermission(game.user, "OWNER")
+        : game.user.isGM === true;
+      const documentClass = pack?.documentClass ?? CONFIG.Item.documentClass;
+      const canCreate = typeof documentClass?.canUserCreate === "function"
+        ? documentClass.canUserCreate(game.user)
+        : game.user.isGM === true;
+      if (!pack || pack.documentName !== "Item" || pack.locked || !isOwner || !canCreate) {
+        throw new Error("The selected Item compendium is unavailable, locked, or not writable.");
+      }
+      delete source.folder;
+      options = { pack: pack.collection };
+    } else if (destination?.folderId) {
+      source.folder = destination.folderId;
+    }
+
+    const documents = await CONFIG.Item.documentClass.createDocuments([source], options);
+    return Array.from(documents ?? [])[0] ?? null;
+  }
+
+  static prepareExistingItemUpdate(itemData) {
+    const update = ItemUtils.deepClone(itemData);
+    delete update._id;
+    delete update.type;
+    delete update.folder;
+    delete update.effects;
+    delete update.ownership;
+    delete update._stats;
+    if (update.system && typeof update.system === "object") {
+      // Existing activities are never deleted by create/update/merge workflows.
+      delete update.system.activities;
+    }
+    return update;
+  }
+
+  static #mergeValueIsEmpty(value) {
+    return value === null
+      || value === undefined
+      || value === ""
+      || (Array.isArray(value) && value.length === 0);
+  }
+
+  static stableSignature(value) {
+    const stable = entry => {
+      if (entry instanceof Set) {
+        return [...entry].map(stable).sort((left, right) =>
+          JSON.stringify(left).localeCompare(JSON.stringify(right))
+        );
+      }
+      if (entry instanceof Map) {
+        return Object.fromEntries([...entry.entries()]
+          .sort(([left], [right]) => String(left).localeCompare(String(right)))
+          .map(([key, nested]) => [key, stable(nested)]));
+      }
+      if (Array.isArray(entry)) return entry.map(stable);
+      if (!entry || typeof entry !== "object") return entry;
+      return Object.fromEntries(Object.keys(entry).sort().map(key => [key, stable(entry[key])]));
+    };
+    try {
+      return JSON.stringify(stable(value));
+    } catch {
+      return String(value);
+    }
+  }
+
+  static #mergeSignature(value) {
+    return ItemData.stableSignature(value);
+  }
+
+  static #conservativeMerge(existing, incoming, path, report) {
+    if (incoming instanceof Set || existing instanceof Set) {
+      const current = new Set(existing instanceof Set ? existing : Array.isArray(existing) ? existing : []);
+      const incomingValues = incoming instanceof Set ? incoming : Array.isArray(incoming) ? incoming : [];
+      const signatures = new Set([...current].map(ItemData.#mergeSignature));
+      let added = 0;
+      for (const value of incomingValues) {
+        const signature = ItemData.#mergeSignature(value);
+        if (signatures.has(signature)) continue;
+        current.add(ItemUtils.deepClone(value));
+        signatures.add(signature);
+        added++;
+      }
+      if (added) report.addedPaths.push(path);
+      if (current.size > added) report.preservedPaths.push(path);
+      return current;
+    }
+
+    if (incoming instanceof Map || existing instanceof Map) {
+      const current = new Map(existing instanceof Map
+        ? [...existing.entries()].map(([key, value]) => [key, ItemUtils.deepClone(value)])
+        : Object.entries(existing || {}));
+      const incomingEntries = incoming instanceof Map ? incoming.entries() : Object.entries(incoming || {});
+      let added = 0;
+      for (const [key, value] of incomingEntries) {
+        if (current.has(key)) {
+          report.preservedPaths.push(path ? `${path}.${String(key)}` : String(key));
+          continue;
+        }
+        current.set(key, ItemUtils.deepClone(value));
+        report.addedPaths.push(path ? `${path}.${String(key)}` : String(key));
+        added++;
+      }
+      if (!added && current.size) report.preservedPaths.push(path);
+      return current;
+    }
+
+    if (Array.isArray(incoming)) {
+      const current = Array.isArray(existing) ? ItemUtils.deepClone(existing) : [];
+      const signatures = new Set(current.map(ItemData.#mergeSignature));
+      let added = 0;
+      for (const value of incoming) {
+        const signature = ItemData.#mergeSignature(value);
+        if (signatures.has(signature)) continue;
+        current.push(ItemUtils.deepClone(value));
+        signatures.add(signature);
+        added++;
+      }
+      if (added > 0) report.addedPaths.push(path);
+      if (Array.isArray(existing) && existing.length > 0) report.preservedPaths.push(path);
+      return current;
+    }
+
+    if (incoming && typeof incoming === "object") {
+      const current = existing && typeof existing === "object" && !Array.isArray(existing)
+        ? ItemUtils.deepClone(existing)
+        : {};
+      for (const [key, value] of Object.entries(incoming)) {
+        const childPath = path ? `${path}.${key}` : key;
+        current[key] = ItemData.#conservativeMerge(current[key], value, childPath, report);
+      }
+      return current;
+    }
+
+    if (ItemData.#mergeValueIsEmpty(existing)) {
+      if (!ItemData.#mergeValueIsEmpty(incoming)) report.addedPaths.push(path);
+      return ItemUtils.deepClone(incoming);
+    }
+    if (!foundry.utils.isEmpty?.(incoming) && existing !== incoming) {
+      report.preservedPaths.push(path);
+    }
+    return ItemUtils.deepClone(existing);
+  }
+
+  static #collectUpdatePaths(existing, incoming, path, report) {
+    if (incoming instanceof Set || incoming instanceof Map) {
+      const incomingValues = incoming instanceof Set ? [...incoming] : [...incoming.entries()];
+      const existingValues = existing instanceof Set
+        ? [...existing]
+        : existing instanceof Map ? [...existing.entries()] : existing;
+      if (ItemData.#mergeSignature(existingValues) !== ItemData.#mergeSignature(incomingValues)) {
+        if (ItemData.#mergeValueIsEmpty(existing)) report.addedPaths.push(path);
+        else report.replacedPaths.push(path);
+      }
+      return;
+    }
+    if (incoming && typeof incoming === "object") {
+      for (const [key, value] of Object.entries(incoming)) {
+        const childPath = path ? `${path}.${key}` : key;
+        ItemData.#collectUpdatePaths(existing?.[key], value, childPath, report);
+      }
+      return;
+    }
+    if (existing === incoming) return;
+    if (ItemData.#mergeValueIsEmpty(existing)) report.addedPaths.push(path);
+    else report.replacedPaths.push(path);
+  }
+
+  static buildExistingOperationPlan(existingItem, itemData, operation = "update") {
+    const incoming = ItemData.prepareExistingItemUpdate(itemData);
+    const existing = ItemData.prepareExistingItemUpdate(existingItem?.toObject?.() ?? {});
+    const report = {
+      operation,
+      itemUuid: existingItem?.uuid ?? null,
+      itemName: existingItem?.name ?? null,
+      replacedPaths: [],
+      preservedPaths: ["system.activities", "effects"],
+      addedPaths: []
+    };
+
+    let updateData;
+    if (operation === "merge") {
+      updateData = ItemData.#conservativeMerge(existing, incoming, "", report);
+    } else {
+      updateData = incoming;
+      ItemData.#collectUpdatePaths(existing, incoming, "", report);
+      const incomingHasAttunement = Object.hasOwn(incoming.system ?? {}, "attunement");
+      const incomingAttunement = String(incoming.system?.attunement ?? "").trim().toLowerCase();
+      const existingRequirement = existing.flags?.[MODULE_NAME]?.attunementRequirement;
+      if (incomingHasAttunement
+        && ["", "none", "0", "false"].includes(incomingAttunement)
+        && existingRequirement) {
+        updateData.flags ??= {};
+        if (!updateData.flags[MODULE_NAME] || typeof updateData.flags[MODULE_NAME] !== "object") {
+          updateData.flags[MODULE_NAME] = {};
+        }
+        updateData.flags[MODULE_NAME]["-=attunementRequirement"] = null;
+        report.replacedPaths.push(`flags.${MODULE_NAME}.attunementRequirement`);
+      }
+    }
+
+    for (const key of ["replacedPaths", "preservedPaths", "addedPaths"]) {
+      report[key] = [...new Set(report[key].filter(Boolean))].sort();
+    }
+    return { updateData, report };
+  }
+
   /**
      * Create the item in Foundry
-     * @param {string} folderId - Optional folder to create item in
-     * @param {object} options - UI Options (generateAnimations, etc)
+     * @param {string|null} folderId - Optional legacy world-folder destination
+     * @param {object} options - UI options and destination/update policy
      * @returns {Promise<Object>} Created item and any issues
      */
   async createItem5e(folderId = null, options = {}) {
     ItemUtils.log("State of ItemData before building", this);
 
     ItemUtils.log("Creating item in Foundry");
+
+    let createdItem = null;
+    let activityResults = {
+      addedActivities: 0,
+      addedEffects: 0,
+      createdActivityIds: [],
+      createdEffectIds: [],
+      issues: []
+    };
+    const operation = ["create", "update", "merge", "skip"].includes(options.operation)
+      ? options.operation
+      : "create";
+    const existingItem = options.existingItem ?? null;
+    const cancellationRequested = () => typeof options.shouldCancel === "function" && options.shouldCancel() === true;
+
+    if (operation === "skip" && existingItem) {
+      return {
+        success: true,
+        skipped: true,
+        operation,
+        item: existingItem,
+        issues: [],
+        activityResults
+      };
+    }
 
     try {
       // Build Foundry data structure
@@ -1266,53 +1614,126 @@ export class ItemData {
       if (!validation.valid) {
         ItemUtils.error("Item validation failed", validation.errors);
         return {
+          success: false,
           item: null,
           issues: validation.errors,
+          activityResults: null,
         };
       }
 
       // Clone data to avoid mutations
       const itemData = ItemUtils.deepClone(this.#dnd5e);
 
-      // Set folder if provided
-      if (folderId) {
-        itemData.folder = folderId;
+      const destination = options.destination ?? { kind: "world", folderId };
+      if ((destination.kind ?? "world") === "world" && (destination.folderId || folderId)) {
+        itemData.folder = destination.folderId || folderId;
+      }
+      if (operation === "create" && options.importSessionId) {
+        ItemUtils.setProperty(itemData, `flags.${MODULE_NAME}.importSessionId`, options.importSessionId);
+        ItemUtils.setProperty(itemData, `flags.${MODULE_NAME}.importedAt`, new Date().toISOString());
       }
 
       let preparedActivityResults = options.parsedActivityResults ?? null;
       let preParsedActivityIssues = [];
+      let preParsedActivityBlockingIssues = [];
       if (this.pendingActivities.length > 0 && this.shouldReplaceGeneratedDefaultActivities()) {
         const prepared = await this.collectActivityResults(preparedActivityResults);
         if (prepared.results) {
           preparedActivityResults = prepared.results;
           preParsedActivityIssues = prepared.issues;
+          preParsedActivityBlockingIssues = prepared.blockingIssues;
 
-          const successfulActivityTypes = ItemData.getSuccessfulActivityTypes(preparedActivityResults);
-          if (ItemData.preventGeneratedDefaultActivity(itemData, successfulActivityTypes)) {
-            const defaultType = ItemData.DEFAULT_ACTIVITY_BY_ITEM_TYPE[itemData.type];
-            ItemUtils.log(`Preventing generated default ${defaultType} activity because inline activities already provide one.`);
+          const preflightIssues = preParsedActivityBlockingIssues.length > 0
+            ? preParsedActivityBlockingIssues
+            : await this.preflightInlineActivityPlan(
+              preparedActivityResults,
+              { type: itemData.type, system: itemData.system },
+              { checkCapability: false }
+            );
+          if (preflightIssues.length === 0) {
+            const successfulActivityTypes = ItemData.getSuccessfulActivityTypes(preparedActivityResults);
+            if (ItemData.preventGeneratedDefaultActivity(itemData, successfulActivityTypes)) {
+              const defaultType = ItemData.DEFAULT_ACTIVITY_BY_ITEM_TYPE[itemData.type];
+              ItemUtils.log(`Preventing generated default ${defaultType} activity because the complete inline attachment plan passed preflight.`);
+            }
+          } else {
+            ItemUtils.warn("Keeping the generated default activity because the inline attachment plan did not pass preflight.");
           }
         }
       }
 
-      // Create the item
-      const createdItem = await CONFIG.Item.documentClass.create(itemData);
+      if ((operation === "update" || operation === "merge") && existingItem) {
+        if (cancellationRequested()) {
+          return {
+            success: false, skipped: true, cancelled: true, operation, item: existingItem,
+            issues: ["Import cancelled before persistence."], activityResults
+          };
+        }
+        if (typeof existingItem.canUserModify === "function" && !existingItem.canUserModify(game.user, "update")) {
+          throw new Error("You do not have permission to update the matching Item.");
+        }
+        const plan = ItemData.buildExistingOperationPlan(existingItem, itemData, operation);
+        if (typeof options.confirmOperation === "function") {
+          const confirmed = await options.confirmOperation(plan.report);
+          if (confirmed !== true) {
+            return {
+              success: false, skipped: true, cancelled: true, operation, item: existingItem,
+              issues: ["Duplicate operation cancelled before persistence."], activityResults
+            };
+          }
+        }
+        if (cancellationRequested()) {
+          return {
+            success: false, skipped: true, cancelled: true, operation, item: existingItem,
+            issues: ["Import cancelled before persistence."], activityResults
+          };
+        }
+        options.operationPlan = plan.report;
+        createdItem = await existingItem.update(plan.updateData);
+      } else {
+        if (cancellationRequested()) {
+          return {
+            success: false, skipped: true, cancelled: true, operation: "create", item: null,
+            issues: ["Import cancelled before persistence."], activityResults
+          };
+        }
+        createdItem = await ItemData.createDocumentAtDestination(itemData, destination);
+      }
 
       if (createdItem) {
-        ItemUtils.log("Item created successfully", createdItem);
+        ItemUtils.log(`Item ${operation === "create" ? "created" : operation} successfully`, createdItem);
 
         // Apply inline activities/effects if present
-        let activityResults = { addedActivities: 0, addedEffects: 0, issues: [] };
         if (this.pendingActivities.length > 0) {
-          activityResults = await this.applyActivities(createdItem, preparedActivityResults);
-          activityResults.issues.unshift(...preParsedActivityIssues);
+          if (cancellationRequested()) {
+            activityResults = {
+              addedActivities: 0,
+              addedEffects: 0,
+              createdActivityIds: [],
+              createdEffectIds: [],
+              issues: ItemData.dedupeInlineIssues([
+                ...preParsedActivityIssues,
+                "Import cancellation was requested after Item persistence; skipped inline Activities and Active Effects before their document writes."
+              ])
+            };
+          } else {
+            activityResults = await this.applyActivitiesSafely(
+              createdItem,
+              preparedActivityResults,
+              preParsedActivityIssues,
+              preParsedActivityBlockingIssues
+            );
+          }
           for (const issue of activityResults.issues) {
             ItemUtils.warn(`Activity/Effect issue: ${issue}`);
           }
         }
 
         // Build notification
-        const parts = [`Created item: ${this.name}`];
+        const verb = operation === "update" ? "Updated"
+          : operation === "merge" ? "Merged"
+            : "Created";
+        const parts = [`${verb} item: ${this.name}`];
         if (activityResults.addedActivities > 0 || activityResults.addedEffects > 0) {
           const actParts = [];
           if (activityResults.addedActivities > 0) actParts.push(`${activityResults.addedActivities} activit${activityResults.addedActivities === 1 ? 'y' : 'ies'}`);
@@ -1322,21 +1743,52 @@ export class ItemData {
         ui.notifications.info(parts.join(' '));
 
         return {
+          success: true,
+          skipped: false,
+          operation: existingItem ? operation : "create",
           item: createdItem,
           issues: activityResults.issues,
+          activityResults,
+          operationPlan: options.operationPlan ?? null
         };
       } else {
         ItemUtils.error("Item creation returned null");
         return {
+          success: false,
           item: null,
           issues: ["Item creation failed"],
+          activityResults: null,
         };
       }
     } catch (error) {
+      if (createdItem) {
+        ItemUtils.error("Error after Item creation", error);
+        const postCreateIssue = `Item was created, but post-creation processing failed: ${error?.message || String(error)}`;
+        activityResults = {
+          ...activityResults,
+          addedActivities: Number.isFinite(activityResults?.addedActivities) ? activityResults.addedActivities : 0,
+          addedEffects: Number.isFinite(activityResults?.addedEffects) ? activityResults.addedEffects : 0,
+          issues: [
+            ...(Array.isArray(activityResults?.issues) ? activityResults.issues : []),
+            postCreateIssue
+          ]
+        };
+        return {
+          success: true,
+          skipped: false,
+          operation: existingItem ? operation : "create",
+          item: createdItem,
+          issues: activityResults.issues,
+          activityResults,
+          operationPlan: options.operationPlan ?? null
+        };
+      }
       ItemUtils.error("Error creating item", error);
       return {
+        success: false,
         item: null,
         issues: [error.message],
+        activityResults: null,
       };
     }
   }
@@ -1352,13 +1804,16 @@ export class ItemData {
     utility: "systems/dnd5e/icons/svg/activity/utility.svg",
     check: "systems/dnd5e/icons/svg/activity/check.svg",
     cast: "systems/dnd5e/icons/svg/activity/cast.svg",
-    enchanting: "systems/dnd5e/icons/svg/activity/enchant.svg",
+    enchant: "systems/dnd5e/icons/svg/activity/enchant.svg",
     summon: "systems/dnd5e/icons/svg/activity/summon.svg",
     transform: "systems/dnd5e/icons/svg/activity/transform.svg",
     forward: "systems/dnd5e/icons/svg/activity/forward.svg",
   };
 
   static EFFECT_DEFAULT_ICON = "icons/svg/combat.svg";
+
+  /** dnd5e activity schemas that intentionally discard applied-effect links. */
+  static ACTIVITY_TYPES_WITHOUT_EFFECTS = new Set(["cast", "forward", "transform"]);
 
   static DEFAULT_ACTIVITY_BY_ITEM_TYPE = {
     weapon: "attack",
@@ -1391,6 +1846,34 @@ export class ItemData {
         .filter(result => result?.success && result.resultType !== "effect" && result.activityType)
         .map(result => result.activityType)
     );
+  }
+
+  /** Return unique, non-empty issue strings while preserving their order. */
+  static dedupeInlineIssues(issues) {
+    return [...new Set((issues || []).filter(Boolean).map(issue => String(issue)))];
+  }
+
+  /** Preserve parser warnings, including warnings on embedded effect results. */
+  static collectInlineResultWarnings(results) {
+    const issues = [];
+    const addWarnings = (label, warnings) => {
+      for (const warning of Array.isArray(warnings) ? warnings : []) {
+        if (warning != null && String(warning).trim()) issues.push(`${label}: ${String(warning).trim()}`);
+      }
+    };
+
+    for (const result of Array.isArray(results) ? results : []) {
+      const label = result?.activityData?.name
+        || result?.effectData?.name
+        || result?.activityType
+        || "Inline attachment";
+      addWarnings(label, result?.warnings);
+      for (const [index, embedded] of (result?.embeddedEffectResults || []).entries()) {
+        const embeddedLabel = embedded?.effectData?.name || `${label} applied effect ${index + 1}`;
+        addWarnings(embeddedLabel, embedded?.warnings);
+      }
+    }
+    return ItemData.dedupeInlineIssues(issues);
   }
 
   /**
@@ -1448,61 +1931,518 @@ export class ItemData {
    */
   async applyIconFallback(data, fallback) {
     if (!data) return;
-    if (data.img) {
-      try {
-        const response = await fetch(data.img, { method: "HEAD" });
-        if (response.ok) return;
-      } catch { /* fall through */ }
+    if (!data.img) {
+      data.img = fallback;
+      return;
     }
-    data.img = fallback;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    try {
+      const response = await fetch(data.img, {
+        method: "HEAD",
+        signal: controller.signal,
+      });
+      if (response.status === 404 || response.status === 410) data.img = fallback;
+    } catch {
+      // A timeout, CORS failure, or other network error does not prove the icon is missing.
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  /** Preserve a resolvable explicit origin; otherwise bind the effect to its Item. */
+  async normalizeEffectOrigin(effectData, createdItem) {
+    if (!effectData) return;
+    const explicitOrigin = typeof effectData.origin === "string" ? effectData.origin.trim() : "";
+    if (explicitOrigin && typeof globalThis.fromUuid === "function") {
+      try {
+        if (await globalThis.fromUuid(explicitOrigin)) return;
+      } catch {
+        // Invalid or inaccessible origins fall back to the owning Item.
+      }
+    }
+    effectData.origin = createdItem.uuid;
   }
 
   /**
    * Parse pending inline activities and effects using Activity Importer.
    *
    * @param {Array<Object>|null} [parsedResults=null] - Pre-parsed activity results with resolved UUIDs
-   * @returns {Promise<{results: Array<Object>|null, issues: string[]}>}
+   * @returns {Promise<{results: Array<Object>|null, issues: string[], blockingIssues: string[]}>}
    */
   async collectActivityResults(parsedResults = null) {
-    if (Array.isArray(parsedResults) && parsedResults.length > 0) return { results: parsedResults, issues: [] };
-
-    const issues = [];
-    if (!game.modules.get("5e-activity-importer")?.active) {
-      issues.push("5e-activity-importer module is not active. Skipping inline activities/effects.");
-      return { results: null, issues };
+    const hasPendingSource = Array.isArray(this.pendingActivities);
+    const pendingActivities = hasPendingSource ? this.pendingActivities : [];
+    if (Array.isArray(parsedResults) && parsedResults.length > 0) {
+      if (hasPendingSource && parsedResults.length !== pendingActivities.length) {
+        const issue = `Pre-parsed attachment count (${parsedResults.length}) does not match the Item attachment count (${pendingActivities.length}).`;
+        return { results: null, issues: [issue], blockingIssues: [issue] };
+      }
+      const comparableRawData = value => {
+        if (Array.isArray(value)) return value.map(comparableRawData);
+        if (!value || typeof value !== "object") return value;
+        return Object.fromEntries(Object.entries(value).map(([key, nested]) => [
+          key,
+          ["Item UUID", "Actor UUID"].includes(key) ? "<resolved-uuid>" : comparableRawData(nested)
+        ]));
+      };
+      const mismatched = parsedResults.findIndex((result, index) => {
+        const rawData = result?.rawData ?? result?._itemImporterRawData;
+        if (!rawData) return false;
+        const pendingRawData = pendingActivities[index]?.rawData;
+        return ItemData.stableSignature(comparableRawData(rawData))
+          !== ItemData.stableSignature(comparableRawData(pendingRawData));
+      });
+      if (mismatched >= 0) {
+        const issue = `Pre-parsed attachment ${mismatched + 1} does not match its strict Item source block outside resolvable UUID fields.`;
+        return { results: null, issues: [issue], blockingIssues: [issue] };
+      }
+      const decorated = parsedResults.map((result, index) => {
+        const rawData = result?.rawData ?? result?._itemImporterRawData ?? pendingActivities[index]?.rawData ?? null;
+        if (result?.rawData && pendingActivities[index]) {
+          pendingActivities[index].rawData = ItemUtils.deepClone(result.rawData);
+        }
+        return { ...result, _itemImporterRawData: rawData };
+      });
+      return {
+        results: decorated,
+        issues: ItemData.collectInlineResultWarnings(parsedResults),
+        blockingIssues: []
+      };
     }
 
-    let parseAllBlocksYaml;
-    try {
-      ({ parseAllBlocksYaml } = await import("/modules/5e-activity-importer/scripts/activityParsers/yamlParser.js"));
-    } catch (err) {
-      issues.push(`Could not load activity parser: ${err.message}`);
-      return { results: null, issues };
+    const issues = [];
+    const blockingIssues = [];
+    const activityImporter = game.modules.get("5e-activity-importer");
+    if (!activityImporter?.active) {
+      const issue = "5e-activity-importer module is not active. Skipping inline activities/effects.";
+      issues.push(issue);
+      blockingIssues.push(issue);
+      return { results: null, issues, blockingIssues };
+    }
+
+    const parseAll = activityImporter.api?.parseAll;
+    const parse = activityImporter.api?.parse;
+    if (typeof parseAll !== "function" && typeof parse !== "function") {
+      const issue = "5e-activity-importer does not expose a compatible parse API. Skipping inline activities/effects.";
+      issues.push(issue);
+      blockingIssues.push(issue);
+      return { results: null, issues, blockingIssues };
     }
 
     const allResults = [];
-    for (const pending of this.pendingActivities) {
+    for (const pending of pendingActivities) {
       try {
         const yamlText = jsyaml.dump(pending.rawData);
-        const results = parseAllBlocksYaml(yamlText);
+        const parsed = typeof parseAll === "function"
+          ? await parseAll(yamlText)
+          : await parse(yamlText);
+        const results = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
+        if (results.length === 0) {
+          const issue = `No activity result was returned for ${pending.name || pending.key}.`;
+          issues.push(issue);
+          blockingIssues.push(issue);
+          continue;
+        }
         for (const result of results) {
           if (!result.success) {
             issues.push(`Failed to parse ${pending.name || pending.key}: ${result.errors?.join(", ") || "Unknown error"}`);
           }
-          allResults.push(result);
+          allResults.push({
+            ...result,
+            _itemImporterRawData: result?.rawData ?? pending.rawData
+          });
         }
       } catch (err) {
-        issues.push(`Error parsing ${pending.name || pending.key}: ${err.message}`);
+        const issue = `Error parsing ${pending.name || pending.key}: ${err.message}`;
+        issues.push(issue);
+        blockingIssues.push(issue);
       }
     }
 
-    return { results: allResults, issues };
+    issues.push(...ItemData.collectInlineResultWarnings(allResults));
+    return {
+      results: allResults,
+      issues: ItemData.dedupeInlineIssues(issues),
+      blockingIssues: ItemData.dedupeInlineIssues(blockingIssues)
+    };
+  }
+
+  /**
+   * Keep attachment integration soft after the base Item has been persisted.
+   * An unexpected attachment exception must not report the already-created Item
+   * as a failed creation, which could cause a retry to create a duplicate.
+   */
+  async applyActivitiesSafely(
+    createdItem,
+    parsedResults = null,
+    inheritedIssues = [],
+    inheritedBlockingIssues = []
+  ) {
+    if (inheritedBlockingIssues.length > 0) {
+      return {
+        addedActivities: 0,
+        addedEffects: 0,
+        createdActivityIds: [],
+        createdEffectIds: [],
+        issues: ItemData.dedupeInlineIssues([
+          ...inheritedIssues,
+          "Skipped the entire inline attachment batch because one or more attachments could not be parsed."
+        ])
+      };
+    }
+    try {
+      const result = await this.applyActivities(createdItem, parsedResults);
+      return {
+        ...result,
+        issues: ItemData.dedupeInlineIssues([
+          ...inheritedIssues,
+          ...(Array.isArray(result?.issues) ? result.issues : [])
+        ])
+      };
+    } catch (error) {
+      ItemUtils.error("Unexpected error applying inline attachments after Item creation", error);
+      return {
+        addedActivities: 0,
+        addedEffects: 0,
+        createdActivityIds: [],
+        createdEffectIds: [],
+        issues: ItemData.dedupeInlineIssues([
+          ...inheritedIssues,
+          `Item was created, but inline attachment processing failed unexpectedly: ${error?.message || String(error)}`
+        ])
+      };
+    }
+  }
+
+  /**
+   * Validate cross-document references used by programmatic/direct imports.
+   * UUIDs are resolved when Foundry exposes fromUuid; local Forward targets are
+   * valid when they already exist on the Item or are planned in this batch.
+   */
+  async validateInlineActivityReferences(results, createdItem, resolveUuid = globalThis.fromUuid) {
+    const issues = [];
+    const activityResults = (Array.isArray(results) ? results : [])
+      .filter(result => result?.success && result.resultType !== "effect" && result.activityData);
+    const plannedActivityIds = new Set(
+      activityResults
+        .map(result => result.activityData?._id)
+        .filter(id => typeof id === "string" && id.trim())
+        .map(id => id.trim())
+    );
+    const uuidResolver = typeof resolveUuid === "function"
+      ? uuid => resolveUuid.call(globalThis, uuid)
+      : null;
+    const resolutionCache = new Map();
+    const resolveDocument = async uuid => {
+      if (!uuidResolver) return undefined;
+      if (!resolutionCache.has(uuid)) {
+        resolutionCache.set(uuid, Promise.resolve().then(() => uuidResolver(uuid)).catch(() => null));
+      }
+      return resolutionCache.get(uuid);
+    };
+
+    const existingActivities = createdItem.system?.activities;
+    const hasExistingActivity = id => {
+      if (typeof existingActivities?.has === "function") return existingActivities.has(id);
+      if (typeof existingActivities?.get === "function") return !!existingActivities.get(id);
+      return !!existingActivities
+        && typeof existingActivities === "object"
+        && Object.prototype.hasOwnProperty.call(existingActivities, id);
+    };
+
+    for (const result of activityResults) {
+      const { activityType, activityData } = result;
+      const label = activityData.name || activityType || "Inline activity";
+
+      if (activityType === "cast") {
+        const uuid = typeof activityData.spell?.uuid === "string" ? activityData.spell.uuid.trim() : "";
+        if (!uuid) {
+          issues.push(`${label} requires a spell Item UUID.`);
+        } else if (uuidResolver) {
+          const spell = await resolveDocument(uuid);
+          if (!spell || spell.documentName !== "Item" || spell.type !== "spell") {
+            issues.push(`${label} has a UUID that does not resolve to a spell Item.`);
+          }
+        }
+      }
+
+      if (activityType === "summon" || activityType === "transform") {
+        const mode = activityType === "summon"
+          ? activityData.summon?.mode
+          : activityData.transform?.mode;
+        if (mode !== "cr") {
+          const profiles = Array.isArray(activityData.profiles) ? activityData.profiles : [];
+          if (profiles.length === 0) {
+            issues.push(`${label} direct-link mode requires at least one Actor profile.`);
+          }
+          for (const [index, profile] of profiles.entries()) {
+            const uuid = typeof profile?.uuid === "string" ? profile.uuid.trim() : "";
+            if (!uuid) {
+              issues.push(`${label} profile ${index + 1} requires an Actor UUID.`);
+            } else if (uuidResolver) {
+              const actor = await resolveDocument(uuid);
+              if (!actor || actor.documentName !== "Actor") {
+                issues.push(`${label} profile ${index + 1} has a UUID that does not resolve to an Actor.`);
+              }
+            }
+          }
+        }
+      }
+
+      if (activityType === "forward") {
+        const targetId = typeof activityData.activity?.id === "string"
+          ? activityData.activity.id.trim()
+          : "";
+        if (!targetId) {
+          issues.push(`${label} requires a target activity ID.`);
+        } else if (!hasExistingActivity(targetId) && !plannedActivityIds.has(targetId)) {
+          issues.push(`${label} targets activity ID "${targetId}", which is not on the Item or in this inline batch.`);
+        }
+      }
+    }
+
+    return issues;
+  }
+
+  static inlineAttachmentSignature(rawData) {
+    return ItemData.stableSignature(rawData ?? null);
+  }
+
+  existingInlineAttachmentSignatures(item) {
+    const documents = [
+      ...Array.from(item?.system?.activities?.values?.() ?? item?.system?.activities ?? []),
+      ...Array.from(item?.effects?.values?.() ?? item?.effects ?? [])
+    ];
+    return new Set(documents.map(document =>
+      document?.getFlag?.(MODULE_NAME, "strictYaml")
+        ?? document?.flags?.[MODULE_NAME]?.strictYaml
+        ?? null
+    ).filter(Boolean).map(ItemData.inlineAttachmentSignature));
+  }
+
+  /** Validate the complete attachment plan before any embedded documents are created. */
+  async preflightInlineActivityPlan(
+    allResults,
+    itemContext,
+    { checkCapability = true, resolveUuid = globalThis.fromUuid } = {}
+  ) {
+    const preflightIssues = [];
+    const results = Array.isArray(allResults) ? allResults : [];
+    const hasActivityResults = results.some(result => result && result.resultType !== "effect");
+    const itemSupportsActivities = itemContext?.system?.activities != null
+      && typeof itemContext?.createActivity === "function";
+    if (checkCapability && hasActivityResults && !itemSupportsActivities) {
+      preflightIssues.push(
+        `${itemContext?.type || "This Item"} does not support dnd5e activities; skipped the entire inline attachment batch before creating any activities or effects.`
+      );
+    }
+
+    for (const result of results) {
+      if (!result?.success) {
+        preflightIssues.push(`Failed to parse inline attachment: ${(result?.errors || []).join(", ") || "Unknown parse error"}`);
+        continue;
+      }
+      if (result.resultType === "effect") {
+        if (!result.effectData) preflightIssues.push("A standalone inline effect is missing effect data.");
+        continue;
+      }
+      if (!result.activityType || !result.activityData) {
+        preflightIssues.push("An inline activity is missing its type or activity data.");
+        continue;
+      }
+
+      if (result.embeddedEffectResults != null && !Array.isArray(result.embeddedEffectResults)) {
+        preflightIssues.push(`${result.activityData.name || result.activityType} has malformed embedded effect results.`);
+        continue;
+      }
+      const embeddedResults = result.embeddedEffectResults || [];
+      const invalidEmbedded = embeddedResults.filter(effect => !effect?.success || !effect.effectData);
+      if (invalidEmbedded.length > 0) {
+        preflightIssues.push(`${result.activityData.name || result.activityType} has ${invalidEmbedded.length} invalid embedded effect result(s).`);
+      }
+      if (embeddedResults.length > 0 && ItemData.ACTIVITY_TYPES_WITHOUT_EFFECTS.has(result.activityType)) {
+        preflightIssues.push(`${result.activityType} activities do not support applied effects in the current dnd5e schema.`);
+      }
+    }
+
+    if (preflightIssues.length === 0) {
+      preflightIssues.push(...await this.validateInlineActivityReferences(results, itemContext, resolveUuid));
+    }
+    return preflightIssues;
+  }
+
+  /** Collect document IDs from Foundry Collections and collection-like test doubles. */
+  static collectInlineDocumentIds(collection) {
+    if (!collection) return [];
+    if (typeof collection.keys === "function") return Array.from(collection.keys()).filter(Boolean);
+    const documents = Array.isArray(collection)
+      ? collection
+      : (Array.isArray(collection.contents) ? collection.contents : []);
+    return documents.map(document => document?.id ?? document?._id).filter(Boolean);
+  }
+
+  /** Allocate a collision-free embedded-document ID, preserving a usable requested ID. */
+  static allocateInlineDocumentId(requestedId, reservedIds) {
+    const requested = typeof requestedId === "string" ? requestedId.trim() : "";
+    if (requested && !reservedIds.has(requested)) {
+      reservedIds.add(requested);
+      return requested;
+    }
+
+    for (let attempt = 0; attempt < 1000; attempt++) {
+      const generated = globalThis.foundry?.utils?.randomID?.()
+        || globalThis.crypto?.randomUUID?.().replaceAll("-", "").slice(0, 16)
+        || `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`.slice(0, 16);
+      if (generated && !reservedIds.has(generated)) {
+        reservedIds.add(generated);
+        return generated;
+      }
+    }
+    throw new Error("Could not allocate a collision-free inline document ID.");
+  }
+
+  /** Clone the validated plan and preallocate IDs needed for reliable rollback. */
+  prepareInlineAttachmentPlan(results, createdItem) {
+    const existingActivityIds = new Set(
+      ItemData.collectInlineDocumentIds(createdItem.system?.activities)
+    );
+    const reservedActivityIds = new Set(existingActivityIds);
+    const existingEffectIds = new Set(
+      ItemData.collectInlineDocumentIds(createdItem.effects)
+    );
+    const reservedEffectIds = new Set(existingEffectIds);
+    const requestedActivityIds = new Set();
+    const requestedEffectIds = new Set();
+
+    return results.map(source => {
+      const result = {
+        ...source,
+        activityData: source.activityData ? ItemUtils.deepClone(source.activityData) : null,
+        effectData: source.effectData ? ItemUtils.deepClone(source.effectData) : null,
+        embeddedEffectResults: (source.embeddedEffectResults || []).map(embedded => ({
+          ...embedded,
+          effectData: embedded.effectData ? ItemUtils.deepClone(embedded.effectData) : null
+        }))
+      };
+
+      if (result.activityData) {
+        const requestedId = typeof result.activityData._id === "string"
+          ? result.activityData._id.trim()
+          : "";
+        if (requestedId && existingActivityIds.has(requestedId)) {
+          throw new Error(`Inline Activity ID "${requestedId}" collides with an existing Activity; the attachment batch was not created.`);
+        }
+        if (requestedId && requestedActivityIds.has(requestedId)) {
+          throw new Error(`Inline Activity ID "${requestedId}" is duplicated in this import batch; the attachment batch was not created.`);
+        }
+        if (requestedId) requestedActivityIds.add(requestedId);
+        result.activityData._id = ItemData.allocateInlineDocumentId(
+          result.activityData._id,
+          reservedActivityIds
+        );
+        for (const profile of result.activityData.profiles || []) delete profile.actorName;
+      }
+      for (const effectData of [
+        result.effectData,
+        ...result.embeddedEffectResults.map(embedded => embedded.effectData)
+      ].filter(Boolean)) {
+        const requestedId = typeof effectData._id === "string" ? effectData._id.trim() : "";
+        if (requestedId && existingEffectIds.has(requestedId)) {
+          throw new Error(`Inline Active Effect ID "${requestedId}" collides with an existing Active Effect; the attachment batch was not created.`);
+        }
+        if (requestedId && requestedEffectIds.has(requestedId)) {
+          throw new Error(`Inline Active Effect ID "${requestedId}" is duplicated in this import batch; the attachment batch was not created.`);
+        }
+        if (requestedId) requestedEffectIds.add(requestedId);
+        effectData._id = ItemData.allocateInlineDocumentId(effectData._id, reservedEffectIds);
+      }
+      return result;
+    });
+  }
+
+  /** Record preallocated or returned IDs once without losing transaction order. */
+  recordInlineDocumentIds(destination, ids) {
+    for (const id of ids) {
+      if (id && !destination.includes(id)) destination.push(id);
+    }
+  }
+
+  /** Track any preallocated effect payloads that Foundry has already persisted. */
+  trackExistingInlineEffectIds(createdItem, effectPayloads, destination) {
+    for (const effectData of effectPayloads) {
+      const id = effectData?._id;
+      if (id && createdItem.effects?.has?.(id)) this.recordInlineDocumentIds(destination, [id]);
+    }
+  }
+
+  /** Roll back only documents created by the current inline attachment batch. */
+  async rollbackInlineDocuments(createdItem, activityIds, effectIds) {
+    const failures = [];
+    const uniqueActivityIds = [...new Set(activityIds)].reverse();
+    for (const id of uniqueActivityIds) {
+      try {
+        const activitiesBefore = createdItem.system?.activities;
+        if (typeof activitiesBefore?.has !== "function" || activitiesBefore.has(id)) {
+          await createdItem.deleteActivity(id);
+        }
+        const activitiesAfter = createdItem.system?.activities;
+        if (typeof activitiesAfter?.has === "function" && activitiesAfter.has(id)) {
+          throw new Error("activity still exists after rollback deletion");
+        }
+      } catch (error) {
+        const activitiesAfterError = createdItem.system?.activities;
+        if (typeof activitiesAfterError?.has !== "function" || activitiesAfterError.has(id)) {
+          failures.push({ type: "activity", id, error: error.message });
+        }
+      }
+    }
+
+    const uniqueEffectIds = [...new Set(effectIds)];
+    const effectsToDelete = uniqueEffectIds.filter(id => {
+      const effects = createdItem.effects;
+      return typeof effects?.has !== "function" || effects.has(id);
+    });
+    if (effectsToDelete.length > 0) {
+      try {
+        await createdItem.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete);
+        const remaining = effectsToDelete.filter(id => createdItem.effects?.has?.(id));
+        if (remaining.length > 0) {
+          failures.push({ type: "effect", ids: remaining, error: "effect still exists after rollback deletion" });
+        }
+      } catch (error) {
+        const remaining = effectsToDelete.filter(id => {
+          const effects = createdItem.effects;
+          return typeof effects?.has !== "function" || effects.has(id);
+        });
+        if (remaining.length > 0) failures.push({ type: "effect", ids: remaining, error: error.message });
+      }
+    }
+
+    return failures;
+  }
+
+  async applyStrictYamlAttachmentFlags(data, rawData) {
+    if (!data || !rawData) return;
+    try {
+      const core = await import("./itemCoreFeatures.js");
+      if (typeof core.createStrictYamlAttachmentFlags !== "function") return;
+      const strictFlags = core.createStrictYamlAttachmentFlags(rawData);
+      if (!strictFlags || typeof strictFlags !== "object") return;
+      data.flags = foundry.utils.mergeObject(data.flags || {}, strictFlags, {
+        inplace: false,
+        recursive: true
+      });
+    } catch (error) {
+      ItemUtils.warn(`Could not preserve strict YAML attachment provenance: ${error?.message || error}`);
+    }
   }
 
   /**
    * Apply inline activities and effects to a created Foundry item.
    * If pre-parsed results (with resolved UUIDs) are provided, uses those directly.
-   * Otherwise dynamically imports the activity parser from the 5e-activity-importer module.
+   * Otherwise uses the public parser API from the 5e-activity-importer module.
    *
    * @param {Object} createdItem - The created Foundry Item document
    * @param {Array<Object>|null} [parsedResults=null] - Pre-parsed activity results with resolved UUIDs
@@ -1512,66 +2452,178 @@ export class ItemData {
     const issues = [];
     let addedActivities = 0;
     let addedEffects = 0;
+    const createdActivityIds = [];
+    const createdEffectIds = [];
 
     const prepared = await this.collectActivityResults(parsedResults);
     issues.push(...prepared.issues);
-    if (!prepared.results) return { addedActivities, addedEffects, issues };
+    if (!prepared.results || prepared.blockingIssues.length > 0) {
+      if (prepared.results && prepared.blockingIssues.length > 0) {
+        issues.push("Skipped the entire inline attachment batch because one or more attachments could not be parsed.");
+      }
+      return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues };
+    }
 
     const allResults = prepared.results;
+    const existingSignatures = this.existingInlineAttachmentSignatures(createdItem);
+    const missingResults = allResults.filter(result => {
+      const rawData = result?._itemImporterRawData ?? result?.rawData;
+      return !rawData || !existingSignatures.has(ItemData.inlineAttachmentSignature(rawData));
+    });
+    const duplicateCount = allResults.length - missingResults.length;
+    if (duplicateCount > 0) {
+      issues.push(`Skipped ${duplicateCount} inline attachment${duplicateCount === 1 ? "" : "s"} already present on the Item.`);
+    }
+    if (missingResults.length === 0) {
+      return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues };
+    }
+
+    // A partially valid batch is more dangerous than a skipped soft integration.
+    const preflightIssues = await this.preflightInlineActivityPlan(missingResults, createdItem);
+    if (preflightIssues.length > 0) {
+      issues.push(...preflightIssues);
+      return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues };
+    }
+
+    const importPlan = this.prepareInlineAttachmentPlan(missingResults, createdItem);
 
     // Apply each parsed result to the created item
-    const itemSupportsActivities = !!createdItem.system?.activities;
-    for (const result of allResults) {
+    for (const result of importPlan) {
       try {
-        if (!result.success) {
-          if (!parsedResults) continue; // Already reported above for fallback path
-          issues.push(`Failed to parse activity: ${(result.errors || []).join(', ')}`);
-          continue;
-        }
-
         if (result.resultType === "effect") {
-          const { effectData } = result;
+          const effectData = result.effectData;
+          await this.applyStrictYamlAttachmentFlags(effectData, result._itemImporterRawData ?? result.rawData);
+          await this.normalizeEffectOrigin(effectData, createdItem);
           await this.applyIconFallback(effectData, ItemData.EFFECT_DEFAULT_ICON);
           ItemUtils.log("Adding inline effect to item:", createdItem.name, effectData);
-          await createdItem.createEmbeddedDocuments("ActiveEffect", [effectData]);
+          const effectSources = [effectData];
+          const payloadIds = effectSources.map(effect => effect._id);
+          this.recordInlineDocumentIds(createdEffectIds, payloadIds);
+          this.trackExistingInlineEffectIds(createdItem, effectSources, createdEffectIds);
+          let createdEffects;
+          try {
+            createdEffects = await createdItem.createEmbeddedDocuments(
+              "ActiveEffect",
+              effectSources,
+              { keepId: true }
+            );
+          } catch (error) {
+            this.trackExistingInlineEffectIds(createdItem, effectSources, createdEffectIds);
+            throw error;
+          }
+          this.trackExistingInlineEffectIds(createdItem, effectSources, createdEffectIds);
+          const returnedIds = Array.isArray(createdEffects)
+            ? createdEffects.map(effect => effect?.id).filter(Boolean)
+            : [];
+          this.recordInlineDocumentIds(createdEffectIds, returnedIds);
+          const payloadPersisted = payloadIds.every(id => createdItem.effects?.has?.(id) !== false);
+          if (!Array.isArray(createdEffects)
+            || createdEffects.length !== 1
+            || returnedIds.length !== 1
+            || !returnedIds.includes(effectData._id)
+            || !payloadPersisted) {
+            throw new Error("Foundry did not return the required standalone effect document");
+          }
           addedEffects++;
         } else {
-          const { activityType, activityData } = result;
-          if (!itemSupportsActivities) {
-            issues.push(`${createdItem.type} items do not support dnd5e activities. Skipping "${activityData?.name || activityType}".`);
-            continue;
-          }
+          const { activityType } = result;
+          const activityData = result.activityData;
 
           const fallbackIcon = ItemData.ACTIVITY_DEFAULT_ICONS[activityType] ?? ItemData.ACTIVITY_DEFAULT_ICONS.utility;
           await this.applyIconFallback(activityData, fallbackIcon);
 
           // Handle embedded effects (APPLIED_EFFECTS within the activity)
           const embeddedEffects = (result.embeddedEffectResults || []).filter(er => er.success && er.effectData);
-          const failedEmbedded = (result.embeddedEffectResults || []).filter(er => !er.success);
+          const effectsToCreate = embeddedEffects;
 
-          if (embeddedEffects.length > 0) {
-            ItemUtils.log(`Creating ${embeddedEffects.length} embedded effect(s) for activity...`);
-            for (const er of embeddedEffects) {
-              await this.applyIconFallback(er.effectData, ItemData.EFFECT_DEFAULT_ICON);
+          let createdEffects = [];
+          if (effectsToCreate.length > 0) {
+            ItemUtils.log(`Creating ${effectsToCreate.length} embedded effect(s) for activity...`);
+            const effectSources = effectsToCreate.map(er => er.effectData);
+            for (const embedded of effectsToCreate) {
+              if (embedded.rawData) await this.applyStrictYamlAttachmentFlags(embedded.effectData, embedded.rawData);
             }
-            const createdEffects = await createdItem.createEmbeddedDocuments(
-              "ActiveEffect",
-              embeddedEffects.map(er => er.effectData)
-            );
-            activityData.effects = createdEffects.map(e => ({ _id: e.id }));
+            for (const effectData of effectSources) {
+              if (activityType === "enchant") effectData.type = "enchantment";
+              await this.normalizeEffectOrigin(effectData, createdItem);
+              await this.applyIconFallback(effectData, ItemData.EFFECT_DEFAULT_ICON);
+            }
+            const payloadIds = effectSources.map(effect => effect._id);
+            this.recordInlineDocumentIds(createdEffectIds, payloadIds);
+            this.trackExistingInlineEffectIds(createdItem, effectSources, createdEffectIds);
+            try {
+              createdEffects = await createdItem.createEmbeddedDocuments(
+                "ActiveEffect",
+                effectSources,
+                { keepId: true }
+              );
+            } catch (error) {
+              this.trackExistingInlineEffectIds(createdItem, effectSources, createdEffectIds);
+              throw error;
+            }
+            this.trackExistingInlineEffectIds(createdItem, effectSources, createdEffectIds);
+            const returnedIds = Array.isArray(createdEffects)
+              ? createdEffects.map(effect => effect?.id).filter(Boolean)
+              : [];
+            this.recordInlineDocumentIds(createdEffectIds, returnedIds);
+            const payloadPersisted = payloadIds.every(id => createdItem.effects?.has?.(id) !== false);
+            if (!Array.isArray(createdEffects)
+              || createdEffects.length !== effectSources.length
+              || returnedIds.length !== effectSources.length
+              || !payloadIds.every(id => returnedIds.includes(id))
+              || !payloadPersisted) {
+              throw new Error(`Created ${returnedIds.length} of ${effectSources.length} required embedded effects`);
+            }
+            activityData.effects = payloadIds.map((id, index) => ({
+              _id: id,
+              ...(effectsToCreate[index]?.applicationData || {})
+            }));
             ItemUtils.log("Linked effect IDs to activity:", activityData.effects);
           }
 
-          if (failedEmbedded.length > 0) {
-            issues.push(`${failedEmbedded.length} embedded effect(s) failed to parse and were skipped.`);
-          }
-
+          await this.applyStrictYamlAttachmentFlags(activityData, result._itemImporterRawData ?? result.rawData);
           ItemUtils.log("Adding inline activity to item:", createdItem.name, activityType, activityData);
+          const activityId = activityData._id;
+          this.recordInlineDocumentIds(createdActivityIds, [activityId]);
           await createdItem.createActivity(activityType, activityData, { renderSheet: false });
+          if (typeof createdItem.system.activities?.has !== "function"
+            || !createdItem.system.activities.has(activityId)) {
+            throw new Error("dnd5e did not create the required activity document");
+          }
           addedActivities++;
+          addedEffects += effectsToCreate.length;
         }
       } catch (err) {
         issues.push(`Error applying activity: ${err.message}`);
+        const rollbackFailures = await this.rollbackInlineDocuments(
+          createdItem,
+          createdActivityIds,
+          createdEffectIds
+        );
+        if (rollbackFailures.length > 0) {
+          const details = rollbackFailures.map(failure => {
+            const ids = failure.id ?? failure.ids?.join(", ") ?? "unknown";
+            return `${failure.type} ${ids}: ${failure.error}`;
+          });
+          issues.push(`Inline attachment rollback was incomplete: ${details.join("; ")}`);
+          const failedActivityIds = new Set(
+            rollbackFailures.filter(failure => failure.type === "activity").map(failure => failure.id)
+          );
+          const failedEffectIds = new Set(
+            rollbackFailures
+              .filter(failure => failure.type === "effect")
+              .flatMap(failure => failure.ids || [])
+          );
+          addedActivities = failedActivityIds.size;
+          addedEffects = failedEffectIds.size;
+        } else {
+          if (createdActivityIds.length > 0 || createdEffectIds.length > 0) {
+            issues.push("Inline attachment creation failed; all documents created by this inline batch were rolled back.");
+          }
+          addedActivities = 0;
+          addedEffects = 0;
+        }
+        break;
       }
     }
 
@@ -1582,14 +2634,14 @@ export class ItemData {
       ItemUtils.log(`Applied ${parts.join(' and ')} to ${createdItem.name}`);
     }
 
-    return { addedActivities, addedEffects, issues };
+    return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues };
   }
 
   /**
    * Export item data for debugging
    */
   toJSON() {
-    return {
+    const json = {
       name: this.name,
       type: this.type,
       rarity: this.rarity,
@@ -1606,9 +2658,18 @@ export class ItemData {
         properties: this.properties,
         recovery: this.recovery,
         attunement: this.attunement,
+        attunementRequirement: this.attunementRequirement,
         magicBonus: this.magicBonus,
       },
       foundryData: this.#dnd5e,
     };
+    if (this.type === "spell") {
+      delete json.rarity;
+      delete json.cost;
+      delete json.weight;
+      delete json.properties.attunement;
+      delete json.properties.attunementRequirement;
+    }
+    return json;
   }
 }

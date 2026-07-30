@@ -44,9 +44,26 @@ export class ItemComparisonWindow extends HandlebarsApplicationMixin(Application
 
     _onRender(context, options) {
         // Set up collapsible sections
-        this.element.querySelectorAll(".ii-section-header").forEach(header => {
-            header.addEventListener("click", () => {
-                header.closest(".ii-section").classList.toggle("collapsed");
+        this.element.querySelectorAll(".ii-section-header").forEach((header, index) => {
+            const section = header.closest(".ii-section");
+            const content = section?.querySelector(":scope > .ii-section-content");
+            if (!section || !content) return;
+            const contentId = content.id || `${this.id}-section-${index}`;
+            content.id = contentId;
+            header.setAttribute("role", "button");
+            header.tabIndex = 0;
+            header.setAttribute("aria-controls", contentId);
+            const updateState = () => header.setAttribute("aria-expanded", String(!section.classList.contains("collapsed")));
+            const toggle = () => {
+                section.classList.toggle("collapsed");
+                updateState();
+            };
+            updateState();
+            header.addEventListener("click", toggle);
+            header.addEventListener("keydown", event => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                toggle();
             });
         });
     }
@@ -62,7 +79,7 @@ export class ItemComparisonWindow extends HandlebarsApplicationMixin(Application
      */
     static async show(comparisons, isBatch = false) {
         const window = new ItemComparisonWindow(comparisons, isBatch);
-        window.render(true);
+        await window.render(true);
         return window;
     }
 }

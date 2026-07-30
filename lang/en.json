@@ -1,0 +1,200 @@
+{
+  "II": {
+    "Window": {
+      "AriaLabel": "5e Item Importer workflow"
+    },
+    "Settings": {
+      "Quick": "Import options",
+      "SemanticIcons": "Semantic icons",
+      "CreateIdentified": "Create identified",
+      "MatchIcons": "Match compendium icons",
+      "AutoParse": "Auto-parse",
+      "Compare": "Compare after import",
+      "Animations": "Generate available animations",
+      "AnimationsUnavailable": "AutoAnimations is not active",
+      "ImageMode": "Image selection",
+      "ImageDeterministic": "Best match",
+      "ImageRandom": "Random top match",
+      "SuggestAutomation": "Suggest automation from natural text",
+      "ImageSeed": "Random image seed",
+      "ImageSeedPlaceholder": "Optional stable seed",
+      "OptionsHint": "Icons, identification, images, and automation"
+    },
+    "Input": {
+      "Label": "Item source",
+      "Placeholder": "Paste item text here, choose a template, or drop a document or file?",
+      "DropHint": "Drop an Item, Actor, text, Markdown, or YAML file. Item drops load strict YAML."
+    },
+    "Presets": {
+      "Select": "Choose an item template or saved preset",
+      "Choose": "Quick start or saved preset",
+      "BuiltIn": "Built-in templates",
+      "Saved": "My presets",
+      "Manage": "Manage presets",
+      "ManageHint": "Save or remove client-local presets",
+      "Name": "Preset name",
+      "NamePlaceholder": "Name this preset",
+      "Save": "Save",
+      "SaveHint": "Save the current input as a client-local preset",
+      "Delete": "Delete",
+      "DeleteHint": "Delete the selected saved preset"
+    },
+    "Actions": {
+      "Parse": "Preview",
+      "Import": "Import",
+      "Reset": "Clear",
+      "Copy": "Copy",
+      "Download": "Download",
+      "Cancel": "Cancel",
+      "Remove": "Remove"
+    },
+    "Results": {
+      "Label": "Import preview",
+      "Empty": "Add an item source to preview it."
+    },
+    "Normalized": {
+      "Title": "Advanced: normalized strict YAML",
+      "Label": "Normalized strict YAML",
+      "Placeholder": "Preview item text to generate editable normalized YAML.",
+      "Reparse": "Use and preview"
+    },
+    "Destination": {
+      "Title": "Import destination",
+      "Kind": "Destination",
+      "World": "World Items",
+      "Actor": "Owned Actor",
+      "Compendium": "Writable Item Compendium",
+      "ActorSelect": "Actor",
+      "CompendiumSelect": "Compendium",
+      "Folder": "Folder",
+      "SearchFolders": "Filter folders?",
+      "ActorNamed": "Actor: {name}",
+      "CompendiumNamed": "Compendium: {name}",
+      "FolderNamed": "Folder: {name}"
+    },
+    "Duplicates": {
+      "Title": "If an item already exists",
+      "Create": "Create another item",
+      "Update": "Update imported fields",
+      "Merge": "Fill missing fields",
+      "Skip": "Skip duplicate",
+      "Help": "Update replaces imported values while preserving existing Activities and effects. Merge only fills empty values and adds missing list entries."
+    },
+    "Activity": {
+      "Builder": "Add activities or effects",
+      "Resolve": "Resolve document references"
+    },
+    "History": {
+      "Title": "Import history",
+      "Empty": "No imports in this browser session.",
+      "Undo": "Undo last import",
+      "Download": "Download report"
+    },
+    "State": {
+      "Ready": "Ready",
+      "Parsing": "Previewing?",
+      "Valid": "Ready to import",
+      "Error": "Needs attention"
+    },
+    "Errors": {
+      "PresetNameRequired": "Enter a preset name.",
+      "PresetTextRequired": "Paste or generate item text before saving a preset.",
+      "PresetTooLarge": "Preset text exceeds the {max} character limit.",
+      "PresetIdInvalid": "The preset identifier is invalid.",
+      "PresetNameDuplicate": "A preset with that name already exists.",
+      "ActorDestinationMissing": "The selected Actor destination is unavailable.",
+      "ActorDestinationPermission": "You do not have permission to add Items to that Actor.",
+      "PackDestinationMissing": "The selected Item compendium is unavailable.",
+      "PackDestinationPermission": "The selected Item compendium is locked or not writable.",
+      "FolderDestinationMissing": "The selected Item folder is unavailable.",
+      "AmbiguousDuplicate": "Found {count} matching Items named {name} in {destination}. Update, merge, and skip require a unique target; rename or remove duplicates first.",
+      "DestinationCreateFailed": "Foundry did not return the created Item.",
+      "HistorySessionMissing": "That import session is no longer available.",
+      "UndoPermission": "permission denied",
+      "UndoMarkerMismatch": "the Item is not marked as created by this import session",
+      "UndoSnapshotMissing": "the pre-import snapshot is unavailable",
+      "UndoAfterSnapshotMissing": "the verified post-import snapshot is unavailable",
+      "UndoItemChanged": "the Item changed after import; undo was refused to protect those edits",
+      "UndoEmbeddedChanged": "an imported Activity or Active Effect changed after import; undo was refused to protect those edits",
+      "WorkflowMutationBusy": "Another import or undo operation is already in progress. Wait for it to finish before changing Items.",
+      "CapturedAttachmentRoot": "Captured {mode} {index} does not have one canonical strict root.",
+      "PresetNameTooLong": "Preset names are limited to 100 characters.",
+      "PresetLimitReached": "You can save up to {max} presets.",
+      "WorldDestinationPermission": "You do not have permission to create World Items.",
+      "PresetStorageLimit": "Saved presets exceed the {max} character storage limit.",
+      "ActivityExportUnsupported": "Cannot export Activity {name} as strict YAML because {reason}. Export stopped to prevent data loss.",
+      "EffectExportUnsupported": "Cannot export Active Effect {name} as strict YAML because {reason}. Export stopped to prevent data loss.",
+      "SharedActivityEffectUnsupported": "Cannot export Activities {firstName} and {secondName} because both reference Active Effect {effectId}. The strict format cannot preserve a shared effect without duplicating it, so export stopped to prevent data loss."
+    },
+    "Notifications": {
+      "PresetSaved": "Saved preset: {name}",
+      "PresetDeleted": "Deleted preset.",
+      "Copied": "Copied normalized YAML.",
+      "CancelRequested": "Import will stop after the current Item.",
+      "NoHistory": "There is no import session to report.",
+      "NoUndo": "There is no undoable import session.",
+      "UndoResult": "Undo complete: {undone} restored/removed, {failed} failed.",
+      "CloseDeferred": "The import will stop after its current Item, then this window will close.",
+      "DropUnsupported": "That drop does not contain a supported Item, Actor, or text file.",
+      "ActorDropUnavailable": "That Actor is not available as a writable import destination.",
+      "ReferencesResolved": "Resolved {resolved} exact reference(s); {unresolved} remain unresolved and {ambiguous} are ambiguous.",
+      "SuggestionRemoved": "Removed the suggested automation from this import preview.",
+      "BuilderBatchUnsupported": "Open Activity Builder only when exactly one Item is parsed.",
+      "CoreExportCopied": "Copied core Item YAML. Activities and Active Effects were excluded.",
+      "FullExportCopied": "Copied full Item YAML with Activities and Active Effects.",
+      "CoreItemDrop": "Loaded core Item YAML. Activities and Active Effects were omitted because 5e Activity Importer serialization is unavailable."
+    },
+    "Confirm": {
+      "UndoTitle": "Undo Last Item Import?",
+      "UndoBody": "This removes Items created by the last session and restores updated/merged Items from session-only snapshots. Continue?",
+      "DuplicateTitle": "Confirm {operation}: {name}",
+      "DuplicateIntro": "Review the exact path policy before changing the existing Item.",
+      "DuplicateTarget": "Exact target",
+      "ReplacePaths": "Paths update will replace",
+      "PreservePaths": "Paths merge/update preserves",
+      "AddPaths": "Paths merge/update adds"
+    },
+    "Suggestions": {
+      "Title": "Local Parse Suggestions",
+      "AutomationTitle": "Suggested Automation (review before import)",
+      "RemoveNamed": "Remove suggested automation: {name}"
+    },
+    "Preview": {
+      "Animation": "AutoAnimations Preview",
+      "IconCandidates": "Compendium Image Candidates",
+      "CustomProperties": "Custom Properties"
+    },
+    "Import": {
+      "Preparing": "Preparing…",
+      "Progress": "Importing…"
+    },
+    "Batch": {
+      "Filter": "Filter ready Items",
+      "FilterPlaceholder": "Search by name…",
+      "Type": "Type",
+      "AllTypes": "All types",
+      "FilterCount": "{visible} of {total} shown",
+      "DuplicatePolicy": "Duplicate policy",
+      "DuplicatePolicyFor": "Duplicate policy for {name}",
+      "SelectNamed": "Select {name}",
+      "UseGlobalPolicy": "Use global policy"
+    },
+    "Insights": {
+      "Title": "Local Parse Insights",
+      "Confidence": "Confidence",
+      "Parser": "Parser",
+      "Fields": "Traced fields",
+      "NoSuggestions": "No local review suggestions."
+    },
+    "Export": {
+      "CopyCore": "Copy Core Item YAML",
+      "DownloadCore": "Download Core Item YAML",
+      "CopyFull": "Copy Full Item YAML",
+      "DownloadFull": "Download Full Item YAML"
+    },
+    "Attunement": {
+      "Note": "Attunement requirement: {requirement}",
+      "Summary": "Attunement Requirement"
+    }
+  }
+}

@@ -26,6 +26,14 @@ const FIXTURE_ITEM_TEXT = [
     "description: Temporary MCP diagnostics fixture."
 ].join("\n");
 
+const FIXTURE_EFFECT_DATA = {
+    name: "MCP Fixture World Item Effect",
+    img: "icons/svg/aura.svg",
+    disabled: false,
+    transfer: true,
+    changes: []
+};
+
 export function getFixtureCounts(runId = null) {
     const fixtures = findFixtureItems(runId);
     return {
@@ -140,7 +148,12 @@ async function createFixtureItem(marker) {
         }
     };
 
-    return CONFIG.Item.documentClass.create(itemData);
+    const createdItem = await CONFIG.Item.documentClass.create(itemData);
+    const createdEffects = await createdItem.createEmbeddedDocuments("ActiveEffect", [FIXTURE_EFFECT_DATA]);
+    if (createdEffects.length !== 1) {
+        throw new Error(`Fixture Active Effect creation returned ${createdEffects.length} documents instead of 1.`);
+    }
+    return createdItem;
 }
 
 function findFixtureItems(runId = null) {
@@ -217,6 +230,7 @@ function summarizeItem(item) {
         uuid: item.uuid ?? null,
         name: item.name ?? null,
         type: item.type ?? null,
-        img: item.img ?? null
+        img: item.img ?? null,
+        effects: Number(item.effects?.size ?? item.effects?.length ?? 0)
     };
 }

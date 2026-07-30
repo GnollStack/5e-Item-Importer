@@ -4,6 +4,15 @@ import jsyaml from '../vendor/js-yaml.mjs';
 import { ItemData } from '../itemData.js';
 import { ItemUtils } from '../itemUtils.js';
 import { MODULE_NAME } from '../itemConfig.js';
+import {
+    ITEM_YAML_SCHEMA_KEY,
+    migrateItemYamlDocument,
+    isItemYamlMetadataKey
+} from './itemSchemaVersion.js';
+import {
+    normalizeCustomProperties,
+    customPropertiesToFlagData
+} from '../itemCustomProperties.js';
 
 // ─── Helper Utilities ───────────────────────────────────────────────────────
 
@@ -19,10 +28,25 @@ function asInt(val, fallback = 0) {
     return isNaN(n) ? fallback : n;
 }
 
-function asFloat(val, fallback = 0) {
-    if (val === null || val === undefined) return fallback;
-    const n = parseFloat(val);
-    return isNaN(n) ? fallback : n;
+function asExactInteger(val) {
+    if (typeof val === 'number') return Number.isSafeInteger(val) ? val : NaN;
+    const text = String(val).trim();
+    if (!/^[+\-]?\d+$/.test(text)) return NaN;
+    const parsed = Number(text);
+    return Number.isSafeInteger(parsed) ? parsed : NaN;
+}
+
+/** Preserve dnd5e FormulaField expressions without parseInt-style truncation. */
+function asFormulaFieldValue(val, { allowDice = true } = {}) {
+    if (typeof val === 'number') return Number.isFinite(val) ? val : null;
+    const text = String(val ?? '').trim();
+    if (!text || text.length > 200 || /[\r\n;]/.test(text)) return null;
+    if (/^[+\-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text)) {
+        const numeric = Number(text);
+        return Number.isFinite(numeric) ? numeric : null;
+    }
+    if (!allowDice && /\b\d*d\d+/i.test(text)) return null;
+    return /(?:@|\d*d\d+|[+\-*/%()])/i.test(text) ? text : null;
 }
 
 function asNullable(val) {
@@ -30,6 +54,14 @@ function asNullable(val) {
     const str = String(val).trim().toLowerCase();
     if (str === 'n/a' || str === '' || str === 'null' || str === 'none') return null;
     return val;
+}
+
+function asExactFiniteNumber(val) {
+    if (typeof val === 'number') return Number.isFinite(val) ? val : NaN;
+    const text = String(val).trim();
+    if (!/^[+\-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+\-]?\d+)?$/i.test(text)) return NaN;
+    const parsed = Number(text);
+    return Number.isFinite(parsed) ? parsed : NaN;
 }
 
 function asString(val, fallback = '') {
@@ -237,7 +269,7 @@ const VALID_CONSUMABLE_TYPES = ['ammo', 'food', 'poison', 'potion', 'rod', 'scro
 
 const CONSUMABLE_AMMO_TYPE_MAP = {
     'arrow': 'arrow', 'bolt': 'crossbowBolt', 'crossbowbolt': 'crossbowBolt',
-    'dart': 'dart', 'needle': 'blowgunNeedle', 'blowgunneedle': 'blowgunNeedle',
+    'needle': 'blowgunNeedle', 'blowgunneedle': 'blowgunNeedle',
     'bullet': 'firearmBullet', 'firearmbullet': 'firearmBullet',
     'slingbullet': 'slingBullet', 'energycell': 'energyCell'
 };
@@ -298,10 +330,99 @@ const VALID_TARGET_TYPES = ['self', 'ally', 'enemy', 'creature', 'object', 'spac
 const VALID_AREA_SHAPES = ['cone', 'cube', 'cylinder', 'radius', 'line', 'sphere', 'circle', 'square', 'wall'];
 const VALID_AREA_UNITS = ['ft', 'mi', 'm', 'km'];
 
+const COMMON_SECTION_KEYS = {
+    ITEM: ['Name', 'Rarity'],
+    INVENTORY: ['Quantity', 'Identified', 'Equipped'],
+    COST_AND_WEIGHT: ['Price Value', 'Price Denomination', 'Weight Value', 'Weight Units'],
+    DESCRIPTION: ['Description'],
+    UNIDENTIFIED_DESCRIPTION: ['Unidentified Name', 'Unidentified Description'],
+    CHAT_FLAVOR: ['Chat Description']
+};
+
+const ATTUNEMENT_KEYS = ['Attunement', 'Attunement By', 'Magic Bonus'];
+const USAGE_KEYS = ['Uses Spent', 'Uses Current', 'Uses Max'];
+const RECOVERY_KEYS = ['Period', 'Type', 'Formula'];
+const SPELL_UNSUPPORTED_SECTIONS = new Set([
+    'INVENTORY', 'COST_AND_WEIGHT', 'UNIDENTIFIED_DESCRIPTION'
+]);
+const SPELL_UNSUPPORTED_ITEM_KEYS = new Set(['Rarity']);
+
+// This schema is intentionally warning-only. It catches misspelled or stale
+// fields without preventing forward-compatible data from being inspected.
+const TYPE_SECTION_KEYS = {
+    weapon: {
+        ITEM: ['Weapon Type', 'Base Weapon'],
+        PROPERTIES: Object.keys(WEAPON_PROPERTY_MAP),
+        ATTUNEMENT: ATTUNEMENT_KEYS,
+        AMMUNITION: ['Ammunition Type'],
+        RELOAD: ['Reload Amount'],
+        RANGE: ['Reach', 'Range Normal', 'Range Long', 'Range Units'],
+        DAMAGE: ['Damage Formula', 'Damage Type'],
+        VERSATILE_DAMAGE: ['Versatile Formula', 'Versatile Damage Type'],
+        MASTERY: ['Mastery'],
+        PROFICIENCY: ['Proficient'],
+        SIEGE_PROPERTIES: ['Siege Armor Class', 'Cover', 'Hit Points Current', 'Hit Points Max', 'Hit Points Threshold', 'Health Conditions'],
+        USAGE: USAGE_KEYS,
+        RECOVERY: RECOVERY_KEYS
+    },
+    equipment: {
+        ITEM: ['Equipment Type', 'Base Equipment'],
+        PROPERTIES: ['Adamantine', 'Focus', 'Magical', 'Stealth Disadvantage'],
+        ATTUNEMENT: ATTUNEMENT_KEYS,
+        ARMOR: ['Armor Class', 'Max Dex Modifier', 'Strength Requirement'],
+        VEHICLE_PROPERTIES: ['Vehicle Armor Class', 'Cover', 'Hit Points Current', 'Hit Points Max', 'Hit Points Threshold', 'Health Conditions', 'Speed', 'Speed Conditions'],
+        PROFICIENCY: ['Proficient'],
+        USAGE: USAGE_KEYS,
+        RECOVERY: RECOVERY_KEYS
+    },
+    consumable: {
+        ITEM: ['Consumable Type'],
+        PROPERTIES: ['Magical'],
+        ATTUNEMENT: ATTUNEMENT_KEYS,
+        AMMUNITION_PROPERTIES: ['Ammunition Type', 'Adamantine', 'Silvered', 'Returning', 'Magic Bonus', 'Damage Formula', 'Damage Type', 'Damage Replace'],
+        POISON_PROPERTIES: ['Poison Type'],
+        SCROLL_PROPERTIES: ['Concentration', 'Somatic', 'Vocal', 'Verbal', 'Ritual'],
+        USAGE: [...USAGE_KEYS, 'Destroy on Empty'],
+        RECOVERY: RECOVERY_KEYS
+    },
+    tool: {
+        ITEM: ['Tool Type', 'Base Tool'],
+        PROPERTIES: ['Magical', 'Tool Bonus'],
+        ATTUNEMENT: ATTUNEMENT_KEYS,
+        ABILITY_CHECK: ['Proficient', 'Ability'],
+        USAGE: USAGE_KEYS,
+        RECOVERY: RECOVERY_KEYS
+    },
+    loot: {
+        ITEM: ['Loot Type'],
+        PROPERTIES: ['Magical']
+    },
+    container: {
+        PROPERTIES: ['Magical', 'Weightless Contents'],
+        ATTUNEMENT: ATTUNEMENT_KEYS,
+        CAPACITY: ['Item Count', 'Weight Capacity Value', 'Weight Capacity Units', 'Volume Capacity Value', 'Volume Capacity Units'],
+        CURRENCY_CONTENTS: ['Platinum', 'Gold', 'Electrum', 'Silver', 'Copper']
+    },
+    spell: {
+        ITEM: ['Level', 'School', 'Ability'],
+        COMPONENTS: ['Vocal', 'Somatic', 'Material'],
+        MATERIALS: ['Value', 'Cost', 'Supply', 'Consumed'],
+        PREPARATION: ['Method', 'Prepared'],
+        ACTIVATION: ['Type', 'Value', 'Condition'],
+        RANGE: ['Value', 'Units'],
+        DURATION: ['Value', 'Units', 'Concentration'],
+        TARGETS: ['Type', 'Count', 'Choice', 'Special'],
+        AREA: ['Shape', 'Size', 'Units', 'Count', 'Width', 'Height', 'Contiguous'],
+        USAGE: USAGE_KEYS,
+        RECOVERY: RECOVERY_KEYS
+    }
+};
+
 // ─── Main Parser Class ──────────────────────────────────────────────────────
 
 export class YamlItemParser {
-    constructor() {
+    constructor(options = {}) {
+        this.options = options;
         this.errors = [];
         this.warnings = [];
         this.trace = null;
@@ -360,8 +481,28 @@ export class YamlItemParser {
                 return this.createResult(false, null);
             }
 
+            // 2b. Migrate legacy documents before normal field extraction.
+            const schema = migrateItemYamlDocument(doc);
+            this.trace.schema = {
+                sourceVersion: schema.sourceVersion,
+                targetVersion: schema.targetVersion,
+                explicitVersion: schema.explicitVersion,
+                migrations: [...schema.migrations]
+            };
+            for (const message of schema.warnings) this.addWarning(message);
+            if (schema.migrations.length > 0) {
+                this.addWarning(`Migrated Item YAML schema: ${schema.migrations.join('; ')}.`);
+            }
+            for (const message of schema.errors) this.addError(message);
+            if (schema.errors.length > 0) {
+                this.trace.errors = [...this.errors];
+                this.trace.warnings = [...this.warnings];
+                return this.createResult(false, null);
+            }
+            doc = schema.document;
+
             // 3. Detect item type from top-level key
-            const { type, data } = this.detectItemType(doc);
+            const { type, data, rootKey } = this.detectItemType(doc);
             this.trace.detectedType = type || null;
             if (!type) {
                 this.addError('Could not detect item type. Expected top-level key: WEAPON, LOOT, EQUIPMENT, CONSUMABLE, TOOL, CONTAINER, or SPELL');
@@ -370,7 +511,18 @@ export class YamlItemParser {
                 return this.createResult(false, null);
             }
 
+            if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+                this.addError(`${rootKey} must contain a mapping of item sections`);
+                this.trace.errors = [...this.errors];
+                this.trace.warnings = [...this.warnings];
+                return this.createResult(false, null);
+            }
+
             ItemUtils.log(`YamlItemParser: Detected item type: ${type}`);
+
+            // Warn about ignored fields before extraction so copy/paste typos
+            // are visible instead of silently disappearing.
+            this.validateKnownKeys(data, type, doc);
 
             // 4. Extract universal fields
             const itemData = this.extractUniversalFields(data, type);
@@ -403,12 +555,39 @@ export class YamlItemParser {
             // 5b. Extract inline activities and effects
             itemData.pendingActivities = this.extractActivities(data);
 
+            // 5c. Normalize registered custom properties and namespaced metadata.
+            const customProperties = normalizeCustomProperties(data?.CUSTOM_PROPERTIES, {
+                registry: this.options.propertyRegistry,
+                itemType: type
+            });
+            for (const message of customProperties.warnings) this.addWarning(message);
+            for (const message of customProperties.errors) this.addError(message);
+            itemData.customProperties = {
+                registered: [...customProperties.registered],
+                metadata: { ...customProperties.metadata }
+            };
+            const hasCustomProperties = customProperties.registered.length > 0
+                || Object.keys(customProperties.metadata).length > 0;
+            itemData.customPropertyFlags = hasCustomProperties
+                ? customPropertiesToFlagData(customProperties)
+                : null;
+            if (itemData.customPropertyFlags) itemData.flags = itemData.customPropertyFlags;
+            if (customProperties.registered.length > 0) {
+                itemData.properties = [...new Set([
+                    ...(Array.isArray(itemData.properties) ? itemData.properties : []),
+                    ...customProperties.registered
+                ])];
+            }
+            itemData.yamlSchemaVersion = schema.targetVersion;
+            itemData.yamlSourceSchemaVersion = schema.sourceVersion;
+            itemData.yamlSchemaMigrations = [...schema.migrations];
+
             // 6. Return result
             const success = this.errors.length === 0;
             ItemUtils.log(`YamlItemParser: Parsing ${success ? 'succeeded' : 'completed with errors'}`);
             this.trace.errors = [...this.errors];
             this.trace.warnings = [...this.warnings];
-            return this.createResult(success, itemData);
+            return this.createResult(success, success ? itemData : null);
 
         } catch (error) {
             ItemUtils.error('YamlItemParser: Unexpected error', error);
@@ -448,7 +627,8 @@ export class YamlItemParser {
                 success: false,
                 item: null,
                 errors: [`YAML parse error: ${yamlError.message}`],
-                warnings: []
+                warnings: [],
+                sourceText: stripped.trim()
             }];
         }
 
@@ -460,7 +640,8 @@ export class YamlItemParser {
                 success: false,
                 item: null,
                 errors: ['YAML document is empty or not an object'],
-                warnings: []
+                warnings: [],
+                sourceText: stripped.trim()
             }];
         }
 
@@ -469,31 +650,86 @@ export class YamlItemParser {
             const topKeys = Object.keys(documents[0]);
             const itemKeys = topKeys.filter(k => validKeys.includes(k));
             if (itemKeys.length <= 1) {
-                return [this.parse(text)];
+                const result = this.parse(text);
+                result.sourceText = stripped.trim();
+                return [result];
             }
         }
 
-        // Process all documents, expanding multi-key documents
+        // Process all documents, expanding multi-key documents while carrying
+        // schema metadata into every per-item sub-document.
         const results = [];
-        for (const doc of documents) {
-            const topKeys = Object.keys(doc);
+        for (const originalDoc of documents) {
+            const schema = migrateItemYamlDocument(originalDoc);
+            if (schema.errors.length > 0) {
+                results.push({
+                    success: false,
+                    item: null,
+                    errors: [...schema.errors],
+                    warnings: [...schema.warnings],
+                    sourceText: jsyaml.dump(originalDoc).trim()
+                });
+                continue;
+            }
+            const doc = schema.document;
+            const topKeys = Object.keys(doc).filter((key) => !isItemYamlMetadataKey(key));
+            if (topKeys.length === 0) {
+                results.push({
+                    success: false,
+                    item: null,
+                    errors: ['YAML document does not contain an Item root key'],
+                    warnings: [...schema.warnings],
+                    schema: {
+                        sourceVersion: schema.sourceVersion,
+                        targetVersion: schema.targetVersion,
+                        explicitVersion: schema.explicitVersion,
+                        migrations: [...schema.migrations]
+                    },
+                    sourceText: jsyaml.dump(doc).trim()
+                });
+                continue;
+            }
 
             for (const key of topKeys) {
+                const subDoc = {
+                    [ITEM_YAML_SCHEMA_KEY]: doc[ITEM_YAML_SCHEMA_KEY],
+                    [key]: doc[key]
+                };
+                const subYaml = jsyaml.dump(subDoc).trim();
                 if (!validKeys.includes(key)) {
                     results.push({
                         success: false,
                         item: null,
                         errors: [`Unknown item type key "${key}". Expected: ${validKeys.join(', ')}. Note: SPELL items can be batched with other types.`],
-                        warnings: []
+                        warnings: [],
+                        sourceText: subYaml
                     });
                     continue;
                 }
 
-                const subDoc = { [key]: doc[key] };
-                const subYaml = jsyaml.dump(subDoc);
-
-                const subParser = new YamlItemParser();
-                results.push(subParser.parse(subYaml));
+                const subParser = new YamlItemParser(this.options);
+                const result = subParser.parse(subYaml);
+                const migrationWarning = schema.migrations.length > 0
+                    ? `Migrated Item YAML schema: ${schema.migrations.join('; ')}.`
+                    : null;
+                result.warnings = [...new Set([
+                    ...schema.warnings,
+                    ...(migrationWarning ? [migrationWarning] : []),
+                    ...(result.warnings ?? [])
+                ])];
+                result.schema = {
+                    sourceVersion: schema.sourceVersion,
+                    targetVersion: schema.targetVersion,
+                    explicitVersion: schema.explicitVersion,
+                    migrations: [...schema.migrations]
+                };
+                if (result.item) {
+                    result.item.yamlSourceSchemaVersion = schema.sourceVersion;
+                    result.item.yamlSchemaMigrations = [...schema.migrations];
+                }
+                if (result.trace) result.trace.schema = { ...result.schema };
+                result.sourceText = subYaml;
+                results.push(result);
             }
         }
 
@@ -524,12 +760,106 @@ export class YamlItemParser {
         };
 
         for (const [key, type] of Object.entries(typeMap)) {
-            if (doc[key]) {
-                return { type, data: doc[key] };
+            if (Object.prototype.hasOwnProperty.call(doc, key)) {
+                return { type, data: doc[key], rootKey: key };
             }
         }
 
-        return { type: null, data: null };
+        return { type: null, data: null, rootKey: null };
+    }
+
+    validateKnownKeys(data, type, doc) {
+        const rootKeyByType = {
+            weapon: 'WEAPON', equipment: 'EQUIPMENT', consumable: 'CONSUMABLE',
+            tool: 'TOOL', loot: 'LOOT', container: 'CONTAINER', spell: 'SPELL'
+        };
+        const validRootKeys = new Set(Object.values(rootKeyByType));
+        const expectedRootKey = rootKeyByType[type];
+
+        for (const key of Object.keys(doc || {})) {
+            if (isItemYamlMetadataKey(key)) continue;
+            if (key === expectedRootKey) continue;
+            if (validRootKeys.has(key)) {
+                this.addWarning(`Additional item key "${key}" is ignored by parse(); use parseAll() for batches.`);
+            } else {
+                this.addWarning(`Unknown top-level key "${key}"; it will be ignored.`);
+            }
+        }
+
+        const sectionSchemas = {};
+        for (const [section, keys] of Object.entries(COMMON_SECTION_KEYS)) {
+            if (type === 'spell' && SPELL_UNSUPPORTED_SECTIONS.has(section)) continue;
+            sectionSchemas[section] = type === 'spell' && section === 'ITEM'
+                ? keys.filter((key) => !SPELL_UNSUPPORTED_ITEM_KEYS.has(key))
+                : [...keys];
+        }
+        for (const [section, keys] of Object.entries(TYPE_SECTION_KEYS[type] || {})) {
+            sectionSchemas[section] = [
+                ...(sectionSchemas[section] || []),
+                ...keys
+            ];
+        }
+
+        const passthroughSections = new Set([
+            'Activities', 'effects', 'Effects', 'EFFECTS', 'CUSTOM_PROPERTIES'
+        ]);
+        const allowedSections = Object.keys(sectionSchemas);
+
+        for (const [section, sectionData] of Object.entries(data || {})) {
+            if (passthroughSections.has(section)) continue;
+            if (type === 'spell' && SPELL_UNSUPPORTED_SECTIONS.has(section)) {
+                this.addWarning(`Unsupported spell section "${section}" is ignored by current dnd5e SpellData.`);
+                continue;
+            }
+            if (!Object.prototype.hasOwnProperty.call(sectionSchemas, section)) {
+                const caseMatch = allowedSections.find(
+                    (allowed) => allowed.toLowerCase() === section.toLowerCase()
+                );
+                const suggestion = caseMatch ? ` Did you mean "${caseMatch}"?` : '';
+                this.addWarning(`Unknown ${type} section "${section}"; it will be ignored.${suggestion}`);
+                continue;
+            }
+
+            const isMapping = sectionData !== null
+                && typeof sectionData === 'object'
+                && !Array.isArray(sectionData);
+            if (section === 'RECOVERY') {
+                const entries = Array.isArray(sectionData) ? sectionData : [sectionData];
+                const malformedIndex = entries.findIndex(
+                    (entry) => entry === null || typeof entry !== 'object' || Array.isArray(entry)
+                );
+                if (malformedIndex >= 0) {
+                    this.addWarning(`RECOVERY[${malformedIndex}] must be a mapping; the malformed entry will be ignored.`);
+                }
+            } else if (!isMapping) {
+                this.addWarning(`${section} must be a mapping; its fields will be ignored.`);
+                continue;
+            }
+
+            const allowedKeys = sectionSchemas[section];
+            const entries = section === 'RECOVERY'
+                ? (Array.isArray(sectionData) ? sectionData : [sectionData])
+                : [sectionData];
+
+            for (const [index, entry] of entries.entries()) {
+                if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
+                for (const key of Object.keys(entry)) {
+                    if (type === 'spell' && section === 'ITEM' && SPELL_UNSUPPORTED_ITEM_KEYS.has(key)) {
+                        this.addWarning(`Unsupported spell key "ITEM.${key}" is ignored by current dnd5e SpellData.`);
+                        continue;
+                    }
+                    if (allowedKeys.includes(key)) continue;
+                    const caseMatch = allowedKeys.find(
+                        (allowed) => allowed.toLowerCase() === key.toLowerCase()
+                    );
+                    const suggestion = caseMatch ? ` Did you mean "${caseMatch}"?` : '';
+                    const location = section === 'RECOVERY'
+                        ? `${section}[${index}]`
+                        : section;
+                    this.addWarning(`Unknown key "${key}" in ${location}; it will be ignored.${suggestion}`);
+                }
+            }
+        }
     }
 
     addError(message) {
@@ -568,58 +898,90 @@ export class YamlItemParser {
         const itemData = new ItemData(name || 'Unnamed Item');
         itemData.type = type;
 
-        // Rarity
-        const rarityRaw = asString(itemSection['Rarity'], 'common').toLowerCase().replace(/\s+/g, '');
-        itemData.rarity = RARITY_MAP[rarityRaw] || 'common';
-        if (!RARITY_MAP[rarityRaw] && rarityRaw !== 'n/a' && rarityRaw !== '') {
-            this.addWarning(`Unknown rarity "${itemSection['Rarity']}", defaulting to common`);
-        }
+        if (type !== 'spell') {
+            // Physical/identifiable fields are not part of current dnd5e SpellData.
+            const rarityRaw = asString(itemSection['Rarity'], 'common').toLowerCase().replace(/\s+/g, '');
+            itemData.rarity = RARITY_MAP[rarityRaw] || 'common';
+            if (!RARITY_MAP[rarityRaw] && rarityRaw !== 'n/a' && rarityRaw !== '') {
+                this.addWarning(`Unknown rarity "${itemSection['Rarity']}", defaulting to common`);
+            }
 
-        // Inventory
-        const inv = data?.INVENTORY || {};
-        itemData.quantity = asInt(inv['Quantity'], 1);
-        itemData.identified = asBool(inv['Identified'], getDefaultIdentifiedSetting());
-        itemData.equipped = asBool(inv['Equipped'], false);
+            const inv = data?.INVENTORY || {};
+            const hasQuantity = Object.prototype.hasOwnProperty.call(inv, 'Quantity');
+            const parsedQuantity = hasQuantity ? asExactInteger(inv['Quantity']) : 1;
+            if (!Number.isSafeInteger(parsedQuantity)) {
+                this.addError(`Quantity must be an integer; received "${inv['Quantity']}"`);
+                itemData.quantity = 1;
+            } else {
+                itemData.quantity = parsedQuantity;
+            }
+            itemData.identified = asBool(inv['Identified'], getDefaultIdentifiedSetting());
+            itemData.equipped = asBool(inv['Equipped'], false);
 
-        // Cost and Weight
-        const cw = data?.COST_AND_WEIGHT || {};
-        itemData.costDisplay = asFloat(cw['Price Value'], 0);
-        const denom = asString(cw['Price Denomination'], 'gp').toLowerCase();
-        itemData.costDenomination = VALID_DENOMINATIONS.includes(denom) ? denom : 'gp';
-        if (!VALID_DENOMINATIONS.includes(denom) && denom !== '') {
-            this.addWarning(`Invalid price denomination "${denom}", using default: gp`);
-        }
+            const cw = data?.COST_AND_WEIGHT || {};
+            const priceRaw = asNullable(cw['Price Value']);
+            if (priceRaw === null) {
+                itemData.costDisplay = 0;
+            } else {
+                const priceValue = asExactFiniteNumber(priceRaw);
+                if (!Number.isFinite(priceValue)) {
+                    this.addError(`Price Value must be a finite number or n/a; received "${cw['Price Value']}"`);
+                    itemData.costDisplay = 0;
+                } else {
+                    itemData.costDisplay = priceValue;
+                }
+            }
+            const denom = asString(cw['Price Denomination'], 'gp').toLowerCase();
+            itemData.costDenomination = VALID_DENOMINATIONS.includes(denom) ? denom : 'gp';
+            if (!VALID_DENOMINATIONS.includes(denom) && denom !== '') {
+                this.addWarning(`Invalid price denomination "${denom}", using default: gp`);
+            }
 
-        itemData.weight = asFloat(cw['Weight Value'], 0);
-        const wUnits = asString(cw['Weight Units'], 'lb').toLowerCase();
-        itemData.weightUnits = WEIGHT_UNIT_MAP[wUnits] ?? 'lb';
-        if (!WEIGHT_UNIT_MAP[wUnits] && wUnits !== '') {
-            this.addWarning(`Invalid weight units "${wUnits}", using default: lb`);
+            const weightRaw = asNullable(cw['Weight Value']);
+            if (weightRaw === null) {
+                itemData.weight = 0;
+            } else {
+                const weightValue = asExactFiniteNumber(weightRaw);
+                if (!Number.isFinite(weightValue)) {
+                    this.addError(`Weight Value must be a finite number or n/a; received "${cw['Weight Value']}"`);
+                    itemData.weight = 0;
+                } else {
+                    itemData.weight = weightValue;
+                }
+            }
+            const wUnits = asString(cw['Weight Units'], 'lb').toLowerCase();
+            itemData.weightUnits = WEIGHT_UNIT_MAP[wUnits] ?? 'lb';
+            if (!WEIGHT_UNIT_MAP[wUnits] && wUnits !== '') {
+                this.addWarning(`Invalid weight units "${wUnits}", using default: lb`);
+            }
         }
 
         // Description
         const descSection = data?.DESCRIPTION || {};
         itemData.description = asString(descSection['Description'], '');
 
-        // Unidentified Description
-        const unidentSection = data?.UNIDENTIFIED_DESCRIPTION || {};
-        const unidentName = asNullable(unidentSection['Unidentified Name']);
-        itemData.unidentifiedName = unidentName ? String(unidentName) : '';
-        itemData.unidentifiedDescription = asString(unidentSection['Unidentified Description'], '');
+        if (type !== 'spell') {
+            const unidentSection = data?.UNIDENTIFIED_DESCRIPTION || {};
+            const unidentName = asNullable(unidentSection['Unidentified Name']);
+            itemData.unidentifiedName = unidentName ? String(unidentName) : '';
+            itemData.unidentifiedDescription = asString(unidentSection['Unidentified Description'], '');
+        }
 
         // Chat Flavor
         const chatSection = data?.CHAT_FLAVOR || {};
         itemData.chatDescription = asString(chatSection['Chat Description'], '');
 
         // Validation
-        if (itemData.quantity < 0) {
-            this.addError('Quantity cannot be negative');
-        }
-        if (itemData.weight < 0) {
-            this.addError('Weight cannot be negative');
-        }
-        if (itemData.costDisplay < 0) {
-            this.addError('Price cannot be negative');
+        if (type !== 'spell') {
+            if (itemData.quantity < 0) {
+                this.addError('Quantity cannot be negative');
+            }
+            if (itemData.weight < 0) {
+                this.addError('Weight cannot be negative');
+            }
+            if (itemData.costDisplay < 0) {
+                this.addError('Price cannot be negative');
+            }
         }
 
         ItemUtils.log('YamlItemParser: Universal fields extracted', {
@@ -631,6 +993,23 @@ export class YamlItemParser {
 
     // ─── Shared Helpers ─────────────────────────────────────────────────────
 
+    /** Parse and preserve a dnd5e FormulaField bonus. */
+    extractMagicBonusValue(item, rawValue, label = 'Magic Bonus') {
+        const raw = asNullable(rawValue);
+        if (raw === null) return null;
+        const parsed = asFormulaFieldValue(raw, { allowDice: false });
+        if (parsed === null) {
+            this.addError(`${label} must be a finite number or deterministic formula; received "${rawValue}".`);
+            return null;
+        }
+        item.magicBonus = parsed;
+        if (parsed !== 0) item.isMagical = true;
+        if (typeof parsed === 'number' && (parsed < 0 || parsed > 3)) {
+            this.addWarning(`${label} (${parsed}) is outside the typical range 0 to 3.`);
+        }
+        return parsed;
+    }
+
     /**
      * Extract attunement fields from ATTUNEMENT section.
      * @param {ItemData} item
@@ -638,13 +1017,19 @@ export class YamlItemParser {
      * @param {boolean} isMagical - Whether the item is magical
      */
     extractAttunement(item, data, isMagical) {
-        if (!isMagical) {
+        const att = data?.ATTUNEMENT || {};
+        const restrictionRaw = asNullable(att['Attunement By']);
+        const magicBonus = this.extractMagicBonusValue(item, att['Magic Bonus']);
+        const resolvedMagical = isMagical || (magicBonus !== null && magicBonus !== 0);
+        if (!resolvedMagical) {
             item.attunement = '';
             item.attunementRequirement = null;
+            if (restrictionRaw !== null) {
+                this.addWarning('ATTUNEMENT.Attunement By is ignored because Attunement resolves to none.');
+            }
             return;
         }
 
-        const att = data?.ATTUNEMENT || {};
         const attunementVal = asString(att['Attunement'], 'none').toLowerCase();
         const validAttunements = ['none', 'required', 'optional'];
 
@@ -653,47 +1038,45 @@ export class YamlItemParser {
         }
 
         item.attunement = (attunementVal === 'required' || attunementVal === 'optional') ? attunementVal : '';
-        item.attunementRequirement = asNullable(att['Attunement By']) ? asString(att['Attunement By']) : null;
-
-        const magicBonusRaw = asNullable(att['Magic Bonus']);
-        if (magicBonusRaw !== null) {
-            const magicBonus = asInt(magicBonusRaw, -1);
-            if (magicBonus >= 0) {
-                item.magicBonus = magicBonus;
-                if (magicBonus > 3) {
-                    this.addWarning(`Magic Bonus (${magicBonus}) should typically be between 0 and 3`);
-                }
-            } else {
-                this.addWarning(`Invalid Magic Bonus value "${att['Magic Bonus']}".`);
-            }
+        item.attunementRequirement = item.attunement && restrictionRaw !== null
+            ? asString(restrictionRaw)
+            : null;
+        if (!item.attunement && restrictionRaw !== null) {
+            this.addWarning('ATTUNEMENT.Attunement By is ignored because Attunement resolves to none.');
         }
+
     }
 
     /**
      * Extract attunement for equipment (uses string-based attunement values).
      */
     extractAttunementEquipment(item, data, isMagical) {
-        if (!isMagical) {
+        const att = data?.ATTUNEMENT || {};
+        const restrictionRaw = asNullable(att['Attunement By']);
+        const magicBonus = this.extractMagicBonusValue(item, att['Magic Bonus']);
+        const resolvedMagical = isMagical || (magicBonus !== null && magicBonus !== 0);
+        if (!resolvedMagical) {
             item.attunement = '';
             item.attunementRequirement = null;
+            if (restrictionRaw !== null) {
+                this.addWarning('ATTUNEMENT.Attunement By is ignored because Attunement resolves to none.');
+            }
             return;
         }
 
-        const att = data?.ATTUNEMENT || {};
         const attunementVal = asString(att['Attunement'], 'none').toLowerCase();
-        item.attunement = attunementVal === 'none' ? '' : attunementVal;
-        item.attunementRequirement = asNullable(att['Attunement By']) ? asString(att['Attunement By']) : null;
-
-        const magicBonusRaw = asNullable(att['Magic Bonus']);
-        if (magicBonusRaw !== null) {
-            const magicBonus = asInt(magicBonusRaw, -1);
-            if (magicBonus >= 0) {
-                item.magicBonus = magicBonus;
-                if (magicBonus > 3) {
-                    this.addWarning(`Magic Bonus (${magicBonus}) should typically be between 0 and 3`);
-                }
-            }
+        const validAttunements = ['none', 'required', 'optional'];
+        if (!validAttunements.includes(attunementVal)) {
+            this.addWarning(`Invalid Attunement value "${attunementVal}". Defaulting to "none".`);
         }
+        item.attunement = (attunementVal === 'required' || attunementVal === 'optional') ? attunementVal : '';
+        item.attunementRequirement = item.attunement && restrictionRaw !== null
+            ? asString(restrictionRaw)
+            : null;
+        if (!item.attunement && restrictionRaw !== null) {
+            this.addWarning('ATTUNEMENT.Attunement By is ignored because Attunement resolves to none.');
+        }
+
     }
 
     /**
@@ -705,27 +1088,72 @@ export class YamlItemParser {
      */
     extractUsageAndRecovery(item, data, options = {}) {
         const usage = data?.USAGE || {};
-        const usesMax = asInt(usage['Uses Max'], 0);
-        // Accept 'Uses Spent' (preferred) or 'Uses Current' (legacy fallback)
-        const usesSpentRaw = usage['Uses Spent'] ?? usage['Uses Current'];
+        const usesMaxRaw = asNullable(usage['Uses Max']);
+        const parsedUsesMax = usesMaxRaw === null ? 0 : asExactInteger(usesMaxRaw);
+        const usesMaxFormula = typeof usesMaxRaw === 'string'
+            && !/^[+\-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(usesMaxRaw.trim())
+            && usesMaxRaw.length <= 200
+            && !/[\r\n;]/.test(usesMaxRaw)
+            && !/\b\d*d\d+/i.test(usesMaxRaw)
+            && /(?:@|[+\-*/%()])/.test(usesMaxRaw)
+            ? usesMaxRaw.trim()
+            : null;
+        const usesMax = Number.isSafeInteger(parsedUsesMax) ? parsedUsesMax : usesMaxFormula;
+        const hasUsesSpent = Object.prototype.hasOwnProperty.call(usage, 'Uses Spent');
+        const hasUsesCurrent = Object.prototype.hasOwnProperty.call(usage, 'Uses Current');
+        // `Uses Current` was the old remaining-uses label. Convert it to the
+        // current dnd5e spent model; canonical `Uses Spent` wins if both exist.
+        const usesSpentRaw = hasUsesSpent ? usage['Uses Spent'] : usage['Uses Current'];
         // Blank/null defaults to 0 (item starts fresh/full)
-        const usesSpent = (usesSpentRaw === null || usesSpentRaw === undefined)
+        const normalizedUsesSpent = asNullable(usesSpentRaw);
+        let usesSpent = normalizedUsesSpent === null
             ? 0
-            : asInt(usesSpentRaw, 0);
+            : asExactInteger(normalizedUsesSpent);
+        let validUses = true;
+
+        if (hasUsesSpent && hasUsesCurrent) {
+            this.addWarning('USAGE.Uses Current is ignored because Uses Spent is also present.');
+        } else if (hasUsesCurrent) {
+            this.addWarning('USAGE.Uses Current is deprecated and means remaining uses; use Uses Spent instead.');
+        }
 
         if (options.hasDestroyOnEmpty) {
             item.autoDestroy = asBool(usage['Destroy on Empty'], false);
         }
 
-        if (usesMax > 0) {
-            item.uses = { value: usesSpent, max: usesMax };
-
-            // Validate
-            if (usesSpent < 0) this.addWarning('Uses Spent cannot be negative');
-            if (usesMax < 0) this.addError('Uses Max cannot be negative');
-            if (usesSpent > usesMax) {
-                this.addWarning(`Uses Spent (${usesSpent}) exceeds Uses Max (${usesMax})`);
+        if (!Number.isSafeInteger(usesMax) && typeof usesMax !== 'string') {
+            this.addError(`Uses Max must be an integer, formula, or n/a; received "${usage['Uses Max']}"`);
+            validUses = false;
+        } else if (Number.isSafeInteger(usesMax) && usesMax < 0) {
+            this.addError('Uses Max cannot be negative');
+            validUses = false;
+        }
+        const usesValueLabel = hasUsesCurrent && !hasUsesSpent ? 'Uses Current' : 'Uses Spent';
+        if (!Number.isSafeInteger(usesSpent)) {
+            this.addError(`${usesValueLabel} must be an integer or n/a; received "${usesSpentRaw}"`);
+            validUses = false;
+        } else if (usesSpent < 0) {
+            this.addError(`${usesValueLabel} cannot be negative`);
+            validUses = false;
+        }
+        if (validUses && hasUsesCurrent && !hasUsesSpent && normalizedUsesSpent !== null) {
+            if (typeof usesMax === 'string') {
+                this.addError('Uses Current cannot be converted when Uses Max is a formula; provide Uses Spent instead.');
+                validUses = false;
+            } else if (usesSpent > usesMax) {
+                this.addError(`Uses Current (${usesSpent}) exceeds Uses Max (${usesMax})`);
+                validUses = false;
+            } else {
+                usesSpent = usesMax - usesSpent;
             }
+        } else if (validUses && Number.isSafeInteger(usesMax) && usesSpent > usesMax) {
+            this.addError(`Uses Spent (${usesSpent}) exceeds Uses Max (${usesMax})`);
+            validUses = false;
+        }
+
+        if (validUses && (typeof usesMax === 'string' || usesMax > 0)) {
+            // ItemData maps value to dnd5e system.uses.spent, not remaining uses.
+            item.uses = { value: usesSpent, max: usesMax };
 
             // Recovery
             const recoveryArr = data?.RECOVERY;
@@ -783,8 +1211,7 @@ export class YamlItemParser {
 
             // Validate recharge period
             if (config.period === 'recharge') {
-                const rechargeValue = parseInt(config.formula);
-                if (isNaN(rechargeValue) || rechargeValue < 2 || rechargeValue > 6) {
+                if (!/^[2-6]$/.test(String(config.formula ?? '').trim())) {
                     this.addWarning('Recovery Period "recharge" requires Formula to be 2, 3, 4, 5, or 6');
                     continue;
                 }
@@ -801,7 +1228,9 @@ export class YamlItemParser {
      * Returns a single string or array of strings.
      */
     parseDamageType(rawType) {
-        if (!rawType) return null;
+        // `n/a` is valid only as an omitted primary type. Callers still require
+        // typed formula terms such as 1d8[slashing] when this returns null.
+        if (asNullable(rawType) === null) return null;
         const typeText = asString(rawType, '').toLowerCase();
         if (!typeText) return null;
 
@@ -827,6 +1256,16 @@ export class YamlItemParser {
             }
         }
         return found;
+    }
+
+    hasUntypedDamageDice(formula) {
+        const formulaText = asString(formula, '');
+        for (const match of formulaText.matchAll(/\b\d+d\d+(?:\s*[+\-]\s*\d+)?/gi)) {
+            const suffix = formulaText.slice((match.index ?? 0) + match[0].length);
+            const typeMatch = suffix.match(/^(?:[a-z][a-z0-9<>=!]*)?\s*\[([a-z]+)\]/i);
+            if (!typeMatch || !VALID_DAMAGE_TYPES.includes(typeMatch[1].toLowerCase())) return true;
+        }
+        return false;
     }
 
     // ─── WEAPON ─────────────────────────────────────────────────────────────
@@ -929,14 +1368,18 @@ export class YamlItemParser {
         // Damage (required)
         const dmg = data?.DAMAGE || {};
         const dmgFormula = asString(dmg['Damage Formula'], '');
+        const dmgTypeProvided = asNullable(dmg['Damage Type']) !== null;
         const dmgType = this.parseDamageType(dmg['Damage Type']);
         const dmgFormulaTypes = this.extractFormulaDamageTypes(dmgFormula);
 
         if (!dmgFormula) {
             this.addError('Damage Formula is required but was not found');
         }
-        if (!dmgType && dmgFormulaTypes.length === 0) {
+        if (!dmgType && dmgFormulaTypes.length === 0 && !dmgTypeProvided) {
             this.addError('Damage Type is required unless Damage Formula uses typed terms like 1d8[piercing]');
+        }
+        if (!dmgTypeProvided && dmgFormulaTypes.length > 0 && this.hasUntypedDamageDice(dmgFormula)) {
+            this.addError('Damage Formula must type every dice term when Damage Type is n/a');
         }
 
         if (dmgFormula && (dmgType || dmgFormulaTypes.length > 0)) {
@@ -947,14 +1390,18 @@ export class YamlItemParser {
         if (propertyBools['Versatile']) {
             const versDmg = data?.VERSATILE_DAMAGE || {};
             const versFormula = asString(versDmg['Versatile Formula'], '');
+            const versTypeProvided = asNullable(versDmg['Versatile Damage Type']) !== null;
             const versType = this.parseDamageType(versDmg['Versatile Damage Type']);
             const versFormulaTypes = this.extractFormulaDamageTypes(versFormula);
 
             if (!versFormula) {
                 this.addError('Versatile Formula is required when Versatile property is true');
             }
-            if (!versType && versFormulaTypes.length === 0) {
+            if (!versType && versFormulaTypes.length === 0 && !versTypeProvided) {
                 this.addError('Versatile Damage Type is required unless Versatile Formula uses typed terms like 1d10[slashing]');
+            }
+            if (!versTypeProvided && versFormulaTypes.length > 0 && this.hasUntypedDamageDice(versFormula)) {
+                this.addError('Versatile Formula must type every dice term when Versatile Damage Type is n/a');
             }
 
             if (versFormula && (versType || versFormulaTypes.length > 0)) {
@@ -1196,7 +1643,7 @@ export class YamlItemParser {
                     if (systemVal) {
                         item.ammunitionType = systemVal;
                     } else {
-                        this.addError(`Invalid Ammunition Type "${ammoTypeRaw}". Must be one of: arrow, bolt, dart, needle, bullet, slingBullet, energyCell`);
+                        this.addError(`Invalid Ammunition Type "${ammoTypeRaw}". Must be one of: arrow, bolt, needle, bullet, slingBullet, energyCell`);
                     }
                 }
 
@@ -1208,21 +1655,19 @@ export class YamlItemParser {
                 // Magic Bonus
                 const magicBonusRaw = asNullable(ammoProps['Magic Bonus']);
                 if (magicBonusRaw !== null) {
-                    const bonusVal = asInt(magicBonusRaw, -1);
-                    if (bonusVal >= 0) {
-                        item.magicBonus = bonusVal;
-                    } else {
-                        this.addWarning(`Invalid Magic Bonus value "${ammoProps['Magic Bonus']}". Must be a positive integer.`);
-                    }
+                    this.extractMagicBonusValue(item, magicBonusRaw, 'Ammunition Magic Bonus');
                 }
 
                 // Damage Formula (optional)
                 const dmgFormula = asNullable(ammoProps['Damage Formula']);
                 if (dmgFormula) {
+                    const dmgTypeProvided = asNullable(ammoProps['Damage Type']) !== null;
                     const dmgType = this.parseDamageType(ammoProps['Damage Type']);
                     const dmgFormulaTypes = this.extractFormulaDamageTypes(dmgFormula);
-                    if (!dmgType && dmgFormulaTypes.length === 0) {
+                    if (!dmgType && dmgFormulaTypes.length === 0 && !dmgTypeProvided) {
                         this.addError('Ammunition Damage Type is required unless Damage Formula uses typed terms like 1d6[piercing]');
+                    } else if (!dmgTypeProvided && dmgFormulaTypes.length > 0 && this.hasUntypedDamageDice(dmgFormula)) {
+                        this.addError('Ammunition Damage Formula must type every dice term when Damage Type is n/a');
                     } else {
                         item.damage = {
                             formula: String(dmgFormula),
@@ -1258,7 +1703,17 @@ export class YamlItemParser {
             const scrollProps = data?.SCROLL_PROPERTIES || {};
             item.concentration = asBool(scrollProps['Concentration'], false);
             item.somatic = asBool(scrollProps['Somatic'], false);
-            item.verbal = asBool(scrollProps['Verbal'], false);
+            const vocal = asBool(scrollProps['Vocal'] ?? scrollProps['Verbal'], false);
+            item.vocal = vocal;
+            // ItemData's legacy `verbal` path writes an obsolete dnd5e code.
+            // Suppress it and stage the current `vocal` code via properties.
+            item.verbal = false;
+            if (vocal && !item.properties.includes('vocal')) {
+                item.properties.push('vocal');
+            }
+            if (scrollProps['Verbal'] !== undefined && scrollProps['Vocal'] === undefined) {
+                this.addWarning('SCROLL_PROPERTIES.Verbal is deprecated; use Vocal for current dnd5e.');
+            }
             item.ritual = asBool(scrollProps['Ritual'], false);
         }
 
@@ -1317,14 +1772,14 @@ export class YamlItemParser {
         // Tool Bonus (in PROPERTIES section)
         const toolBonusRaw = asNullable(props['Tool Bonus']);
         if (toolBonusRaw !== null) {
-            const bonusVal = asInt(toolBonusRaw, NaN);
-            if (!isNaN(bonusVal)) {
+            const bonusVal = asFormulaFieldValue(toolBonusRaw);
+            if (bonusVal !== null) {
                 item.toolBonus = bonusVal;
-                if (bonusVal < -5 || bonusVal > 10) {
+                if (typeof bonusVal === 'number' && (bonusVal < -5 || bonusVal > 10)) {
                     this.addWarning(`Tool Bonus ${bonusVal} is outside typical range (-5 to +10)`);
                 }
             } else {
-                this.addWarning(`Tool Bonus "${props['Tool Bonus']}" is not a valid number`);
+                this.addError(`Tool Bonus must be a finite number or formula; received "${props['Tool Bonus']}".`);
             }
         }
 
@@ -1421,9 +1876,13 @@ export class YamlItemParser {
         const capacity = data?.CAPACITY || {};
         const itemCount = asNullable(capacity['Item Count']);
         if (itemCount !== null) {
-            const val = asInt(itemCount, 0);
-            if (val > 0) {
+            const val = asExactInteger(itemCount);
+            if (!Number.isSafeInteger(val)) {
+                this.addError(`Item Count must be an integer or n/a; received "${capacity['Item Count']}"`);
+            } else if (val > 0) {
                 item.itemCapacity = val;
+            } else if (val < 0) {
+                this.addError('Item Count cannot be negative');
             } else {
                 this.addWarning('Item Capacity should be positive if specified');
             }
@@ -1431,9 +1890,13 @@ export class YamlItemParser {
 
         const weightCapVal = asNullable(capacity['Weight Capacity Value']);
         if (weightCapVal !== null) {
-            const val = asFloat(weightCapVal, 0);
-            if (val > 0) {
+            const val = asExactFiniteNumber(weightCapVal);
+            if (!Number.isFinite(val)) {
+                this.addError(`Weight Capacity Value must be a finite number or n/a; received "${capacity['Weight Capacity Value']}"`);
+            } else if (val > 0) {
                 item.weightCapacity = val;
+            } else if (val < 0) {
+                this.addError('Weight Capacity Value cannot be negative');
             } else {
                 this.addWarning('Weight Capacity should be positive if specified');
             }
@@ -1449,9 +1912,13 @@ export class YamlItemParser {
 
         const volumeCapVal = asNullable(capacity['Volume Capacity Value']);
         if (volumeCapVal !== null) {
-            const val = asFloat(volumeCapVal, 0);
-            if (val > 0) {
+            const val = asExactFiniteNumber(volumeCapVal);
+            if (!Number.isFinite(val)) {
+                this.addError(`Volume Capacity Value must be a finite number or n/a; received "${capacity['Volume Capacity Value']}"`);
+            } else if (val > 0) {
                 item.volumeCapacity = val;
+            } else if (val < 0) {
+                this.addError('Volume Capacity Value cannot be negative');
             } else {
                 this.addWarning('Volume Capacity should be positive if specified');
             }

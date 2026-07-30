@@ -500,6 +500,12 @@ body.theme-dark .ii-batch-controls {
     color: var(--ii-primary);
 }
 
+.ii-folder-toggle:focus-visible {
+    color: var(--ii-primary);
+    outline: 2px solid var(--ii-primary);
+    outline-offset: 2px;
+}
+
 .ii-folder-item.collapsed .ii-folder-toggle {
     transform: rotate(-90deg);
 }

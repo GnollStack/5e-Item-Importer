@@ -1,102 +1,225 @@
-<div class="ii-form">
-    {{!-- Quick Settings Row --}}
-    <div class="ii-quick-settings">
-        <span class="ii-quick-settings-label"><i class="fas fa-sliders-h"></i> Quick Settings:</span>
-        <label class="ii-quick-setting">
-            <input type="checkbox" id="ii-setting-semantic" checked>
-            <span>Semantic Icons</span>
-        </label>
-        <label class="ii-quick-setting">
-            <input type="checkbox" id="ii-setting-identified" checked>
-            <span>Create Identified</span>
-        </label>
-        <label class="ii-quick-setting">
-            <input type="checkbox" id="ii-setting-match-icons" checked>
-            <span>Match Icons</span>
-        </label>
-    </div>
+<div class="ii-form" aria-label="{{localize 'II.Window.AriaLabel'}}">
+    <details class="ii-options-panel">
+        <summary>
+            <span><i class="fas fa-sliders-h" aria-hidden="true"></i> {{localize "II.Settings.Quick"}}</span>
+            <small>{{localize "II.Settings.OptionsHint"}}</small>
+        </summary>
+        <div class="ii-quick-settings" role="group" aria-label="{{localize 'II.Settings.Quick'}}">
+            <span class="ii-quick-settings-label"><i class="fas fa-sliders-h" aria-hidden="true"></i> {{localize "II.Settings.Quick"}}:</span>
+            <label class="ii-quick-setting">
+                <input type="checkbox" id="ii-setting-semantic" checked>
+                <span>{{localize "II.Settings.SemanticIcons"}}</span>
+            </label>
+            <label class="ii-quick-setting">
+                <input type="checkbox" id="ii-setting-identified" checked>
+                <span>{{localize "II.Settings.CreateIdentified"}}</span>
+            </label>
+            <label class="ii-quick-setting">
+                <input type="checkbox" id="ii-setting-match-icons" checked>
+                <span>{{localize "II.Settings.MatchIcons"}}</span>
+            </label>
+            <label class="ii-quick-setting" for="ii-icon-mode">
+                <span>{{localize "II.Settings.ImageMode"}}</span>
+                <select id="ii-icon-mode">
+                    <option value="deterministic">{{localize "II.Settings.ImageDeterministic"}}</option>
+                    <option value="random">{{localize "II.Settings.ImageRandom"}}</option>
+                </select>
+            </label>
+            <label class="ii-quick-setting" for="ii-icon-seed">
+                <span>{{localize "II.Settings.ImageSeed"}}</span>
+                <input id="ii-icon-seed" type="text" maxlength="100" placeholder="{{localize 'II.Settings.ImageSeedPlaceholder'}}">
+            </label>
+            <label class="ii-quick-setting">
+                <input type="checkbox" id="ii-suggest-automation">
+                <span>{{localize "II.Settings.SuggestAutomation"}}</span>
+            </label>
+        </div>
+    </details>
 
-    {{!-- Input Section --}}
     <div class="ii-form-group ii-input-group state-empty">
         <div class="ii-input-header">
             <label for="ii-input">
-                <i class="fas fa-paste"></i> Item Text
+                <i class="fas fa-paste" aria-hidden="true"></i> {{localize "II.Input.Label"}}
             </label>
             <div class="ii-input-header-right">
-                <div class="ii-template-group">
-                    <select id="ii-template-select">
-                        <option value="">-- Quick Start Template --</option>
+                <select id="ii-template-select" aria-label="{{localize 'II.Presets.Select'}}">
+                    <option value="">{{localize "II.Presets.Choose"}}</option>
+                    <optgroup label="{{localize 'II.Presets.BuiltIn'}}">
                         {{#each templates}}
-                        <option value="{{this.id}}">{{this.label}}</option>
+                        <option value="builtin:{{this.id}}">{{this.label}}</option>
                         {{/each}}
-                    </select>
-                </div>
-                <span class="ii-state-indicator state-empty">
-                    <i class="fas fa-edit"></i> Ready
+                    </optgroup>
+                    {{#if savedPresets.length}}
+                    <optgroup label="{{localize 'II.Presets.Saved'}}" data-saved-presets="true">
+                        {{#each savedPresets}}
+                        <option value="saved:{{this.id}}">{{this.name}}</option>
+                        {{/each}}
+                    </optgroup>
+                    {{/if}}
+                </select>
+                <span class="ii-state-indicator state-empty" role="status" aria-live="polite">
+                    <i class="fas fa-edit" aria-hidden="true"></i> {{localize "II.State.Ready"}}
                 </span>
             </div>
         </div>
 
-        <textarea id="ii-input" placeholder="{{placeholder}}" spellcheck="false"></textarea>
+        <details class="ii-preset-panel">
+            <summary>
+                <span><i class="fas fa-bookmark" aria-hidden="true"></i> {{localize "II.Presets.Manage"}}</span>
+                <small>{{localize "II.Presets.ManageHint"}}</small>
+            </summary>
+            <div class="ii-preset-controls">
+                <input id="ii-preset-name" type="text" maxlength="100" placeholder="{{localize 'II.Presets.NamePlaceholder'}}"
+                    aria-label="{{localize 'II.Presets.Name'}}">
+                <button type="button" data-action="savePreset" title="{{localize 'II.Presets.SaveHint'}}">
+                    <i class="fas fa-bookmark" aria-hidden="true"></i> {{localize "II.Presets.Save"}}
+                </button>
+                <button type="button" data-action="deletePreset" title="{{localize 'II.Presets.DeleteHint'}}">
+                    <i class="fas fa-trash" aria-hidden="true"></i> {{localize "II.Presets.Delete"}}
+                </button>
+            </div>
+        </details>
 
-        <div class="ii-shortcuts-hint">
-            <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd> Parse</span>
-            <span><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> Import</span>
-            <span><kbd>Esc</kbd> Reset</span>
+        <textarea id="ii-input" placeholder="{{placeholder}}" spellcheck="false"
+            aria-describedby="ii-input-help ii-shortcuts"></textarea>
+        <div class="ii-input-footer">
+            <p id="ii-input-help" class="ii-drop-hint">
+                <i class="fas fa-file-import" aria-hidden="true"></i> {{localize "II.Input.DropHint"}}
+            </p>
+
+            <div id="ii-shortcuts" class="ii-shortcuts-hint">
+                <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd> {{localize "II.Actions.Parse"}}</span>
+                <span><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Enter</kbd> {{localize "II.Actions.Import"}}</span>
+                <span><kbd>Esc</kbd> {{localize "II.Actions.Reset"}}</span>
+            </div>
         </div>
     </div>
 
-    {{!-- Parse Output Section --}}
     <div class="ii-form-group ii-output-group">
         <label for="ii-parse-output">
-            <i class="fas fa-search"></i> Parse Results
+            <i class="fas fa-search" aria-hidden="true"></i> {{localize "II.Results.Label"}}
         </label>
-        <div id="ii-parse-output" class="ii-parse-output">
-            <p><em>Enter item text to parse...</em></p>
+        <div id="ii-parse-output" class="ii-parse-output" role="region" aria-live="polite" aria-busy="false">
+            <p><em>{{localize "II.Results.Empty"}}</em></p>
         </div>
     </div>
 
-    {{!-- Controls Section --}}
-    <div class="ii-form-group ii-controls-group">
-        <label for="ii-folder-select">
-            <i class="fas fa-folder"></i> Import to Folder
-        </label>
-
-        {{!-- Nested Folder Browser --}}
-        <div class="ii-folder-browser">
-            <input type="text" class="ii-folder-search" placeholder="Search folders...">
-            <div class="ii-folder-list" id="ii-folder-select"></div>
+    <details class="ii-workflow-tools">
+        <summary><i class="fas fa-code" aria-hidden="true"></i> {{localize "II.Normalized.Title"}}</summary>
+        <textarea id="ii-normalized-input" spellcheck="false" aria-label="{{localize 'II.Normalized.Label'}}"
+            placeholder="{{localize 'II.Normalized.Placeholder'}}"></textarea>
+        <div class="ii-inline-actions">
+            <button type="button" data-action="copyNormalized"><i class="fas fa-copy" aria-hidden="true"></i> {{localize "II.Actions.Copy"}}</button>
+            <button type="button" data-action="downloadNormalized"><i class="fas fa-download" aria-hidden="true"></i> {{localize "II.Actions.Download"}}</button>
+            <button type="button" data-action="reparseNormalized"><i class="fas fa-sync" aria-hidden="true"></i> {{localize "II.Normalized.Reparse"}}</button>
         </div>
+    </details>
+
+    <div class="ii-form-group ii-controls-group">
+        <fieldset class="ii-destination-fieldset">
+            <legend><i class="fas fa-map-marker-alt" aria-hidden="true"></i> {{localize "II.Destination.Title"}}</legend>
+            <div class="ii-destination-row">
+                <label for="ii-destination-kind">{{localize "II.Destination.Kind"}}</label>
+                <select id="ii-destination-kind">
+                    <option value="world" {{#if destinationWorld}}selected{{/if}} {{#unless canCreateWorld}}disabled{{/unless}}>{{localize "II.Destination.World"}}</option>
+                    <option value="actor" {{#if destinationActor}}selected{{/if}} {{#unless actorDestinations.length}}disabled{{/unless}}>{{localize "II.Destination.Actor"}}</option>
+                    <option value="compendium" {{#if destinationCompendium}}selected{{/if}} {{#unless compendiumDestinations.length}}disabled{{/unless}}>{{localize "II.Destination.Compendium"}}</option>
+                </select>
+            </div>
+
+            <div class="ii-destination-panel ii-destination-actor" {{#unless destinationActor}}hidden{{/unless}}>
+                <label for="ii-actor-select">{{localize "II.Destination.ActorSelect"}}</label>
+                <select id="ii-actor-select">
+                    {{#each actorDestinations}}
+                    <option value="{{this.uuid}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>
+                    {{/each}}
+                </select>
+            </div>
+
+            <div class="ii-destination-panel ii-destination-compendium" {{#unless destinationCompendium}}hidden{{/unless}}>
+                <label for="ii-pack-select">{{localize "II.Destination.CompendiumSelect"}}</label>
+                <select id="ii-pack-select">
+                    {{#each compendiumDestinations}}
+                    <option value="{{this.collection}}" {{#if this.selected}}selected{{/if}}>{{this.name}}</option>
+                    {{/each}}
+                </select>
+            </div>
+
+            <div class="ii-destination-panel ii-destination-world" {{#unless destinationWorld}}hidden{{/unless}}>
+                <label for="ii-folder-select">{{localize "II.Destination.Folder"}}</label>
+                <div class="ii-folder-browser">
+                    <input type="text" class="ii-folder-search" placeholder="{{localize 'II.Destination.SearchFolders'}}"
+                        aria-label="{{localize 'II.Destination.SearchFolders'}}">
+                    <div class="ii-folder-list" id="ii-folder-select" role="listbox" aria-label="{{localize 'II.Destination.Folder'}}"></div>
+                </div>
+            </div>
+
+            <div class="ii-destination-row">
+                <label for="ii-duplicate-mode">{{localize "II.Duplicates.Title"}}</label>
+                <select id="ii-duplicate-mode" aria-describedby="ii-duplicate-help">
+                    <option value="create">{{localize "II.Duplicates.Create"}}</option>
+                    <option value="update">{{localize "II.Duplicates.Update"}}</option>
+                    <option value="merge">{{localize "II.Duplicates.Merge"}}</option>
+                    <option value="skip">{{localize "II.Duplicates.Skip"}}</option>
+                </select>
+            </div>
+            <p id="ii-duplicate-help" class="hint">{{localize "II.Duplicates.Help"}}</p>
+        </fieldset>
+
+        {{#if activityCapabilities.available}}
+        <div class="ii-integration-actions">
+            <button type="button" data-action="openActivityBuilder" {{#unless activityCapabilities.builder}}disabled{{/unless}}>
+                <i class="fas fa-bolt" aria-hidden="true"></i> {{localize "II.Activity.Builder"}}
+            </button>
+            <button type="button" data-action="resolveReferences" {{#unless activityCapabilities.resolveAll}}disabled{{/unless}}>
+                <i class="fas fa-crosshairs" aria-hidden="true"></i> {{localize "II.Activity.Resolve"}}
+            </button>
+        </div>
+        {{/if}}
 
         <div class="ii-button-group">
             <label class="ii-auto-parse-label">
                 <input type="checkbox" id="ii-auto-parse-checkbox" {{#if autoParse}}checked{{/if}}>
-                Auto-parse
+                {{localize "II.Settings.AutoParse"}}
             </label>
             <label class="ii-auto-parse-label">
                 <input type="checkbox" id="ii-compare-checkbox">
-                Compare after import
+                {{localize "II.Settings.Compare"}}
             </label>
             <button type="button" class="ii-btn-parse" data-action="parse">
-                <i class="fas fa-cog"></i> Parse
+                <i class="fas fa-cog" aria-hidden="true"></i> {{localize "II.Actions.Parse"}}
             </button>
             <button type="button" class="ii-btn-reset" data-action="reset">
-                <i class="fas fa-undo"></i> Reset
+                <i class="fas fa-undo" aria-hidden="true"></i> {{localize "II.Actions.Reset"}}
             </button>
             <button type="button" class="ii-btn-import" data-action="import" disabled>
-                <i class="fas fa-download"></i> Import
+                <i class="fas fa-download" aria-hidden="true"></i> {{localize "II.Actions.Import"}}
+            </button>
+            <button type="button" class="ii-btn-cancel" data-action="cancelImport" hidden>
+                <i class="fas fa-ban" aria-hidden="true"></i> {{localize "II.Actions.Cancel"}}
             </button>
         </div>
 
         <div class="ii-checkbox-wrapper">
-            <input type="checkbox" id="ii-use-autoanimations" {{#if isAutoAnimationsActive}}checked{{/if}} {{#unless
-                isAutoAnimationsActive}}disabled{{/unless}}>
+            <input type="checkbox" id="ii-use-autoanimations" {{#if isAutoAnimationsActive}}checked{{/if}}
+                {{#unless isAutoAnimationsActive}}disabled{{/unless}}>
             <label for="ii-use-autoanimations">
-                Generate Available Animations
+                {{localize "II.Settings.Animations"}}
                 {{#unless isAutoAnimationsActive}}
-                <span style="font-size: 0.8em; opacity: 0.7;">(Auto Animations Module not active)</span>
+                <span class="hint">({{localize "II.Settings.AnimationsUnavailable"}})</span>
                 {{/unless}}
             </label>
         </div>
     </div>
+
+    <details class="ii-history-panel">
+        <summary><i class="fas fa-history" aria-hidden="true"></i> {{localize "II.History.Title"}}</summary>
+        <div id="ii-history-list" role="log" aria-live="polite">
+            <p class="hint">{{localize "II.History.Empty"}}</p>
+        </div>
+        <div class="ii-inline-actions">
+            <button type="button" data-action="undoLast"><i class="fas fa-undo" aria-hidden="true"></i> {{localize "II.History.Undo"}}</button>
+            <button type="button" data-action="downloadReport"><i class="fas fa-file-download" aria-hidden="true"></i> {{localize "II.History.Download"}}</button>
+        </div>
+    </details>
 </div>

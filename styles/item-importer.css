@@ -37,20 +37,26 @@ body.theme-dark {
 
 /* Window styling */
 .ii-window {
-    min-width: 600px;
-    min-height: 800px;
+    min-width: 560px;
+    min-height: 420px;
 }
 
 .ii-window .window-content {
+    min-height: 0;
     padding: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
 }
 
 /* Form layout */
 .ii-form {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    padding: 8px;
+    min-height: 100%;
+    height: auto;
+    padding: 10px 12px 14px;
     gap: 8px;
 }
 
@@ -324,11 +330,11 @@ body.theme-dark {
     .ii-window {
         min-width: 100%;
     }
-    
+
     .ii-button-group {
         flex-direction: column;
     }
-    
+
     .ii-button-group button {
         width: 100%;
     }
@@ -501,4 +507,608 @@ body.theme-dark {
 body.theme-dark .ii-shortcuts-hint kbd {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Workflow feature controls */
+.ii-preset-controls,
+.ii-inline-actions,
+.ii-destination-row,
+.ii-integration-actions,
+.ii-batch-filter-controls,
+.ii-insight-summary,
+.ii-suggestion-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ii-preset-controls input,
+.ii-destination-row select,
+.ii-destination-panel select,
+.ii-batch-filter-controls input,
+.ii-batch-filter-controls select,
+.ii-entry-mode,
+#ii-icon-seed {
+  min-width: 0;
+  flex: 1 1 10rem;
+}
+
+.ii-workflow-tools,
+.ii-history-panel,
+.ii-destination-fieldset {
+  margin-block: 0.5rem;
+  padding: 0.65rem;
+  border: 1px solid var(--color-border-light-2, #777);
+  border-radius: 0.35rem;
+}
+
+#ii-normalized-input {
+  width: 100%;
+  min-height: 10rem;
+  resize: vertical;
+  font-family: var(--font-monospace, monospace);
+}
+
+.ii-destination-panel,
+.ii-history-entry,
+.ii-insight-choice,
+.ii-suggestion-row {
+  margin-block: 0.4rem;
+}
+
+.ii-input-group.is-dragover {
+  outline: 3px dashed var(--color-warm-2, #c87b2a);
+  outline-offset: -4px;
+}
+
+.ii-conflict-paths {
+  max-height: 12rem;
+  overflow: auto;
+}
+
+.ii-insights-section .ii-section-content,
+.ii-suggested-automation {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.ii-insight-suggestions {
+  margin: 0.25rem 0;
+}
+
+.ii-insight-suggestions .severity-error { color: var(--color-level-error, #b31b1b); }
+.ii-insight-suggestions .severity-warning { color: var(--color-level-warning, #8a5a00); }
+
+.ii-entry-mode-label {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.ii-btn-cancel {
+  border-color: var(--color-level-warning, #a35d00);
+}
+
+.ii-attunement-note {
+  box-sizing: border-box;
+  flex: 1 0 100%;
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  margin: 0.5rem 0;
+  border: 1px solid color-mix(in srgb, var(--color-warm-2, #c87b2a) 42%, transparent);
+  border-left: 3px solid var(--color-warm-2, #c87b2a);
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--color-warm-2, #c87b2a) 12%, transparent);
+  overflow: hidden;
+}
+
+.ii-attunement-note > summary {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.ii-attunement-note > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ii-attunement-note > summary::marker {
+  content: "";
+}
+
+.ii-attunement-note > summary:focus-visible {
+  outline: 2px solid var(--color-warm-1, #ee9b3a);
+  outline-offset: -2px;
+}
+
+.ii-attunement-note__label {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ii-attunement-note__preview {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-dark-secondary, inherit);
+  opacity: 0.82;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ii-attunement-note__preview::before {
+  content: "— ";
+}
+
+.ii-attunement-note[open] .ii-attunement-note__preview {
+  display: none;
+}
+
+.ii-attunement-note__chevron {
+  transition: transform 120ms ease;
+}
+
+.ii-attunement-note[open] .ii-attunement-note__chevron {
+  transform: rotate(90deg);
+}
+
+.ii-attunement-note__content {
+  max-height: 7.5rem;
+  padding: 0.55rem 0.75rem 0.65rem;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  border-top: 1px solid color-mix(in srgb, var(--color-warm-2, #c87b2a) 28%, transparent);
+  line-height: 1.4;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  white-space: pre-wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ii-attunement-note__chevron {
+    transition: none;
+  }
+}
+
+.ii-window :is(button, input, select, textarea, [role="button"], [role="option"]):focus-visible {
+  outline: 2px solid var(--color-warm-1, #ee9b3a);
+  outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  .ii-quick-settings,
+  .ii-button-group,
+  .ii-batch-filter-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .ii-window .ii-form {
+    padding-inline: 0.35rem;
+  }
+}
+
+
+/* ===========================================
+   Foundry v14 workflow layout refresh
+   =========================================== */
+
+.ii-window .window-content,
+.ii-window .ii-form {
+    scrollbar-color: color-mix(in srgb, var(--color-warm-2, #c58b3b) 70%, transparent) transparent;
+    scrollbar-width: thin;
+}
+
+.ii-window .window-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.ii-window .window-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.ii-window .window-content::-webkit-scrollbar-thumb {
+    min-height: 42px;
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-warm-2, #c58b3b) 68%, #555);
+    background-clip: padding-box;
+}
+
+.ii-window .window-content::-webkit-scrollbar-thumb:hover {
+    background: var(--color-warm-1, #e0a04b);
+    background-clip: padding-box;
+}
+
+.ii-options-panel,
+.ii-input-group,
+.ii-output-group,
+.ii-preset-panel,
+.ii-workflow-tools,
+.ii-destination-fieldset,
+.ii-history-panel {
+    border: 1px solid color-mix(in srgb, var(--ii-border) 64%, transparent);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--ii-bg) 82%, transparent);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+}
+
+.ii-options-panel,
+.ii-preset-panel,
+.ii-workflow-tools,
+.ii-history-panel {
+    margin: 0;
+    padding: 0;
+    overflow: clip;
+}
+
+.ii-options-panel > summary,
+.ii-preset-panel > summary,
+.ii-workflow-tools > summary,
+.ii-history-panel > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 34px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-weight: 650;
+    list-style: none;
+    background: color-mix(in srgb, var(--ii-bg) 72%, var(--ii-primary) 4%);
+}
+
+.ii-options-panel > summary::-webkit-details-marker,
+.ii-preset-panel > summary::-webkit-details-marker,
+.ii-workflow-tools > summary::-webkit-details-marker,
+.ii-history-panel > summary::-webkit-details-marker {
+    display: none;
+}
+
+.ii-options-panel > summary::marker,
+.ii-preset-panel > summary::marker,
+.ii-workflow-tools > summary::marker,
+.ii-history-panel > summary::marker {
+    content: "";
+}
+
+.ii-options-panel > summary:hover,
+.ii-preset-panel > summary:hover,
+.ii-workflow-tools > summary:hover,
+.ii-history-panel > summary:hover {
+    background: color-mix(in srgb, var(--ii-bg) 66%, var(--ii-primary) 10%);
+}
+
+.ii-options-panel > summary:focus-visible,
+.ii-preset-panel > summary:focus-visible,
+.ii-workflow-tools > summary:focus-visible,
+.ii-history-panel > summary:focus-visible {
+    outline: 2px solid var(--color-warm-1, #ee9b3a);
+    outline-offset: -2px;
+}
+
+.ii-options-panel > summary::after,
+.ii-preset-panel > summary::after,
+.ii-workflow-tools > summary::after,
+.ii-history-panel > summary::after {
+    content: "";
+    width: 0.48rem;
+    height: 0.48rem;
+    flex: 0 0 0.48rem;
+    margin-left: auto;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    opacity: 0.65;
+    transform: rotate(45deg);
+    transform-origin: center;
+    transition: transform 160ms ease;
+}
+
+.ii-options-panel[open] > summary::after,
+.ii-preset-panel[open] > summary::after,
+.ii-workflow-tools[open] > summary::after,
+.ii-history-panel[open] > summary::after {
+    transform: rotate(225deg);
+}
+
+.ii-options-panel > summary small,
+.ii-preset-panel > summary small {
+    color: var(--color-text-subtle, #999);
+    font-size: 0.72rem;
+    font-weight: 400;
+}
+
+.ii-window .ii-options-panel .ii-quick-settings {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 6px;
+    margin: 0;
+    padding: 9px 10px;
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--ii-border) 45%, transparent);
+    border-radius: 0;
+    background: transparent;
+}
+
+.ii-window .ii-options-panel .ii-quick-settings-label {
+    display: none;
+}
+
+.ii-window .ii-options-panel .ii-quick-setting {
+    display: flex;
+    min-width: 0;
+    min-height: 32px;
+    margin: 0;
+    padding: 6px 8px;
+    border: 1px solid color-mix(in srgb, var(--ii-border) 50%, transparent);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--ii-bg) 88%, transparent);
+    font-size: 0.78rem;
+}
+
+.ii-window .ii-options-panel .ii-quick-setting:has(select),
+.ii-window .ii-options-panel .ii-quick-setting:has(input[type="text"]) {
+    align-items: stretch;
+    flex-direction: column;
+}
+
+.ii-window .ii-options-panel .ii-quick-setting select,
+.ii-window .ii-options-panel .ii-quick-setting input[type="text"] {
+    width: 100%;
+    min-width: 0;
+    margin-top: 4px;
+}
+
+.ii-input-group,
+.ii-output-group {
+    flex: 0 0 auto;
+    min-height: 0;
+    padding: 9px 10px;
+}
+
+.ii-input-header {
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.ii-input-header > label {
+    font-size: 0.88rem;
+}
+
+.ii-input-header-right {
+    min-width: 0;
+    gap: 8px;
+}
+
+#ii-template-select {
+    width: min(310px, 38vw);
+    max-width: none;
+}
+
+.ii-preset-controls {
+    display: grid;
+    grid-template-columns: minmax(12rem, 1fr) auto auto;
+    gap: 6px;
+    margin: 0;
+    padding: 8px 10px;
+    border-top: 1px solid color-mix(in srgb, var(--ii-border) 45%, transparent);
+}
+
+.ii-input-group .ii-preset-panel {
+    box-shadow: none;
+}
+
+.ii-preset-controls input {
+    width: 100%;
+}
+
+#ii-input {
+    flex: none;
+    height: 150px;
+    min-height: 110px;
+    max-height: 38vh;
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+
+.ii-input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 14px;
+    min-width: 0;
+}
+
+.ii-drop-hint {
+    flex: 1 1 18rem;
+    margin: 4px 0 0;
+    color: var(--color-text-subtle, #999);
+    font-size: 0.75rem;
+}
+
+.ii-shortcuts-hint {
+    flex: 0 1 auto;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.ii-parse-output {
+    min-height: 44px;
+    max-height: 42vh;
+    border-width: 1px;
+    border-radius: 6px;
+}
+
+.ii-workflow-tools > textarea,
+.ii-workflow-tools > .ii-inline-actions,
+.ii-history-panel > div {
+    margin: 8px 10px;
+}
+
+.ii-controls-group {
+    flex: 0 0 auto;
+    margin: 0;
+    gap: 7px;
+}
+
+.ii-destination-fieldset {
+    margin: 0;
+    padding: 9px 10px;
+}
+
+.ii-destination-fieldset legend {
+    padding: 0 7px;
+    font-size: 0.88rem;
+    font-weight: 650;
+}
+
+.ii-destination-row {
+    display: grid;
+    grid-template-columns: minmax(11rem, 0.42fr) minmax(14rem, 1fr);
+    align-items: center;
+    gap: 8px;
+    margin-block: 6px;
+}
+
+.ii-destination-row label {
+    margin: 0;
+}
+
+.ii-destination-panel {
+    margin-block: 7px;
+}
+
+.ii-folder-list {
+    max-height: 110px;
+}
+
+#ii-duplicate-help {
+    margin: 6px 0 0;
+    color: var(--color-text-subtle, #999);
+    font-size: 0.74rem;
+    line-height: 1.35;
+}
+
+.ii-integration-actions {
+    gap: 8px;
+}
+
+.ii-integration-actions button {
+    flex: 1 1 14rem;
+}
+
+.ii-button-group {
+    position: sticky;
+    bottom: -14px;
+    z-index: 3;
+    align-items: center;
+    padding: 8px 10px;
+    border: 1px solid color-mix(in srgb, var(--ii-border) 55%, transparent);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--ii-bg) 94%, transparent);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(8px);
+}
+
+.ii-button-group button {
+    min-height: 32px;
+    padding-inline: 12px;
+}
+
+.ii-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0 4px;
+    font-size: 0.76rem;
+}
+
+.ii-checkbox-wrapper label,
+.ii-button-group label {
+    margin: 0;
+}
+
+.ii-window select {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 1.8rem;
+    background-image:
+        linear-gradient(45deg, transparent 50%, currentColor 50%),
+        linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+        calc(100% - 12px) 50%,
+        calc(100% - 8px) 50%;
+    background-repeat: no-repeat;
+    background-size: 4px 4px, 4px 4px;
+}
+
+@media (max-width: 760px) {
+    .ii-window {
+        min-width: 360px;
+    }
+
+    .ii-options-panel > summary small {
+        display: none;
+    }
+
+    .ii-preset-panel > summary small {
+        display: none;
+    }
+
+    .ii-window .ii-options-panel .ii-quick-settings {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ii-input-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .ii-input-footer {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .ii-shortcuts-hint {
+        justify-content: flex-start;
+    }
+
+    .ii-input-header-right,
+    #ii-template-select {
+        width: 100%;
+    }
+
+    .ii-preset-controls {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ii-preset-controls input {
+        grid-column: 1 / -1;
+    }
+
+    .ii-destination-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+}
+
+@media (max-width: 520px) {
+    .ii-form {
+        padding: 8px;
+    }
+
+    .ii-window .ii-options-panel .ii-quick-settings {
+        grid-template-columns: 1fr;
+    }
 }

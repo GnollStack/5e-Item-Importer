@@ -49,6 +49,14 @@ const SPELL_SCHOOLS = {
     nec: "Necromancy", trs: "Transmutation"
 };
 
+function formatRemainingUses(spentValue, maxValue) {
+    const spent = Number(spentValue ?? 0);
+    const max = Number(maxValue);
+    return Number.isFinite(spent) && Number.isFinite(max)
+        ? `${Math.max(0, max - spent)}/${max}`
+        : `${spentValue ?? 0} spent / ${maxValue}`;
+}
+
 /**
  * Format a recovery entry for display.
  * @param {{period: string, type?: string, formula?: string}} r
@@ -199,8 +207,7 @@ export function extractExpectedItemProps(parseResult) {
         props.push({ section: "Special Properties", label: "Properties", value: [...item.properties].sort().join(", ") });
     }
     if (item.uses?.max) {
-        const spent = item.uses.value ?? 0;
-        props.push({ section: "Special Properties", label: "Uses", value: `${item.uses.max - spent}/${item.uses.max}` });
+        props.push({ section: "Special Properties", label: "Uses", value: formatRemainingUses(item.uses.value, item.uses.max) });
     }
     if (item.recovery?.length > 0) {
         const recoveryText = item.recovery.map(r => formatRecovery(r)).join(", ");
@@ -491,8 +498,7 @@ function extractActualSpecialProps(foundryItem, props) {
 
     // Uses
     if (sys.uses?.max) {
-        const spent = sys.uses.spent ?? 0;
-        props.push({ section: "Special Properties", label: "Uses", value: `${sys.uses.max - spent}/${sys.uses.max}` });
+        props.push({ section: "Special Properties", label: "Uses", value: formatRemainingUses(sys.uses.spent, sys.uses.max) });
     }
 
     // Recovery

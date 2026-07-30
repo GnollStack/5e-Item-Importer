@@ -82,7 +82,7 @@ const WEAPON_TO_FOLDER = {
 
   // Thrown
   dart: "thrown",
-  javelin: "thrown",
+  javelin: "polearms",
   net: "thrown",
 
   // Sickles
@@ -106,6 +106,50 @@ const WEAPON_TYPE_TO_FOLDER = {
   siege: "ammunition", // Siege weapons often fire projectiles
   natural: "fist",
   improv: "clubs", // Improvised weapons often club-like
+};
+
+const WEAPON_ICON_ALIAS_KEYWORDS = {
+  pike: ["pike", "spear", "sarissa", "lance", "polearm"],
+  sarissa: ["sarissa", "pike", "spear", "lance", "polearm"],
+  spear: ["spear", "pike", "sarissa", "javelin", "lance", "polearm"],
+  lance: ["lance", "spear", "pike", "polearm"],
+  javelin: ["javelin", "spear", "throwing", "polearm"],
+  trident: ["trident", "spear", "fork", "polearm"],
+  glaive: ["glaive", "polearm", "blade"],
+  halberd: ["halberd", "poleaxe", "polearm", "axe"],
+  longsword: ["longsword", "sword", "blade"],
+  shortsword: ["shortsword", "sword", "blade"],
+  greatsword: ["greatsword", "sword", "blade"],
+  rapier: ["rapier", "sword", "blade"],
+  scimitar: ["scimitar", "sword", "blade", "curved"],
+  dagger: ["dagger", "knife", "blade"],
+  handaxe: ["handaxe", "axe", "hatchet"],
+  battleaxe: ["battleaxe", "axe"],
+  greataxe: ["greataxe", "axe"],
+  lighthammer: ["lighthammer", "hammer", "throwing"],
+  warhammer: ["warhammer", "hammer", "maul"],
+  maul: ["maul", "hammer", "mallet"],
+  mace: ["mace", "club"],
+  flail: ["flail", "mace", "chain"],
+  quarterstaff: ["quarterstaff", "staff", "stave"],
+  longbow: ["longbow", "bow", "arrow"],
+  shortbow: ["shortbow", "bow", "arrow"],
+  lightcrossbow: ["crossbow", "bolt", "quarrel"],
+  handcrossbow: ["crossbow", "bolt", "quarrel"],
+  heavycrossbow: ["crossbow", "bolt", "quarrel"],
+  sling: ["sling", "stone", "bullet"],
+};
+
+const WEAPON_ICON_AVOID_KEYWORDS = {
+  pike: ["halberd", "glaive", "axe", "bardiche", "hook"],
+  sarissa: ["halberd", "glaive", "axe", "bardiche", "hook"],
+  spear: ["halberd", "glaive", "axe", "bardiche", "hook"],
+  lance: ["halberd", "glaive", "axe", "bardiche", "hook"],
+  longbow: ["crossbow", "bolt"],
+  shortbow: ["crossbow", "bolt"],
+  lightcrossbow: ["longbow", "shortbow"],
+  handcrossbow: ["longbow", "shortbow"],
+  heavycrossbow: ["longbow", "shortbow"],
 };
 
 /**
@@ -515,29 +559,23 @@ export async function getRandomWeaponIcon(
     `Getting semantic icon for weapon: baseWeapon=${baseWeapon}, weaponType=${weaponType}, name=${itemName}`
   );
 
-  // Determine the target folder
   let folder = null;
+  const normalizedBase = normalizeIconToken(baseWeapon);
 
-  // First, try to match by baseWeapon
-  if (baseWeapon) {
-    const normalizedBase = baseWeapon.toLowerCase().replace(/\s+/g, "");
+  if (normalizedBase) {
     folder = WEAPON_TO_FOLDER[normalizedBase];
-
     if (folder) {
       ItemUtils.log(`Matched baseWeapon "${baseWeapon}" to folder "${folder}"`);
     }
   }
 
-  // If no match by baseWeapon, try weaponType for special cases
   if (!folder && weaponType) {
     folder = WEAPON_TYPE_TO_FOLDER[weaponType];
-
     if (folder) {
       ItemUtils.log(`Matched weaponType "${weaponType}" to folder "${folder}"`);
     }
   }
 
-  // If still no match, return null (will fall back to other methods)
   if (!folder) {
     ItemUtils.log(
       `No folder match for baseWeapon="${baseWeapon}", weaponType="${weaponType}"`
@@ -545,7 +583,6 @@ export async function getRandomWeaponIcon(
     return null;
   }
 
-  // Build full path and get icons
   const folderPath = `${WEAPON_ICON_BASE}/${folder}`;
   const icons = await getIconsFromFolder(folderPath);
 
@@ -554,11 +591,94 @@ export async function getRandomWeaponIcon(
     return null;
   }
 
-  // Try to find the best matching icon using priority selection
-  const selectedIcon = selectBestIcon(icons, baseWeapon, itemName, options);
+  const selectedIcon = selectBestWeaponIcon(
+    icons,
+    normalizedBase,
+    folder,
+    itemName,
+    options
+  );
 
   ItemUtils.log(
     `Selected icon: ${selectedIcon} (from ${icons.length} options)`
+  );
+  return selectedIcon;
+}
+
+function selectBestWeaponIcon(icons, baseWeapon, folder, itemName, options = {}) {
+  const aliases = getWeaponSearchAliases(baseWeapon, itemName);
+  const avoidKeywords = WEAPON_ICON_AVOID_KEYWORDS[baseWeapon] ?? [];
+
+  const scoredIcons = icons.map((iconPath) => {
+    const filename = extractFilename(iconPath);
+    const searchPath = iconPath.toLowerCase();
+    let score = 0;
+    const reasons = [];
+
+    if (folder && searchPath.includes(`/${folder}/`)) {
+      score += 20;
+      reasons.push(`folder: ${folder}`);
+    }
+
+    if (baseWeapon && filenameHasExactToken(filename, baseWeapon)) {
+      score += 180;
+      reasons.push(`base exact: ${baseWeapon}`);
+    }
+
+    for (const alias of aliases) {
+      if (alias.length < 3 || alias === baseWeapon) continue;
+      if (filenameHasIconKeyword(filename, alias)) {
+        score += alias.length >= 5 ? 70 : 35;
+        reasons.push(`alias: ${alias}`);
+      }
+    }
+
+    for (const keyword of extractKeywords(itemName)) {
+      const normalizedKeyword = normalizeIconToken(keyword);
+      if (normalizedKeyword && filenameHasIconKeyword(filename, normalizedKeyword)) {
+        score += 45;
+        reasons.push(`name: ${normalizedKeyword}`);
+      }
+    }
+
+    for (const avoid of avoidKeywords) {
+      if (filename.includes(avoid)) {
+        score -= 35;
+        reasons.push(`avoid: ${avoid}`);
+      }
+    }
+
+    return {
+      path: iconPath,
+      score,
+      matchReason: reasons.length ? reasons.join(", ") : "random"
+    };
+  });
+
+  scoredIcons.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path));
+
+  const topMatches = scoredIcons.slice(0, 5);
+  ItemUtils.log(
+    "Top weapon icon matches:",
+    topMatches.map(
+      (i) => `${extractFilename(i.path)}: ${i.score} (${i.matchReason})`
+    )
+  );
+
+  const topScore = scoredIcons[0].score;
+  if (topScore > 0) {
+    const topScoringIcons = scoredIcons.filter((i) => i.score === topScore);
+    const selected = chooseIcon(topScoringIcons, options);
+
+    ItemUtils.log(
+      `Selected from ${topScoringIcons.length} top weapon matches (score: ${topScore}): ${selected.path}`
+    );
+    return selected.path;
+  }
+
+  const selectedIcon = chooseIcon(icons.map((path) => ({ path })), options).path;
+  ItemUtils.log(
+    `No weapon keyword match, selecting ${options.deterministicIcons ? "deterministic" : "random"} icon: ${selectedIcon}`
   );
   return selectedIcon;
 }
@@ -686,6 +806,52 @@ function extractKeywords(name) {
     .split(/\s+/)
     .filter((word) => word.length >= 3) // Only words 3+ chars
     .filter((word) => !isCommonWord(word));
+}
+
+function normalizeIconToken(value) {
+  return String(value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function filenameHasExactToken(filename, token) {
+  const normalizedToken = normalizeIconToken(token);
+  if (!normalizedToken) return false;
+  const tokenPattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(normalizedToken)}([^a-z0-9]|$)`);
+  return tokenPattern.test(filename);
+}
+
+function filenameHasIconKeyword(filename, keyword) {
+  const normalizedKeyword = normalizeIconToken(keyword);
+  if (!normalizedKeyword) return false;
+  if (filenameHasExactToken(filename, normalizedKeyword)) return true;
+  return normalizedKeyword.length >= 5 && normalizeIconToken(filename).includes(normalizedKeyword);
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getWeaponNameAliases(itemName) {
+  const aliases = new Set();
+  for (const keyword of extractKeywords(itemName)) {
+    aliases.add(keyword);
+    const normalized = normalizeIconToken(keyword);
+    for (const alias of WEAPON_ICON_ALIAS_KEYWORDS[normalized] ?? []) {
+      aliases.add(alias);
+    }
+  }
+  return [...aliases];
+}
+
+function getWeaponSearchAliases(baseWeapon, itemName) {
+  const aliases = new Set();
+  if (baseWeapon) aliases.add(baseWeapon);
+  for (const alias of WEAPON_ICON_ALIAS_KEYWORDS[baseWeapon] ?? []) {
+    aliases.add(alias);
+  }
+  for (const alias of getWeaponNameAliases(itemName)) {
+    aliases.add(alias);
+  }
+  return [...aliases].map(normalizeIconToken).filter(Boolean);
 }
 
 /**
@@ -1673,76 +1839,76 @@ const SPELL_KEYWORD_ICONS = {
     flame: ["icons/magic/fire/beam-jet-stream-embers.webp", "icons/magic/fire/explosion-fireball-large-orange.webp"],
     burn: ["icons/magic/fire/flame-burning-hand-red.webp"],
     fireball: ["icons/magic/fire/explosion-fireball-large-orange.webp"],
-    
+
     // Cold/Ice spells
     cold: ["icons/magic/cold/snowflake-ice-blue-white.webp", "icons/magic/cold/ice-crystal-blue-white.webp"],
     ice: ["icons/magic/cold/snowflake-ice-blue-white.webp", "icons/magic/cold/ice-crystal-blue-white.webp"],
     frost: ["icons/magic/cold/snowflake-ice-blue-white.webp"],
     freeze: ["icons/magic/cold/ice-crystal-blue-white.webp"],
-    
+
     // Lightning spells
     lightning: ["icons/magic/lightning/bolt-strike-blue.webp", "icons/magic/lightning/bolt-strike-orange.webp"],
     thunder: ["icons/magic/lightning/bolt-strike-orange.webp"],
     shock: ["icons/magic/lightning/bolt-strike-blue.webp"],
-    
+
     // Light/Radiant spells
     light: ["icons/magic/light/beam-rays-magenta.webp", "icons/magic/light/explosion-star-large-blue-yellow.webp"],
     radiant: ["icons/magic/holy/beam-pillar-gold.webp", "icons/magic/light/explosion-star-large-blue-yellow.webp"],
     holy: ["icons/magic/holy/beam-pillar-gold.webp"],
     divine: ["icons/magic/holy/beam-pillar-gold.webp"],
-    
+
     // Darkness/Necrotic spells
     dark: ["icons/magic/death/skull-shadow-dark-purple.webp"],
     shadow: ["icons/magic/perception/silhouette-stealth-shadow.webp", "icons/magic/perception/shadow-eyed-green.webp"],
     death: ["icons/magic/death/skull-energy-light-purple.webp", "icons/magic/death/skull-shadow-dark-purple.webp"],
     undead: ["icons/magic/death/hand-undead-skeleton-fire-gray.webp"],
     necrotic: ["icons/magic/death/skull-energy-light-purple.webp"],
-    
+
     // Healing spells
     heal: ["icons/magic/life/cross-area-circle-green-white.webp", "icons/magic/life/heart-cross-strong-flame-green.webp"],
     cure: ["icons/magic/life/cross-area-circle-green-white.webp"],
     restore: ["icons/magic/life/heart-cross-strong-flame-green.webp"],
-    
+
     // Shield/Protection spells
     shield: ["icons/magic/defensive/shield-barrier-blue.webp", "icons/magic/defensive/shield-barrier-glowing-blue.webp"],
     protect: ["icons/magic/defensive/barrier-shield-dome-blue-purple.webp"],
     ward: ["icons/magic/defensive/barrier-shield-dome-blue-purple.webp"],
-    
+
     // Mind/Psychic spells
     mind: ["icons/magic/control/hypnosis-mesmerism-swirl.webp"],
     charm: ["icons/magic/control/hypnosis-mesmerism-swirl.webp"],
     psychic: ["icons/magic/perception/eye-ringed-glow-angry-large-teal.webp"],
-    
+
     // Teleportation spells
     teleport: ["icons/magic/symbols/runes-star-pentagon-blue.webp"],
     dimension: ["icons/magic/symbols/runes-star-pentagon-blue.webp"],
     portal: ["icons/magic/symbols/rune-sigil-black-pink.webp"],
-    
+
     // Nature spells
     nature: ["icons/magic/nature/root-vines-grow-green.webp", "icons/magic/nature/hand-nature-environment-green.webp"],
     plant: ["icons/magic/nature/root-vines-grow-green.webp"],
     animal: ["icons/magic/nature/wolf-paw-glow-teal-blue.webp"],
     beast: ["icons/magic/nature/wolf-paw-glow-teal-blue.webp"],
-    
+
     // Poison/Acid spells
     poison: ["icons/magic/acid/projectile-bolts-green.webp"],
     acid: ["icons/magic/acid/projectile-bolts-green.webp"],
     venom: ["icons/magic/acid/projectile-bolts-green.webp"],
-    
+
     // Air/Wind spells
     wind: ["icons/magic/air/air-burst-spiral-blue-gray.webp"],
     air: ["icons/magic/air/air-burst-spiral-blue-gray.webp"],
     fly: ["icons/magic/control/buff-flight-wings-blue.webp"],
     flight: ["icons/magic/control/buff-flight-wings-blue.webp"],
-    
+
     // Water spells
     water: ["icons/magic/water/wave-water-blue.webp"],
     wave: ["icons/magic/water/wave-water-blue.webp"],
-    
+
     // Summoning spells
     summon: ["icons/magic/symbols/runes-star-blue.webp"],
     conjure: ["icons/magic/symbols/runes-star-blue.webp"],
-    
+
     // Divination/Vision spells
     see: ["icons/magic/perception/eye-ringed-glow-angry-large-teal.webp"],
     vision: ["icons/magic/perception/eye-ringed-glow-angry-large-teal.webp"],

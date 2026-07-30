@@ -7,7 +7,8 @@ export const ITEM_TEMPLATES = [
     {
         id: "weapon",
         label: "Magic Weapon",
-        text: `WEAPON:
+        text: `SCHEMA_VERSION: 1
+WEAPON:
   ITEM:
     Name: "Longsword +1"
     Rarity: uncommon
@@ -53,7 +54,8 @@ export const ITEM_TEMPLATES = [
     {
         id: "armor",
         label: "Wondrous Item",
-        text: `EQUIPMENT:
+        text: `SCHEMA_VERSION: 1
+EQUIPMENT:
   ITEM:
     Name: "Cloak of Protection"
     Rarity: uncommon
@@ -83,7 +85,8 @@ export const ITEM_TEMPLATES = [
     {
         id: "potion",
         label: "Potion",
-        text: `CONSUMABLE:
+        text: `SCHEMA_VERSION: 1
+CONSUMABLE:
   ITEM:
     Name: "Potion of Healing"
     Rarity: common
@@ -114,7 +117,8 @@ export const ITEM_TEMPLATES = [
     {
         id: "tool",
         label: "Tool",
-        text: `TOOL:
+        text: `SCHEMA_VERSION: 1
+TOOL:
   ITEM:
     Name: "Alchemist's Supplies"
     Rarity: common
@@ -145,7 +149,8 @@ export const ITEM_TEMPLATES = [
     {
         id: "container",
         label: "Container",
-        text: `CONTAINER:
+        text: `SCHEMA_VERSION: 1
+CONTAINER:
   ITEM:
     Name: "Bag of Holding"
     Rarity: uncommon
@@ -180,7 +185,8 @@ export const ITEM_TEMPLATES = [
     {
         id: "loot",
         label: "Loot/Gear",
-        text: `LOOT:
+        text: `SCHEMA_VERSION: 1
+LOOT:
   ITEM:
     Name: "Ruby"
     Rarity: common
@@ -204,9 +210,54 @@ export const ITEM_TEMPLATES = [
       A clear red gemstone about one inch across, suitable as treasure or a spell component.`
     },
     {
+        id: "spell",
+        label: "Spell",
+        text: `SCHEMA_VERSION: 1
+SPELL:
+  ITEM:
+    Name: "Magic Missile"
+    Level: 1
+    School: evo
+    Ability: n/a
+  COMPONENTS:
+    Vocal: true
+    Somatic: true
+    Material: false
+  PREPARATION:
+    Method: spell
+    Prepared: true
+  ACTIVATION:
+    Type: action
+    Value: 1
+    Condition: n/a
+  RANGE:
+    Units: ft
+    Value: 120
+  DURATION:
+    Units: inst
+    Value: n/a
+    Concentration: false
+  TARGETS:
+    Type: creature
+    Count: 1
+    Choice: true
+    Special: n/a
+  USAGE:
+    Uses Spent: 0
+    Uses Max: n/a
+  RECOVERY: []
+  DESCRIPTION:
+    Description: |
+      Three glowing darts of magical force strike creatures you can see within range.
+  CHAT_FLAVOR:
+    Chat Description: |
+      n/a`
+    },
+    {
         id: "batch",
         label: "Multi-Item Batch",
-        text: `WEAPON:
+        text: `SCHEMA_VERSION: 1
+WEAPON:
   ITEM:
     Name: "Shortsword +1"
     Rarity: uncommon
@@ -274,7 +325,8 @@ LOOT:
     {
         id: "mixed-damage-weapon",
         label: "Mixed Damage Weapon",
-        text: `WEAPON:
+        text: `SCHEMA_VERSION: 1
+WEAPON:
   ITEM:
     Name: "Flame Tongue Longsword"
     Rarity: rare

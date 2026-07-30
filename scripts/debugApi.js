@@ -30,6 +30,7 @@ const READ_ONLY_ACTIONS = [
     "validateText",
     "analyzeActivities",
     "inspectWorldItem",
+    "inspectWindow",
     "openWindow"
 ];
 const MUTATING_ACTIONS = ["runAutomation", "cleanupFixtures"];
@@ -59,14 +60,19 @@ const MODULE_ASSETS = Object.freeze([
     "module.json",
     "README.md",
     "scripts/itemImporter.js",
+    "scripts/ui/itemAttunementNote.js",
+    "scripts/itemWindow.js",
     "scripts/itemConfig.js",
     "scripts/debugApi.js",
     "scripts/diagnosticsAutomation.js",
-    "scripts/itemTests.js",
+    "scripts/diagnostics/runtimeSmokeTests.js",
     "scripts/parserRouting.js",
     "scripts/itemData.js",
     "scripts/itemUtils.js",
     "templates/itemWindow.hbs",
+    "lang/en.json",
+    "styles/item-importer-card.css",
+    "styles/item-importer-components.css",
     "styles/item-importer.css"
 ]);
 
@@ -355,7 +361,7 @@ function summarizeParseResult(result) {
         item: item ? {
             name: item.name,
             type: item.type,
-            rarity: item.rarity,
+            ...(item.type === "spell" ? {} : { rarity: item.rarity }),
             pendingActivities: item.pendingActivities?.length ?? 0,
             data: itemJson
         } : null
@@ -521,13 +527,43 @@ function inspectWorldItem(input = {}) {
     };
 }
 
-async function buildGeneratedData(item) {
-    await item.buildFoundryData({ deterministicIcons: true });
+function normalizeBuildOptions(input = {}) {
+    return {
+        deterministicIcons: input.deterministicIcons !== false,
+        generateAnimations: input.generateAnimations === true
+    };
+}
+
+function summarizeAutoAnimationsBuild(generatedItemData, buildOptions) {
+    const flags = generatedItemData?.flags?.autoanimations ?? null;
+    const meleeSwitch = flags?.meleeSwitch ?? null;
+
+    return {
+        requested: buildOptions.generateAnimations === true,
+        moduleActive: !!game.modules.get("autoanimations")?.active,
+        applied: !!flags,
+        id: flags?.id ?? null,
+        menu: flags?.menu ?? null,
+        primary: flags?.primary?.video ?? null,
+        meleeSwitch: meleeSwitch ? {
+            switchType: meleeSwitch.options?.switchType ?? null,
+            isReturning: meleeSwitch.options?.isReturning ?? null,
+            returning: meleeSwitch.options?.returning ?? null,
+            video: meleeSwitch.video ?? null
+        } : null
+    };
+}
+
+async function buildGeneratedData(item, options = {}) {
+    const buildOptions = normalizeBuildOptions(options);
+    await item.buildFoundryData(buildOptions);
     const exported = item.toJSON ? item.toJSON() : {};
     const generatedItemData = exported.foundryData ?? null;
     const validation = ItemUtils.validateItemData(generatedItemData ?? {});
 
     return {
+        buildOptions,
+        autoAnimations: summarizeAutoAnimationsBuild(generatedItemData, buildOptions),
         generatedItemData: safeSerialize(generatedItemData, { maxDepth: 7 }),
         validation: safeSerialize(validation)
     };
@@ -783,10 +819,11 @@ export function createDiagnosticsApi({ parse, openWindow }) {
             });
         },
 
-        async runSmokeTests() {
+        async runSmokeTests(input = {}) {
             return withGate("runSmokeTests", async () => {
                 const tests = [];
                 const beforeCounts = getWorldDocumentCounts();
+                const requestedSuite = input.suite === "full" ? "full" : "runtime";
 
                 record(tests, "diagnostics action allowlist matches contract", () => {
                     const actual = Object.keys(game.modules.get(MODULE_NAME)?.api?.diagnostics?.actions ?? {}).sort();
@@ -795,17 +832,41 @@ export function createDiagnosticsApi({ parse, openWindow }) {
                 });
                 record(tests, "settings gate is currently open", () => getAvailability().available === true);
 
-                const { ItemImporterTests } = await import("./itemTests.js");
-                if (typeof ItemImporterTests.runStructured !== "function") {
+                let runSuite;
+                try {
+                    if (requestedSuite === "full") {
+                        const { ItemImporterTests } = await import("../tests/foundry/itemImporterTests.js");
+                        runSuite = ItemImporterTests?.runStructured?.bind(ItemImporterTests);
+                    } else {
+                        const { runRuntimeSmokeTests } = await import("./diagnostics/runtimeSmokeTests.js");
+                        runSuite = runRuntimeSmokeTests;
+                    }
+                } catch (error) {
                     return {
                         success: false,
                         available: true,
-                        errors: ["Structured smoke tests are unavailable"],
+                        suite: requestedSuite,
+                        sourceOnly: requestedSuite === "full",
+                        errors: [requestedSuite === "full"
+                            ? "The full source test suite is not included in production release archives."
+                            : "Runtime smoke tests are unavailable."],
+                        detail: error.message,
                         tests
                     };
                 }
 
-                const structured = await ItemImporterTests.runStructured();
+                if (typeof runSuite !== "function") {
+                    return {
+                        success: false,
+                        available: true,
+                        suite: requestedSuite,
+                        sourceOnly: requestedSuite === "full",
+                        errors: [`${requestedSuite === "full" ? "Full source" : "Runtime"} smoke tests are unavailable.`],
+                        tests
+                    };
+                }
+
+                const structured = await runSuite();
                 const afterCounts = getWorldDocumentCounts();
                 record(tests, "smoke tests created no world documents", () =>
                     JSON.stringify(beforeCounts) === JSON.stringify(afterCounts)
@@ -821,6 +882,7 @@ export function createDiagnosticsApi({ parse, openWindow }) {
                 return {
                     available: true,
                     ...structured,
+                    suite: requestedSuite,
                     success: structured.success === true && failed.length === 0,
                     passed: combinedTests.length - failed.length,
                     failed: failed.length,
@@ -850,6 +912,7 @@ export function createDiagnosticsApi({ parse, openWindow }) {
             return withGate("parseText", async () => {
                 const text = typeof input.text === "string" ? input.text : "";
                 const buildItemData = !!input.buildItemData;
+                const buildOptions = normalizeBuildOptions(input);
                 if (!text.trim()) {
                     return {
                         success: false,
@@ -872,7 +935,7 @@ export function createDiagnosticsApi({ parse, openWindow }) {
                     }
 
                     if (buildItemData && result?.item) {
-                        response.build = await buildGeneratedData(result.item);
+                        response.build = await buildGeneratedData(result.item, buildOptions);
                     }
 
                     return response;
@@ -892,6 +955,8 @@ export function createDiagnosticsApi({ parse, openWindow }) {
                 const parsed = await actions.parseText({
                     text: input.text,
                     buildItemData: true,
+                    deterministicIcons: input.deterministicIcons,
+                    generateAnimations: input.generateAnimations === true,
                     trace: !!input.trace
                 });
 
@@ -966,6 +1031,70 @@ export function createDiagnosticsApi({ parse, openWindow }) {
             });
         },
 
+        inspectWindow() {
+            return withGate("inspectWindow", () => {
+                const application = document.querySelector(".ii-window");
+                const content = application?.querySelector?.(".window-content") ?? null;
+                const form = application?.querySelector?.(".ii-form") ?? null;
+                const options = form?.querySelector?.(".ii-options-panel") ?? null;
+                const presetPanel = form?.querySelector?.(".ii-preset-panel") ?? null;
+                const quickSettings = options?.querySelector?.(".ii-quick-settings") ?? null;
+                const sourceInput = form?.querySelector?.("#ii-input") ?? null;
+                const disclosureSummary = options?.querySelector?.(":scope > summary") ?? null;
+                const select = form?.querySelector?.("select") ?? null;
+                const destination = form?.querySelector?.(".ii-destination-fieldset") ?? null;
+                const actionBar = form?.querySelector?.(".ii-button-group") ?? null;
+                const contentStyle = content ? getComputedStyle(content) : null;
+                const disclosureChevronStyle = disclosureSummary ? getComputedStyle(disclosureSummary, "::after") : null;
+                const selectStyle = select ? getComputedStyle(select) : null;
+                const formText = form?.textContent ?? "";
+                const unresolvedKeys = Array.from(new Set(formText.match(/\bII\.[A-Za-z0-9_.]+/g) ?? [])).sort();
+
+                return {
+                    success: !!(application && content && form),
+                    available: true,
+                    opened: !!application,
+                    localization: {
+                        language: game.i18n?.lang ?? null,
+                        sample: game.i18n?.localize?.("II.Input.Label") ?? null,
+                        unresolvedKeys
+                    },
+                    scrolling: content ? {
+                        overflowX: contentStyle?.overflowX ?? null,
+                        overflowY: contentStyle?.overflowY ?? null,
+                        clientHeight: content.clientHeight,
+                        scrollHeight: content.scrollHeight,
+                        hasVerticalOverflow: content.scrollHeight > content.clientHeight,
+                        scrollTop: content.scrollTop
+                    } : null,
+                    layout: {
+                        optionsCollapsed: options ? !options.open : null,
+                        presetsCollapsed: presetPanel ? !presetPanel.open : null,
+                        optionsLayout: quickSettings ? {
+                            display: getComputedStyle(quickSettings).display,
+                            gridTemplateColumns: getComputedStyle(quickSettings).gridTemplateColumns
+                        } : null,
+                        sourceHeight: sourceInput?.getBoundingClientRect?.().height ?? null,
+                        destinationVisible: !!destination && !destination.hidden,
+                        actionBarVisible: !!actionBar && getComputedStyle(actionBar).display !== "none",
+                        width: application?.getBoundingClientRect?.().width ?? null,
+                        height: application?.getBoundingClientRect?.().height ?? null,
+                        chevrons: {
+                            disclosure: disclosureChevronStyle ? {
+                                content: disclosureChevronStyle.content,
+                                borderRightWidth: disclosureChevronStyle.borderRightWidth,
+                                borderBottomWidth: disclosureChevronStyle.borderBottomWidth
+                            } : null,
+                            select: selectStyle ? {
+                                appearance: selectStyle.appearance,
+                                backgroundImage: selectStyle.backgroundImage
+                            } : null
+                        }
+                    }
+                };
+            });
+        },
+
         openWindow() {
             return withGate("openWindow", () => {
                 openWindow();
@@ -1004,6 +1133,7 @@ export function createDiagnosticsApi({ parse, openWindow }) {
         validateText: actions.validateText,
         analyzeActivities: actions.analyzeActivities,
         inspectWorldItem: actions.inspectWorldItem,
+        inspectWindow: actions.inspectWindow,
         openWindow: actions.openWindow,
         runAutomation: actions.runAutomation,
         cleanupFixtures: actions.cleanupFixtures

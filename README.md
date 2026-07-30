@@ -30,6 +30,8 @@
 
 > *The **5e Item Importer** allows you to import D&D 5e items directly from text into Foundry VTT. It supports two powerful workflows: Natural Language and Strict Format.*
 
+5e Item Importer and 5e Activity Importer are standalone sibling modules. Each can be installed and used without the other. Reciprocal Foundry recommendations are planned once 5e Activity Importer is publicly available. When both are active, Item Importer discovers Activity Importer's public API to add inline Activities and Active Effects, resolve document references, open the Activity Builder, and perform full lossless Item-graph exports. No private source files are imported across module boundaries.
+
 ---
 
 <a id="quick-start"></a>
@@ -77,6 +79,24 @@ The Strict Parser uses a specific key/value format. This is ideal for using with
 **Great for homebrew, bulk generation, or working with LLMs.**
 
 Strict Format supports batches by stacking different item types in one block or separating multiple items of the same type with YAML document separators. Supported top-level keys are `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, and `CONTAINER`.
+
+### Lightweight Key/Value Drafts
+
+For a quick single-Item draft, the same seven Item types can also be written as a flat key/value list. At minimum, provide `name` and `type`; the router supplies conservative valid defaults and then validates the generated document through the strict parser.
+
+```yaml
+name: Quick Spark
+type: spell
+level: 2
+school: evocation
+activation: bonus action
+components: V, S
+range: 60 feet
+duration: 1 minute
+description: A brief arc of blue-white light.
+```
+
+Type-specific lightweight fields include `weaponType`/`baseWeapon`, `equipmentType`/`baseEquipment`/`armorClass`, `consumableType`/`ammunitionType`/`poisonType`, `toolType`/`baseTool`, `lootType`, container capacity fields, and spell level/school/activation/component/range/duration fields. Common readable aliases are accepted, such as `armor`/`armour`, `potion`, `scroll`, `martial melee`, `thieves tools`, `trade goods`, and full spell-school names. Fields are validated after type and consumable-subtype inference: mismatched fields, conflicting combined/explicit representations, malformed booleans, prices, weights or damage, and unknown or inapplicable property tokens are rejected rather than silently discarded or replaced with defaults. Use the full strict templates when exact advanced configuration is required.
 
 ---
 
@@ -155,7 +175,7 @@ The parser uses 3 strategies. The safest is Title Case on the first line.
 Include specific keywords in the first 3 lines to trigger type detection:
 *   **Weapon:** "Weapon", "Melee Weapon", "Ranged Weapon", "Attack Roll"
 *   **Armor:** "Armor", "Shield", "Plate", "Leather", "AC"
-*   **Consumable:** "Potion", "Scroll", "Food", "Drink", "Ammunition"
+*   **Consumable:** "Potion", "Scroll", "Wand", "Rod", "Food", "Drink", "Poison", "Ammunition", "Trinket"
 *   **Tool:** "Tool", "Kit", "Instrument", "Gaming Set"
 *   **Container:** "Bag", "Backpack", "Box", "Holds", "Capacity"
 *   **Loot:** "Gem", "Art Object", "Treasure", "Material"
@@ -164,15 +184,22 @@ Include specific keywords in the first 3 lines to trigger type detection:
 To ensure correct parsing of damage and properties:
 *   **Type:** Use full terms like "Martial Melee Weapon" or "Simple Ranged Weapon".
 *   **Damage:** Format as `1d8 slashing` or `Damage: 2d6 fire`.
-*   **Properties:** List them clearly: `Finesse, Light, Thrown`.
+*   **Properties:** Use an explicit label, such as `Properties: Finesse, Light, Thrown`.
 *   **Versatile:** Use the specific format `Versatile (1d10)`.
+*   **Magic weapon damage:** Known base weapons retain their normal base damage unless an explicit `Damage:` field overrides it. Additional damage in description prose remains additional damage and does not replace the base roll.
 
 ###### **4. Armor & Equipment**
 *   **AC:** Use `AC 18` or `Armor Class: 14`.
 *   **Stealth:** Use the phrase `Disadvantage on Stealth checks`.
 *   **Strength:** Use `Requires Strength 13` or `Str 15`.
+*   **Wondrous items:** A declared `Wondrous Item` type imports as dnd5e `wondrous` equipment rather than loot.
 
-###### **5. Containers**
+###### **5. Consumables**
+*   The header/name determines potion, scroll, wand, rod, ammunition, poison, food, or trinket subtype before description keywords are considered.
+*   Phrases such as `has 7 charges` populate the maximum uses and start with zero uses spent. Prefer `Uses Spent` in strict YAML; legacy `Uses Current` means remaining uses and is converted with a warning.
+*   Quantity suffixes preserve exact non-negative integers, including zero (`Arrows (0)`). Fractional or unsafe quantities and charge counts are ignored with a warning rather than truncated.
+
+###### **6. Containers**
 The parser looks for specific capacity phrases:
 *   **Weight:** "Holds 500 pounds" or "Capacity: 500 lbs".
 *   **Volume:** "64 cubic feet".
@@ -253,6 +280,10 @@ The Strict Parser uses a specific key/value format. This is ideal for using with
 These examples were validated through the 5e Item Importer MCP diagnostics. They intentionally use optional sections like uses, recovery, chat flavor, unidentified descriptions, dnd5e enrichers, and dynamic name lookups, while avoiding inline activity and active-effect blocks so they work with only 5e Item Importer installed.
 
 For mixed weapon damage, use a dnd5e typed custom formula such as `1d8[piercing] + 1d6[lightning]` and set `Damage Type` to the weapon's primary damage type, such as `piercing`. Do the same for `Versatile Damage Type`. The primary type gives dnd5e a default for system-added ability and magic bonuses, while bracketed formula terms keep extra damage such as lightning separate for resistance and immunity. Use `n/a` only for fully self-contained typed formulas that will not receive system-added ability, magic, or ammunition bonuses. For saves, conditions, healing, and other effects that need automation beyond base item fields, keep the rules in the description text unless the user explicitly wants Activity Importer support.
+
+Strict YAML reports unknown sections and field names as warnings so typos are not silently ignored. A parse with validation errors returns no importable item; correct the reported fields before importing.
+
+Strict numeric scalars are parsed exactly: quantities and uses must be integers, while price, weight, and weight/volume capacities may be finite decimals; these values cannot be negative. Values with trailing text such as `12abc` are errors rather than numeric prefixes. `Attunement By` is retained only when `Attunement` is `required` or `optional`; it is cleared with a warning for `none` or invalid attunement values.
 
 <a id="validated-yaml-stormglass-rapier"></a>
 
@@ -654,11 +685,6 @@ SPELL:
       <p>When the spell ends, one creature of the caster's choice in the bright light gains [[/heal 1d4 temp average]] temporary hit points.</p>
       <section class="secret" id="upcast"><p><strong>At Higher Levels.</strong> When [[lookup @name]]{the creature} casts this spell using a spell slot of 2nd level or higher, the bright-light radius increases by 5 feet for each slot level above 1st.</p></section>
 
-  UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: n/a
-    Unidentified Description: |
-      n/a
-
   CHAT_FLAVOR:
     Chat Description: |
       [[lookup @name]]{The creature} releases a small sun-colored mote.
@@ -952,7 +978,89 @@ For import-ready examples, use the [validated custom YAML examples](#validated-c
 
 ---
 
+### Schema, Round-Trip Export, and Safe Core Contracts
+
+New strict YAML documents begin with visible schema metadata:
+
+```yaml
+SCHEMA_VERSION: 1
+WEAPON:
+  ITEM:
+    Name: "Example Weapon"
+```
+
+Unversioned strict YAML remains accepted as legacy schema version 0 and is migrated in memory. The parser reports migration provenance and carries it through mixed and multi-document batches. Documents declaring a schema version newer than the installed importer supports are rejected instead of being partially imported. `Uses Max`, magic bonuses, tool bonuses, and recharge thresholds preserve compatible dnd5e formula strings; legacy `Uses Current` cannot be converted against a formula maximum and fails with an instruction to provide `Uses Spent`.
+
+The strict exporter supports Weapon, Equipment, Consumable, Tool, Loot, Container, and Spell Items. **Core Item export** is always available, excludes Activities and Active Effects, and is the default for `api.export()`, `api.exportBatch()`, copy, download, and Item drops when the companion serializers are unavailable. **Full Item export** is an explicit companion workflow exposed by `api.exportFull()`, `api.exportFullBatch()`, `{ mode: "full" }`, and the Full Item YAML context actions shown when Activity Importer exposes both synchronous serializers. Batch export uses `---` document separators so repeated Item types remain lossless.
+
+For full export, every live dnd5e Activity and Active Effect is serialized from its current document state through Activity Importer's `api.serializeActivity()` and `api.serializeEffect()` services, so later edits supersede stored provenance. If the companion is unavailable, the current state cannot be represented, a third-party field is present, or the serializer cannot prove a lossless mapping, full export stops with an explicit error. Activity-specific effect application metadata is matched separately from the effect body. A shared Active Effect referenced by multiple Activities is rejected because the current strict format cannot preserve that topology without duplication; duplicate requested effect IDs are also rejected during import. A linked effect is omitted from the standalone `effects` section only when its exact serialized body is embedded in its owning Activity. Low-level export options continue to accept `includeActivities` and `includeEffects`; each alias takes precedence over the older aggregate attachment options when both are supplied.
+
+Custom properties use this strict shape:
+
+```yaml
+CUSTOM_PROPERTIES:
+  Registered:
+    - "registeredPropertyId"
+  Metadata:
+    my-module.note: "Namespaced metadata only"
+```
+
+`Registered` accepts only property IDs registered for that Item type by dnd5e. `Metadata` requires namespaced keys and is stored under the Item Importer's flags. Metadata keys are never treated as `system.*` update paths. The core adapter returns registered property IDs separately from the nested flag object so callers cannot accidentally flatten metadata into Item system data.
+
+Normal parsing returns deterministic, local-only confidence, provenance, and review suggestions; it does not call a remote AI service. High-confidence natural-text automation suggestions recognize explicit extra damage, healing, saving throw, condition, and recharge wording. They are previewed by default and are added to pending activities only when parsing is called with `{ synthesizeAutomation: true }`. If 5e Activity Importer is active, generated payloads are validated through its `parseAll`/legacy `parse` API. If it is absent, validation is reported as skipped rather than assumed successful, and normal Item parsing remains available.
+
+Compendium image candidates are collected locally and can be selected randomly, with a seed for reproducible random choice, or deterministically. Cache enablement, lifetime, size, statistics, and clearing are explicit controls. AutoAnimations candidates now cover weapons, spells, consumables, tools, and equipment, can use inline activity hints, and are persisted only when a sufficiently confident candidate is available; installed animation database availability is checked at runtime.
+
+The supported module API remains feature-detected:
+
+```js
+const importer = game.modules.get("5e-item-importer")?.api;
+const result = importer?.parse(text, {
+  trace: true,
+  synthesizeAutomation: false
+});
+```
+
+Internal UI integrations load `scripts/itemCoreFeatures.js` defensively and verify each capability before use. That facade exposes the strict exporters, schema migration helpers, parse insights, safe custom-property adapters, compendium image candidate/cache services, natural automation synthesis/validation, and AutoAnimations preview/flag builders. Callers should likewise feature-detect functions and must not interpret returned metadata keys as Foundry property paths.
+
+---
+
 <a id="common-issues"></a>
+
+## Window Workflow and Public API
+
+The importer window now supports client-local saved presets, an editable normalized strict-YAML editor, and drag-and-drop from Item, Actor, Journal text, and local text/YAML files. Imports can target World Items or a folder, an owned Actor, or a writable Item compendium. Duplicate handling is explicit per batch entry: create, update, conservative merge, or skip. Update and merge show the exact target UUID plus a path-level conflict preview, never delete existing embedded Activities or effects, and fail closed when more than one exact name/type match exists.
+
+The window keeps the source, preview, destination, and import action in the primary workflow. Less-frequent controls such as presets, import options, normalized YAML, and history stay in compact disclosure sections until needed. Disclosure and select controls use theme-aware CSS chevrons, so they do not depend on an icon font being present.
+
+Batch imports can be filtered, cooperatively cancelled before document writes, and retried without recreating successful entries. Imports and undo share one mutation lock. Session-only history provides downloadable reports and a confirmed, permission-checked undo that verifies the imported core and embedded-document state, refuses to overwrite later edits, and can safely retry after a partial embedded-document deletion. The Activity Builder captures strict attachment YAML for a single parsed Item, while Resolve Exact UUID References delegates to the companion Activity Importer when available. Existing Items always expose **Copy/Download Core Item YAML** and additionally expose **Copy/Download Full Item YAML** when the companion serializers are available.
+
+Relevant registered settings:
+
+| Setting key | Scope | Purpose |
+| --- | --- | --- |
+| `savedPresets` | client | Bounded reusable input presets |
+| `lastDestination` | client | Last permission-validated destination |
+| `compendiumImageMode` | client | Deterministic or random top image selection |
+
+```js
+const api = game.modules.get("5e-item-importer").api;
+api.schemaVersion; // Public API schema 3
+api.capabilities.exportModes; // ["core", "full"]
+const preview = api.parseWithInsights(sourceText);
+await api.import(sourceText, {
+  destination: { kind: "actor", actorUuid: actor.uuid },
+  duplicateMode: "merge",
+  confirmExisting: true
+});
+const coreYaml = await api.export(item);       // Standalone default: Item fields only
+const fullYaml = await api.exportFull(item);   // Explicit companion export
+const sameFullYaml = await api.export(item, { mode: "full" });
+await api.copyExport(item);
+await api.downloadExport(item);
+```
+
+API undo is intentionally explicit: `api.history.undo(sessionId, { confirmed: true })`. The legacy `api.import(text, folderId)` signature remains supported.
 
 ## Common Issues
 
@@ -960,7 +1068,7 @@ For import-ready examples, use the [validated custom YAML examples](#validated-c
 > Natural Parsing is still being worked on.
 
 **Icons aren't matching automatically.**
-> Go to Module Settings and enable **"Match Icons from Compendiums"**. Note: This feature works best when the item name includes a recognizable D&D 5e base item or item type (e.g., "Stormglass Rapier", "Emberguard Half Plate", "Potion of Sunlit Breath"). I'm hoping to include randomized compendium images in the near future
+> Go to Module Settings and enable **"Match Icons from Compendiums"**. This works best when the item name includes a recognizable D&D 5e base item or item type (for example, "Stormglass Rapier", "Emberguard Half Plate", or "Potion of Sunlit Breath"). Use **Compendium image choice** to select the best deterministic match or a random top match. Random selection can still be made reproducible with a seed when using the core service programmatically.
 
 **Description is empty.**
 > If using Natural Language: Ensure there is a n/a line between the stat block and the description.
@@ -988,9 +1096,27 @@ Diagnostics require all of these gates:
 
 Read-only diagnostics include status, settings validation, asset validation, compact client snapshots, parser text validation, activity handoff analysis, world item inspection, opening the import window, and structured smoke tests. Smoke tests are expected to stay read-only and report before/after world document counts.
 
+`runSmokeTests()` runs the compact production suite shipped in `scripts/diagnostics/runtimeSmokeTests.js`. From a source checkout, `runSmokeTests({ suite: "full" })` dynamically loads the comprehensive Foundry suite in `tests/foundry/itemImporterTests.js`. The `tests/` directory is tracked in GitHub for maintainers and contributors, but is intentionally omitted from the installable release archive; requesting the full suite from an installed production archive therefore reports that the source-only suite is unavailable.
+
+`parseText` and `validateText` can build generated item data with `{ buildItemData: true, generateAnimations: true }` or `{ generateAnimations: false }`. The build response reports the selected build options and whether AutoAnimations flags were requested, available, and applied.
+
 Confirmed fixture automation is available under the same **Enable MCP Diagnostics** gate. `runAutomation` and `cleanupFixtures` also require `confirmMutation: true`. Fixture cleanup only deletes world Items whose names start with `5E-ITEM-IMPORTER-MCP-FIXTURE` and that also carry this module's `mcpAutomationFixture` flag.
 
 For hard refresh testing, the MCP bridge `reload-foundry-client` tool is the main refresh path. The module-level `refreshClient` action is inherently available when diagnostics gates are open and additionally requires `confirmRefresh: true`.
+
+---
+
+## Development Tests and Release Packaging
+
+Source-only tests live at:
+
+- `tests/foundry/itemImporterTests.js` for the full Foundry integration suite
+- `tests/foundry/itemPlatformFeatureTests.js` for platform-facing feature coverage
+- `tests/unit/itemCoreFeatureTests.js` for core service coverage
+
+See `tests/README.md` for the supported test entry points. Keep these files in the repository so changes remain reviewable and reproducible; the release builder excludes them from the package installed on a Foundry server.
+
+From PowerShell, `./tools/Build-Release.ps1` creates a clean installable ZIP and standalone `module.json` in the ignored `dist/` directory. `./tools/Verify-Release.ps1` checks an existing archive. A reliable release order is: run the tests, update the version and release notes, commit and push the exact source, tag that commit, build from it, create the GitHub release, upload the ZIP and `module.json`, and finally test installation through the published manifest URL.
 
 ---
 
@@ -1017,7 +1143,7 @@ I am not generally accepting unsolicited code PRs for features, refactors, archi
 - **Feature requests** — tell me what happened at your table and what you wish the module could do.
 - **Pull requests** — please do not open code PRs unless I ask for one. Open an issue with the idea instead.
 - **Code ownership** — core implementation, architecture, and release decisions remain with GnollStack unless stated otherwise.
-- **Translations and docs** — typo fixes, wording suggestions, and localization ideas are welcome by issue first. I do not have a public translation setup yet, so I will fold useful wording in myself.
+- **Translations and docs** - UI strings use Foundry's public localization setup in `lang/en.json`, primarily under `II.*` keys. Typo fixes, wording suggestions, and translation files are welcome by issue first; the code-contribution policy above still applies.
 
 Submitted ideas may be adapted, declined, or implemented by GnollStack. Any accepted contribution or submitted project material may be released under the same EULA as the rest of the module.
 

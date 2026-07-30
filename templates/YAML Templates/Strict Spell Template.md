@@ -4,6 +4,7 @@
 
 **How to use this template:**
 - Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
+- Begin every YAML document with `SCHEMA_VERSION: 1` before the Item type key.
 - Wrap the completed YAML in a single ```` ```yaml ```` code fence.
 - Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
 - For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
@@ -17,6 +18,7 @@
 **Batching multiple items:**
 Combine different item types in one block by stacking top-level keys:
 ```text
+SCHEMA_VERSION: 1
 SPELL:
   ITEM:
     Name: "Fireball"
@@ -28,11 +30,13 @@ WEAPON:
 ```
 For multiple items of the **same type**, separate them with `---` (YAML document separator):
 ```text
+SCHEMA_VERSION: 1
 SPELL:
   ITEM:
     Name: "Fireball"
     # additional fields omitted in this batching example
 ---
+SCHEMA_VERSION: 1
 SPELL:
   ITEM:
     Name: "Lightning Bolt"
@@ -64,12 +68,12 @@ You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMEN
 - Duration Concentration: `false` unless concentration is explicitly required.
 - Uses Spent: `0`; Uses Max: `n/a` unless the spell item tracks limited uses outside normal spell slots.
 - RECOVERY: `[]` when no limited-use recovery applies.
-- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
 - Chat Description: `n/a` unless special chat flavor is needed.
 
 ---
 
 ```yaml
+SCHEMA_VERSION: 1
 SPELL:
   ITEM:
     Name: "[text]"
@@ -140,11 +144,6 @@ SPELL:
   DESCRIPTION:
     Description: |
       [multiline HTML content containing Enrichers]
-
-  UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "[text|n/a]"
-    Unidentified Description: |
-      [multiline HTML content]
 
   CHAT_FLAVOR:
     Chat Description: |
