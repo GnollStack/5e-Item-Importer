@@ -12,30 +12,15 @@
 
 *For GMs who want D&D 5e items imported from text instead of typed by hand.*
 
-[Features](#what-you-get) &middot; [Quick Start](#quick-start) &middot; [Preview](#preview) &middot; [Installation](#installation) &middot; [Compatibility](#compatibility) &middot; [Templates](#template-reference) &middot; [Common Issues](#common-issues) &middot; [Community](#community) &middot; [Contributing](#contributing) &middot; [Support](#support-development) &middot; [License](#license-permissions)
+[Features](#what-you-get) &middot; [Quick Start](#quick-start) &middot; [Preview](#preview) &middot; [Installation](#installation) &middot; [Compatibility](#compatibility) &middot; [Templates](#template-reference) &middot; [Common Issues](#common-issues) &middot; [Community](#community) &middot; [Contributing](#contributing) &middot; [AI Use](#ai-use) &middot; [Support](#support-development) &middot; [License](#license-permissions)
 
 </div>
 
 ---
 
-## Feature Index
-
-| Feature | Why it matters |
-| --- | --- |
-| **[Natural Language Parser](#natural-language-parser)** | Paste a familiar item stat block and review what the importer finds. |
-| **[Strict Format Parser](#strict-format-parser)** | Use the supplied YAML templates when every field needs to be predictable. |
-| **[Batch Imports](#batch-imports)** | Import a mixed collection or several Items of the same type in one pass. |
-| **[Template Downloads](#template-reference)** | Download the canonical template files for weapons, consumables, containers, equipment, loot, spells, and tools. |
-| **[Common Issues](#common-issues)** | Quick fixes for natural parsing, icons, and descriptions. |
+## Overview
 
 5e Item Importer turns item text into Foundry Items. Paste a normal stat block for a quick import, or use one of the strict YAML templates when you want exact control.
-
-<details>
-<summary><strong>Optional Activity Importer integration</strong></summary>
-
-5e Item Importer works on its own. If 5e Activity Importer is also installed, the two modules can share Activities and Active Effects, resolve document references, open the Activity Builder, and export complete Item data. Reciprocal Foundry recommendations will be enabled after Activity Importer is publicly available.
-
-</details>
 
 ---
 
@@ -74,7 +59,7 @@ Paste a familiar D&D 5e item stat block from a PDF, website, or your own notes. 
 
 ### Strict Format Parser
 
-Use the supplied YAML templates when you want predictable fields and clearer validation. This is the better choice for complicated homebrew, repeatable formats, and imports you expect to revise later.
+Use the supplied YAML templates when you want predictable fields and clearer validation. This is the better choice for complicated homebrew, repeatable formats, and imports you expect to revise later. Best when paired with Large Language AI models like chatGPT, Gemini, or Claude.
 
 <a id="batch-imports"></a>
 
@@ -83,6 +68,9 @@ Use the supplied YAML templates when you want predictable fields and clearer val
 Strict Format can import a mixed collection in one block. For several Items of the same type, separate YAML documents with `---`. Supported top-level keys are `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, and `CONTAINER`.
 
 ### Lightweight Key/Value Drafts
+
+<details>
+<summary><strong>View a lightweight draft example and supported fields</strong></summary>
 
 For a quick single-Item draft, the same seven Item types can also be written as a flat key/value list. At minimum, provide `name` and `type`; the router supplies conservative valid defaults and then validates the generated document through the strict parser.
 
@@ -98,42 +86,11 @@ duration: 1 minute
 description: A brief arc of blue-white light.
 ```
 
-<details>
-<summary><strong>Supported lightweight fields and validation</strong></summary>
-
 Type-specific lightweight fields include `weaponType`/`baseWeapon`, `equipmentType`/`baseEquipment`/`armorClass`, `consumableType`/`ammunitionType`/`poisonType`, `toolType`/`baseTool`, `lootType`, container capacity fields, and spell level/school/activation/component/range/duration fields.
 
 Readable aliases such as `armor`/`armour`, `potion`, `scroll`, `martial melee`, `thieves tools`, `trade goods`, and full spell-school names are accepted. Mismatched fields, conflicting representations, malformed values, and unknown properties are reported instead of being silently replaced. Use the full strict templates when you need advanced configuration.
 
 </details>
-
----
-
-<a id="installation"></a>
-
-## Installation
-
-1. Foundry -> **Add-on Modules** -> **Install Module**.
-2. Search "5e Item Importer", or paste this manifest URL:
-
-```text
-https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.json
-```
-
-3. Enable the module in your world.
-
----
-
-<a id="compatibility"></a>
-
-## Compatibility
-
-| Requirement | Version |
-| --- | --- |
-| Foundry VTT | v14+ (verified through v14.363) |
-| D&D 5e System | v5.3.3+ (verified through v5.3.3) |
-
-This release line intentionally targets Foundry VTT v14 and dnd5e v5.3.x. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.
 
 ---
 
@@ -287,17 +244,6 @@ Strict Format uses a documented YAML shape instead of guessing from prose. Start
 ### Validated Custom YAML Examples
 
 These examples have been checked against the current parser and dnd5e Item schema. They use optional sections such as uses, recovery, chat flavor, unidentified descriptions, enrichers, and dynamic name lookups while remaining usable with 5e Item Importer alone.
-
-<details>
-<summary><strong>Strict YAML rules worth knowing</strong></summary>
-
-For mixed weapon damage, use a dnd5e typed custom formula such as `1d8[piercing] + 1d6[lightning]` and set `Damage Type` to the weapon's primary damage type, such as `piercing`. Do the same for `Versatile Damage Type`. The primary type gives dnd5e a default for system-added ability and magic bonuses, while bracketed formula terms keep extra damage such as lightning separate for resistance and immunity. Use `n/a` only for fully self-contained typed formulas that will not receive system-added ability, magic, or ammunition bonuses. For saves, conditions, healing, and other effects that need automation beyond base item fields, keep the rules in the description text unless the user explicitly wants Activity Importer support.
-
-Strict YAML reports unknown sections and field names as warnings so typos are not silently ignored. A parse with validation errors returns no importable item; correct the reported fields before importing.
-
-Strict numeric scalars are parsed exactly: quantities and uses must be integers, while price, weight, and weight/volume capacities may be finite decimals; these values cannot be negative. Values with trailing text such as `12abc` are errors rather than numeric prefixes. `Attunement By` is retained only when `Attunement` is `required` or `optional`; it is cleared with a warning for `none` or invalid attunement values.
-
-</details>
 
 <a id="validated-yaml-stormglass-rapier"></a>
 
@@ -958,8 +904,6 @@ WEAPON:
 
 </details>
 
-<a id="template-reference"></a>
-
 <details>
 <summary><strong>Advanced: dnd5e description enrichers and name lookups</strong></summary>
 
@@ -970,6 +914,8 @@ Use dynamic name lookups for active narration and chat flavor, such as `[[lookup
 Optional companion: **Token Name Lookup** can make the same stock dnd5e `[[lookup @name]]` text prefer concrete token names for aliases, disguises, and token inventory views. Items remain fully compatible without that module; dnd5e simply resolves the lookup to the actor name.
 
 </details>
+
+<a id="template-reference"></a>
 
 ### Template Downloads
 
@@ -993,6 +939,17 @@ modules/5e-item-importer/templates/YAML Templates/
 
 For import-ready examples, use the [validated custom YAML examples](#validated-custom-yaml-examples), the [mixed-type batch example](#validated-mixed-batch-example), and the [same-type batch example](#validated-same-type-batch-example) above.
 
+<details>
+<summary><strong>Strict YAML rules worth knowing</strong></summary>
+
+For mixed weapon damage, use a dnd5e typed custom formula such as `1d8[piercing] + 1d6[lightning]` and set `Damage Type` to the weapon's primary damage type, such as `piercing`. Do the same for `Versatile Damage Type`. The primary type gives dnd5e a default for system-added ability and magic bonuses, while bracketed formula terms keep extra damage such as lightning separate for resistance and immunity. Use `n/a` only for fully self-contained typed formulas that will not receive system-added ability, magic, or ammunition bonuses. For saves, conditions, healing, and other effects that need automation beyond base item fields, keep the rules in the description text unless the user explicitly wants Activity Importer support.
+
+Strict YAML reports unknown sections and field names as warnings so typos are not silently ignored. A parse with validation errors returns no importable item; correct the reported fields before importing.
+
+Strict numeric scalars are parsed exactly: quantities and uses must be integers, while price, weight, and weight/volume capacities may be finite decimals; these values cannot be negative. Values with trailing text such as `12abc` are errors rather than numeric prefixes. `Attunement By` is retained only when `Attunement` is `required` or `optional`; it is cleared with a warning for `none` or invalid attunement values.
+
+</details>
+
 ---
 
 <details>
@@ -1007,7 +964,7 @@ WEAPON:
     Name: "Example Weapon"
 ```
 
-Unversioned strict YAML remains accepted as legacy schema version 0 and is migrated in memory. The parser reports migration provenance and carries it through mixed and multi-document batches. Documents declaring a schema version newer than the installed importer supports are rejected instead of being partially imported. `Uses Max`, magic bonuses, tool bonuses, and recharge thresholds preserve compatible dnd5e formula strings; legacy `Uses Current` cannot be converted against a formula maximum and fails with an instruction to provide `Uses Spent`.
+The parser reports migration provenance and carries it through mixed and multi-document batches. Documents declaring a schema version newer than the installed importer supports are rejected instead of being partially imported. `Uses Max`, magic bonuses, tool bonuses, and recharge thresholds preserve compatible dnd5e formula strings; legacy `Uses Current` cannot be converted against a formula maximum and fails with an instruction to provide `Uses Spent`.
 
 The strict exporter supports Weapon, Equipment, Consumable, Tool, Loot, Container, and Spell Items. **Core Item export** is always available, excludes Activities and Active Effects, and is the default for `api.export()`, `api.exportBatch()`, copy, download, and Item drops when the companion serializers are unavailable. **Full Item export** is an explicit companion workflow exposed by `api.exportFull()`, `api.exportFullBatch()`, `{ mode: "full" }`, and the Full Item YAML context actions shown when Activity Importer exposes both synchronous serializers. Batch export uses `---` document separators so repeated Item types remain lossless.
 
@@ -1101,24 +1058,31 @@ API undo is intentionally explicit: `api.history.undo(sessionId, { confirmed: tr
 
 ---
 
-## Development
+<a id="installation"></a>
 
-<details>
-<summary><strong>Tests and release packaging</strong></summary>
+## Installation
 
-Source-only tests live at:
+1. Foundry -> **Add-on Modules** -> **Install Module**.
+2. Search "5e Item Importer", or paste this manifest URL:
 
-- `tests/foundry/itemImporterTests.js` for the full Foundry integration suite
-- `tests/foundry/itemPlatformFeatureTests.js` for platform-facing feature coverage
-- `tests/unit/itemCoreFeatureTests.js` for core service coverage
+```text
+https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.json
+```
 
-See `tests/README.md` for test entry points. These files stay in the repository for maintainers and contributors, but the release builder leaves them out of the Foundry package.
+3. Enable the module in your world.
 
-From PowerShell, `./tools/Build-Release.ps1` creates and verifies `dist/5e-item-importer.zip`. The release `module.json` remains at the repository root; attach it alongside the ZIP on GitHub. `./tools/Verify-Release.ps1` can check an existing archive.
+---
 
-A reliable release order is: run the tests, update the version and release notes, commit and push the exact source, tag that commit, build from it, create the GitHub release, upload the ZIP and `module.json`, and test installation through the published manifest URL.
+<a id="compatibility"></a>
 
-</details>
+## Compatibility
+
+| Requirement | Version |
+| --- | --- |
+| Foundry VTT | v14+ (verified through v14.363) |
+| D&D 5e System | v5.3.3+ (verified through v5.3.3) |
+
+This release line intentionally targets Foundry VTT v14 and dnd5e v5.3.x. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.
 
 ---
 
@@ -1139,6 +1103,9 @@ A reliable release order is: run the tests, update the version and release notes
 
 Bug reports, feature ideas, reproduction notes, documentation fixes, and localization ideas are welcome.
 
+<details>
+<summary><strong>Contribution policy</strong></summary>
+
 I am not generally accepting unsolicited code PRs for features, refactors, architecture, or behavior changes. This is still my module and my codebase; I will decide how features are designed and implemented unless I explicitly say otherwise.
 
 - **Bug reports** — include Foundry version, module version, a console log, and the steps to reproduce. Screenshots or short clips help a lot.
@@ -1149,14 +1116,21 @@ I am not generally accepting unsolicited code PRs for features, refactors, archi
 
 Submitted ideas may be adapted, declined, or implemented by GnollStack. Any accepted contribution or submitted project material may be released under the same EULA as the rest of the module.
 
+</details>
+
 ---
 
-<details>
-<summary><strong>Development disclosure</strong></summary>
+<a id="ai-use"></a>
 
-Some development work uses AI-assisted tools. I review the behavior, make the release decisions, and take responsibility for what ships.
+## AI-Assisted Development
 
-</details>
+This module is developed and maintained with the help of AI-assisted tools for coding, debugging, and testing.
+
+I care about the quality, behavior, performance, security, and long-term maintainability of this module, and I take full responsibility for what ships. AI assistance does not replace review, testing, debugging, or security and design judgment.
+
+AI is used here as a tool under my direction to make Foundry better and allow for long term mod support while still having a life outside of building and maintaining my free and premium modules.
+
+If you are uncomfortable using software developed with AI-assisted tools, this module is not for you.
 
 ---
 
