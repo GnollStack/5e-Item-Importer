@@ -252,6 +252,7 @@ These examples have been checked against the current parser and dnd5e Item schem
 
 
 ```yaml
+SCHEMA_VERSION: 1
 WEAPON:
   ITEM:
     Name: "Stormglass Rapier"
@@ -345,6 +346,7 @@ WEAPON:
 
 
 ```yaml
+SCHEMA_VERSION: 1
 EQUIPMENT:
   ITEM:
     Name: "Emberguard Half Plate"
@@ -416,6 +418,7 @@ EQUIPMENT:
 
 
 ```yaml
+SCHEMA_VERSION: 1
 CONSUMABLE:
   ITEM:
     Name: "Potion of Sunlit Breath"
@@ -472,6 +475,7 @@ CONSUMABLE:
 
 
 ```yaml
+SCHEMA_VERSION: 1
 CONTAINER:
   ITEM:
     Name: "Moonwell Bag"
@@ -536,6 +540,7 @@ CONTAINER:
 
 
 ```yaml
+SCHEMA_VERSION: 1
 LOOT:
   ITEM:
     Name: "Starfall Opal"
@@ -581,6 +586,7 @@ LOOT:
 
 
 ```yaml
+SCHEMA_VERSION: 1
 SPELL:
   ITEM:
     Name: "Lantern Mote"
@@ -659,6 +665,7 @@ SPELL:
 
 
 ```yaml
+SCHEMA_VERSION: 1
 TOOL:
   ITEM:
     Name: "Cartographer's Quillcase"
@@ -723,6 +730,7 @@ TOOL:
 
 
 ```yaml
+SCHEMA_VERSION: 1
 WEAPON:
   ITEM:
     Name: "Stormglass Rapier"
@@ -810,6 +818,7 @@ LOOT:
 
 
 ```yaml
+SCHEMA_VERSION: 1
 WEAPON:
   ITEM:
     Name: "Stormglass Rapier"
@@ -849,6 +858,7 @@ WEAPON:
     Description: |
       <p>A blue crystal dueling blade that crackles before a storm. When [[lookup @name]]{the creature} hits with it, the target takes an extra [[/damage 1d6 lightning average]].</p>
 ---
+SCHEMA_VERSION: 1
 WEAPON:
   ITEM:
     Name: "Whisperpin Dagger"
