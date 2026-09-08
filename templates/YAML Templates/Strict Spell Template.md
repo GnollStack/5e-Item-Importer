@@ -2,6 +2,14 @@
 
 ## INSTRUCTIONS
 
+**Free and premium generation modes:**
+- 5e Activity Importer is a forthcoming premium companion, not included with this free release. Use free/core output unless premium output is explicitly requested or companion availability is confirmed.
+- **Free/core (default):** 5e Item Importer is free and works alone. Generate core Item fields and the complete source rules in descriptions. Omit `Activities` and `effects` entirely; description enrichers do not create those mechanics.
+- **Premium/full:** Use this mode only when the user explicitly requests it or confirms that 5e Activity Importer is available. Add only source-defined, supported activities/effects using that premium companion's strict templates. Keep the complete rules in the Item description as well. Activity Importer must be active when importing attachments.
+- If module availability is unspecified, use free/core mode. Merely receiving this template does not establish premium availability. An explicit free/core request takes precedence even when both modules are installed.
+- These mode names are prompt instructions, not YAML fields. Do not emit mode, edition, purchase, or licensing metadata.
+- Loot and Container support passive `effects` only; never emit `Activities` for those types.
+
 **How to use this template:**
 - Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
 - Begin every YAML document with `SCHEMA_VERSION: 1` before the Item type key.
@@ -50,7 +58,7 @@ You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMEN
 - Booleans: `true` or `false` (lowercase, no quotes).
 - Required scalar fields that do not apply: use the literal string `n/a`.
 - **Omit conditional sections entirely** (e.g., MATERIALS, AREA) when their condition is not met. Do not fill omitted sections with `n/a` values.
-- **Omit both `effects:` and `Activities:` entirely** unless explicitly requested.
+- For functional source-defined mechanics, use the companion Activities/Active Effects workflow below in premium/full mode. For a core Item import without companion support, omit both sections and retain the rules in the description.
 - Do not include template comments (`# ...`) in the final YAML output.
 - Do not omit individual fields from required sections just because their value is `n/a`.
 - Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
@@ -63,7 +71,9 @@ You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMEN
 
 **Default assumptions when source text is silent:**
 - Ability: `n/a` unless the spell uses a fixed ability override.
-- Preparation Method: `spell`; Prepared: `true` unless explicitly at-will, innate, ritual-only, or pact magic.
+- Preparation Method: `spell`; Prepared: `true` unless explicitly at-will, innate, ritual-only, or pact magic. A normally prepared spell that can also be cast as a ritual keeps `Method: spell`.
+- Components Ritual: `false` unless the spell is ritual-capable; use `true` independently of its preparation method.
+- Material Cost and Supply: finite nonnegative numbers (integers or decimals); use `0` when no cost or tracked supply is specified.
 - Activation Condition: `n/a` unless a trigger or special condition is stated.
 - Duration Concentration: `false` unless concentration is explicitly required.
 - Uses Spent: `0`; Uses Max: `n/a` unless the spell item tracks limited uses outside normal spell slots.
@@ -85,12 +95,13 @@ SPELL:
     Vocal: "[true|false]"
     Somatic: "[true|false]"
     Material: "[true|false]"
+    Ritual: "[true|false]"
 
   MATERIALS:
     # (Required only if Material is true)
     Value: "[text]"
-    Cost: "[integer]"
-    Supply: "[integer]"
+    Cost: "[integer|decimal]"
+    Supply: "[integer|decimal]"
     Consumed: "[true|false]"
 
   PREPARATION:
@@ -151,22 +162,70 @@ SPELL:
 
 ```
 
-## OPTIONAL ADVANCED SECTIONS
+## OPTIONAL ACTIVITIES AND ACTIVE EFFECTS
 
-Do not include `effects:` or `Activities:` in normal output. Add them only when the user explicitly asks for passive Active Effects or extra activities beyond the base item behavior.
+The core Item fields and description import without `5e-activity-importer`. Description enrichers create clickable text; they do not construct attack, saving throw, damage, healing, or condition activities. The importer does not generate those mechanics from strict YAML description text. Some item types receive generic system defaults, which do not reproduce arbitrary source rules.
 
-When requested, append them after `CHAT_FLAVOR`:
+For a functional item with source-defined rolls or effects, include the appropriate `Activities` and/or `effects` entries when Activity Importer is available for this workflow or the user requests its support. This includes a spell's primary save and damage, not only extra actions. Use the matching complete Activity Importer templates from `modules/5e-activity-importer/templates/Base Activity Templates/`, or the MIDI variants when that automation is intended. Preserve source mechanics, triggers, costs, and scaling; never invent mechanics, UUIDs, macros, or module-specific effect keys. If a rule cannot be represented, retain it in the description for manual resolution.
+
+In free/core mode, or when companion support is unavailable or unspecified, omit these sections and preserve the full rules in the description. The resulting import does not promise automated use of those rules. Do not add empty placeholder entries. Both sections require the companion module to be active at import time, and the selected dnd5e Item type must support the requested activities.
+
+Append supported sections at the same indentation as `DESCRIPTION` and `CHAT_FLAVOR`, beneath the Item type key:
+- `Activities` is an array. Each entry contains exactly one `ACTIVITY_*` key and the corresponding activity body. Multiple activities of the same type are separate array entries; do not insert `---` inside this array.
+- `effects` is an array of effect bodies beginning with `DETAILS`, without an `EFFECT:` wrapper. Use these for passive item effects. Effects applied by an activity belong in that activity's `APPLIED_EFFECTS` array instead; do not duplicate them here.
+- For each effect on Foundry 14, populate at most one duration unit (Seconds, Rounds, or Turns), using `n/a` for the other units.
+
+The completed examples below demonstrate array nesting for a passive +1 AC ward and an action that deals 1d6 fire damage. They are illustrative only: include them only if the source actually grants those mechanics, and use the full matching companion template for the requested activity type.
 
 ```yaml
   effects:
-    # Passive Active Effects applied to the actor when the item is equipped, attuned, or otherwise active.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry follows the EFFECT template format.
-
+    - DETAILS:
+        Name: "Armor Ward"
+        Icon Tint Color: n/a
+        Effect Suspended: false
+        Apply Effect to Actor: true
+        Status Conditions: n/a
+        Separate Status Conditions: n/a
+      EFFECT_DESCRIPTION:
+        Effect Description: "Grants +1 AC while this item's passive effect is active."
+      DURATION:
+        Effect Duration (Seconds): n/a
+        Effect Start Time: n/a
+        Effect Duration (combat) Rounds: n/a
+        Effect Duration (combat) Turns: n/a
+        Effect Start (combat) Rounds: n/a
+        Effect Start (combat) Turns: n/a
+      CHANGES:
+        - Attribute Key: system.attributes.ac.bonus
+          Change Mode: 2
+          Value: "1"
+          Priority: 20
   Activities:
-    # Extra activities only. Most base item behavior is generated by the dnd5e system.
-    # Requires the 5e-activity-importer module to be active.
-    # Must be a YAML array. Each entry starts with a dash and has one ACTIVITY_* key.
+    - ACTIVITY_DAMAGE:
+        ACTIVITY:
+          Name: "Fire Burst"
+          Icon: n/a
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: action
+          Activation Cost: 1
+          Condition: n/a
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Special Duration: n/a
+          Duration Amount: n/a
+          Concentration: false
+        DAMAGE_DETAILS:
+          Allow Critical: false
+          Extra Critical Damage Formula: n/a
+        DAMAGE:
+          DAMAGE_PARTS:
+            - Custom Damage Formula: true
+              Damage Formula: "1d6"
+              Damage Type: fire
+              Damage Scaling: No Scaling
+        APPLIED_EFFECTS: []
 ```
 
 ---
@@ -205,11 +264,21 @@ Use `Ability` in the `ITEM` section to override the class spellcasting ability f
 |--------|-------------|
 | `atwill` | At Will (always available, no slot needed) |
 | `innate` | Innate (uses per day, not spell slots) |
-| `ritual` | Ritual (adds ritual property, always prepared) |
+| `ritual` | Legacy ritual-only preparation (always prepared); when Components Ritual is omitted, also enables the ritual property. |
 | `pact` | Pact Magic (Warlock slot) |
 | `spell` | Standard spellbook/prepared spell |
 
 Legacy `prepared` is still accepted for backward compatibility, but new templates should use `spell`.
+
+### **Ritual Casting and Materials**
+
+| Field | Description | Accepted Values |
+|---|---|---|
+| `COMPONENTS.Ritual` | Whether this spell can be cast as a ritual, independently of preparation. A normal ritual-capable spell uses `Ritual: true` with `PREPARATION.Method: spell`. | `true` or `false`; default `false`. |
+| `MATERIALS.Cost` | Material component cost in gold pieces. | Finite nonnegative number (integer or decimal); `0` when no cost is stated. |
+| `MATERIALS.Supply` | Tracked supply of material components. | Finite nonnegative number (integer or decimal); `0` when no supply is tracked. |
+
+New YAML must state `COMPONENTS.Ritual` explicitly. An explicit boolean takes precedence over the legacy `Method: ritual` implication. Older YAML with an omitted, null, or `n/a` Ritual field retains that legacy inference.
 
 ### **Activation Types**
 | Type | Description |

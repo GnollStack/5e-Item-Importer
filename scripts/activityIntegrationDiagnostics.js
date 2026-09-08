@@ -65,6 +65,12 @@ function collectAnalysisIssues(analysis) {
 
 function summarizePendingAnalysis(index, pending, yamlText, analysis, strict) {
     const issues = collectAnalysisIssues(analysis);
+    const hasSingleMappedResult = analysis?.count === 1
+        && Array.isArray(analysis?.results)
+        && analysis.results.length === 1;
+    if (!hasSingleMappedResult) {
+        issues.errors.push(`Planner did not return exactly one mapped result for pending attachment ${index + 1}.`);
+    }
     const clean = issues.warnings.length === 0
         && issues.errors.length === 0
         && issues.droppedPaths.length === 0;
@@ -73,7 +79,7 @@ function summarizePendingAnalysis(index, pending, yamlText, analysis, strict) {
         index,
         key: pending?.key ?? null,
         name: pending?.name ?? null,
-        success: !!analysis?.success && (!strict || clean),
+        success: hasSingleMappedResult && !!analysis?.success && (!strict || clean),
         yamlLength: yamlText.length,
         resultCount: analysis?.count ?? 0,
         activityTypes: (analysis?.results ?? []).map((entry) => entry?.parse?.activityType ?? null),
@@ -84,6 +90,15 @@ function summarizePendingAnalysis(index, pending, yamlText, analysis, strict) {
         droppedPaths: issues.droppedPaths,
         analysis
     };
+}
+
+function matchesPendingResultType(pending, result) {
+    const key = String(pending?.key ?? "");
+    const resultType = result?.parse?.resultType ?? null;
+    if (key === "EFFECT") return resultType === "effect";
+    if (!key.startsWith("ACTIVITY_")) return false;
+    return resultType === "activity"
+        && result?.parse?.activityType === key.slice("ACTIVITY_".length).toLowerCase();
 }
 
 function summarizePendingError(index, pending, error) {
@@ -185,15 +200,56 @@ export async function analyzeItemActivitiesText(text, options = {}) {
         };
     }
 
+    const yamlTexts = pending.map(entry => jsyaml.dump(entry.rawData));
     const pendingActivities = [];
-    for (let index = 0; index < pending.length; index += 1) {
-        const entry = pending[index];
-        try {
-            const yamlText = jsyaml.dump(entry.rawData);
-            const analysis = await analyzeText({ text: yamlText, trace });
-            pendingActivities.push(summarizePendingAnalysis(index, entry, yamlText, analysis, strict));
-        } catch (error) {
-            pendingActivities.push(summarizePendingError(index, entry, error));
+    try {
+        // Analyze the complete attachment batch so the companion planner can
+        // resolve Forward targets by ID, identifier, or unique exact name and
+        // validate dependency order/cycles just as the write path does.
+        const batchAnalysis = await analyzeText({
+            text: yamlTexts.join("\n---\n"),
+            trace,
+            plan: true
+        });
+        const planEntries = Array.isArray(batchAnalysis?.plan?.entries)
+            ? batchAnalysis.plan.entries
+            : [];
+        for (let index = 0; index < pending.length; index += 1) {
+            const batchShapeValid = planEntries.length === pending.length
+                && (batchAnalysis?.results?.length ?? 0) === pending.length;
+            const matchingEntries = planEntries.filter(entry => entry?.originalIndex === index);
+            const plannedEntry = matchingEntries.length === 1 ? matchingEntries[0] : null;
+            const resultIndex = Number.isInteger(plannedEntry?.plannedIndex)
+                ? plannedEntry.plannedIndex
+                : -1;
+            const mappingValid = batchShapeValid
+                && resultIndex >= 0
+                && resultIndex < (batchAnalysis?.results?.length ?? 0)
+                && planEntries.filter(entry => entry?.plannedIndex === resultIndex).length === 1;
+            const result = mappingValid ? batchAnalysis.results[resultIndex] : null;
+            const typeValid = mappingValid && matchesPendingResultType(pending[index], result);
+            const scopedAnalysis = {
+                ...batchAnalysis,
+                success: !!batchAnalysis?.success && mappingValid && typeValid,
+                count: result ? 1 : 0,
+                results: result ? [result] : [],
+                errors: [
+                    ...(Array.isArray(batchAnalysis?.errors) ? batchAnalysis.errors : []),
+                    ...(mappingValid ? [] : [`Planner result mapping is missing or invalid for pending attachment ${index + 1}.`]),
+                    ...(mappingValid && !typeValid ? [`Planner result type does not match pending attachment ${index + 1}.`] : [])
+                ]
+            };
+            pendingActivities.push(summarizePendingAnalysis(
+                index,
+                pending[index],
+                yamlTexts[index],
+                scopedAnalysis,
+                strict
+            ));
+        }
+    } catch (error) {
+        for (let index = 0; index < pending.length; index += 1) {
+            pendingActivities.push(summarizePendingError(index, pending[index], error));
         }
     }
 

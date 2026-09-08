@@ -130,6 +130,108 @@ function record(results, name, condition, details = null) {
   results.push({ name, passed: !!condition, details: condition ? null : details });
 }
 
+/** Focused spell regressions, safe to run with the Activity Importer active. */
+export async function runSpellFieldRegressionTests(options = {}) {
+  const results = [];
+  const propertyRegistry = new Set(["mgc", "customProp"]);
+
+  const spellFixture = fixtures().find((fixture) => fixture.type === "spell");
+  for (const method of ["spell", "innate", "atwill", "pact", "ritual"]) {
+    for (const ritual of [true, false]) {
+      const fixture = { ...spellFixture, preparationMode: method, prepared: true, ritual };
+      const exported = itemToStrictYamlDocument(fixture, { propertyRegistry });
+      const parsed = new YamlItemParser({ propertyRegistry }).parse(jsyaml.dump(exported));
+      await parsed.item?.buildSpellData();
+      const system = parsed.item?.getProperty("system");
+      const nativeExport = itemToStrictYamlDocument({
+        name: fixture.name, type: "spell", system
+      }, { propertyRegistry });
+      const nativeParsed = new YamlItemParser({ propertyRegistry }).parse(jsyaml.dump(nativeExport));
+      record(results, `spell ritual ${ritual} round-trips independently of ${method} preparation`,
+        exported.SPELL.COMPONENTS.Ritual === ritual
+          && exported.SPELL.PREPARATION.Method === method
+          && parsed.success && parsed.warnings.length === 0
+          && parsed.item?.ritual === ritual
+          && system?.properties?.has("ritual") === ritual
+          && system?.method === method && system?.prepared === 1
+          && nativeExport.SPELL.COMPONENTS.Ritual === ritual
+          && nativeExport.SPELL.PREPARATION.Method === method
+          && nativeParsed.success && nativeParsed.warnings.length === 0
+          && nativeParsed.item?.ritual === ritual
+          && nativeParsed.item?.preparationMode === method
+          && nativeParsed.item?.prepared === true,
+        { exported, errors: parsed.errors, warnings: parsed.warnings, system,
+          nativeExport, nativeErrors: nativeParsed.errors, nativeWarnings: nativeParsed.warnings });
+    }
+  }
+  for (const method of ["ritual", "spell", "prepared"]) {
+    const legacySpell = itemToStrictYamlDocument({
+      ...spellFixture, preparationMode: method
+    }, { propertyRegistry });
+    delete legacySpell.SPELL.COMPONENTS.Ritual;
+    const parsed = new YamlItemParser({ propertyRegistry }).parse(jsyaml.dump(legacySpell));
+    record(results, `omitted Ritual preserves legacy ${method} preparation behavior`,
+      parsed.success && parsed.warnings.length === 0
+        && parsed.item?.ritual === (method === "ritual")
+        && parsed.item?.preparationMode === (method === "prepared" ? "spell" : method),
+      { errors: parsed.errors, warnings: parsed.warnings, item: parsed.item });
+  }
+
+  for (const field of ["Cost", "Supply"]) {
+    const invalidMaterials = [-1, Infinity, NaN, "3 gp", "1.2.3", true, [], [1], ["n/a"], { value: 1 }].map((value) => {
+      const document = itemToStrictYamlDocument({ ...spellFixture, material: true }, { propertyRegistry });
+      document.SPELL.MATERIALS[field] = value;
+      const parsed = new YamlItemParser({ propertyRegistry }).parse(jsyaml.dump(document));
+      return { value, success: parsed.success, item: parsed.item, errors: parsed.errors };
+    });
+    record(results, `spell material ${field.toLowerCase()} rejects negative, nonfinite, and malformed values`,
+      invalidMaterials.every((entry) => !entry.success && entry.item === null
+        && entry.errors.some((error) => error.startsWith(`Materials ${field} must be a finite non-negative number`))),
+      invalidMaterials);
+  }
+  const fractionalMaterialsDocument = itemToStrictYamlDocument({
+    ...spellFixture, material: true, materialCost: 0.5, materialSupply: 1.25
+  }, { propertyRegistry });
+  const fractionalMaterials = new YamlItemParser({ propertyRegistry }).parse(jsyaml.dump(fractionalMaterialsDocument));
+  await fractionalMaterials.item?.buildSpellData();
+  const fractionalMaterialsSystem = fractionalMaterials.item?.getProperty("system");
+  const nativeMaterials = itemToStrictYamlDocument({
+    name: spellFixture.name, type: "spell", system: fractionalMaterialsSystem
+  }, { propertyRegistry });
+  record(results, "spell material fractions survive parser, Foundry data, and native export",
+    fractionalMaterials.success && fractionalMaterials.warnings.length === 0
+      && fractionalMaterialsDocument.SPELL.MATERIALS.Cost === 0.5
+      && fractionalMaterialsDocument.SPELL.MATERIALS.Supply === 1.25
+      && fractionalMaterialsSystem?.materials?.cost === 0.5
+      && fractionalMaterialsSystem?.materials?.supply === 1.25
+      && nativeMaterials.SPELL.MATERIALS.Cost === 0.5
+      && nativeMaterials.SPELL.MATERIALS.Supply === 1.25,
+    { errors: fractionalMaterials.errors, warnings: fractionalMaterials.warnings,
+      fractionalMaterialsDocument, fractionalMaterialsSystem, nativeMaterials });
+  const optionalMaterialsDocument = itemToStrictYamlDocument({
+    ...spellFixture, material: true
+  }, { propertyRegistry });
+  optionalMaterialsDocument.SPELL.MATERIALS.Cost = "n/a";
+  optionalMaterialsDocument.SPELL.MATERIALS.Supply = 0;
+  const optionalMaterials = new YamlItemParser({ propertyRegistry }).parse(jsyaml.dump(optionalMaterialsDocument));
+  record(results, "spell materials accept n/a and zero",
+    optionalMaterials.success && optionalMaterials.warnings.length === 0
+      && optionalMaterials.item?.materialCost === null && optionalMaterials.item?.materialSupply === 0,
+    { errors: optionalMaterials.errors, warnings: optionalMaterials.warnings, item: optionalMaterials.item });
+
+  const passed = results.filter((result) => result.passed).length;
+  const summary = { passed, failed: results.length - passed, total: results.length, results };
+  if (options.log !== false) {
+    console.group?.(`5e Item Importer | Spell field tests: ${passed}/${results.length}`);
+    for (const result of results) {
+      const method = result.passed ? "log" : "error";
+      console[method](`${result.passed ? "PASS" : "FAIL"} ${result.name}`, result.details ?? "");
+    }
+    console.groupEnd?.();
+  }
+  return summary;
+}
+
 /** Run in Foundry diagnostics or any harness providing the usual game/ui globals. */
 export async function runItemCoreFeatureTests(options = {}) {
   const results = [];
@@ -195,6 +297,9 @@ export async function runItemCoreFeatureTests(options = {}) {
         parsed.item?.customPropertyFlags);
     }
   }
+
+  const spellFields = await runSpellFieldRegressionTests({ log: false });
+  results.push(...spellFields.results);
 
   const batchYaml = exportStrictItemYamlBatch(itemFixtures, { propertyRegistry });
   const batch = new YamlItemParser({ propertyRegistry }).parseAll(batchYaml);

@@ -35,6 +35,10 @@ const READ_ONLY_ACTIONS = [
 ];
 const MUTATING_ACTIONS = ["runAutomation", "cleanupFixtures"];
 const ACTION_NAMES = [...READ_ONLY_ACTIONS, ...MUTATING_ACTIONS];
+const COMPATIBILITY_TARGETS = Object.freeze({
+    foundry: Object.freeze({ minimum: "14", verified: "14.367" }),
+    dnd5e: Object.freeze({ minimum: "5.3.0", verified: "5.3.3" })
+});
 const SETTINGS_SCHEMA = Object.freeze({
     debug: { type: "boolean" },
     enableMcpDiagnostics: { type: "boolean" },
@@ -58,6 +62,8 @@ const SETTINGS_SCHEMA = Object.freeze({
 });
 const MODULE_ASSETS = Object.freeze([
     "module.json",
+    "LICENSE.txt",
+    "THIRD_PARTY_NOTICES.txt",
     "README.md",
     "scripts/itemImporter.js",
     "scripts/ui/itemAttunementNote.js",
@@ -73,7 +79,8 @@ const MODULE_ASSETS = Object.freeze([
     "lang/en.json",
     "styles/item-importer-card.css",
     "styles/item-importer-components.css",
-    "styles/item-importer.css"
+    "styles/item-importer.css",
+    "styles/item-comparison.css"
 ]);
 
 const pendingClientCollections = new Map();
@@ -732,6 +739,7 @@ export function createDiagnosticsApi({ parse, openWindow }) {
                 const maxChecks = Math.max(1, Math.min(Number(input.maxChecks) || MODULE_ASSETS.length, MODULE_ASSETS.length));
                 const assets = [];
                 const errors = [];
+                let manifest = null;
 
                 for (const path of MODULE_ASSETS.slice(0, maxChecks)) {
                     const url = `modules/${MODULE_ID}/${path}`;
@@ -741,6 +749,10 @@ export function createDiagnosticsApi({ parse, openWindow }) {
                         const response = await fetch(url, { method: "GET", cache: "no-store" });
                         ok = response.ok;
                         status = response.status;
+                        if (ok && path === "module.json") {
+                            manifest = await response.json();
+                            errors.push(...validateServedManifest(manifest));
+                        }
                     } catch (error) {
                         errors.push(issue("asset-fetch-error", `Could not fetch ${path}.`, { path, error: error.message }));
                     }
@@ -756,7 +768,15 @@ export function createDiagnosticsApi({ parse, openWindow }) {
                     available: true,
                     checked: assets.length,
                     assets,
-                    errors
+                    errors,
+                    manifest: manifest ? {
+                        id: manifest.id ?? null,
+                        version: manifest.version ?? null,
+                        compatibility: manifest.compatibility ?? null,
+                        socket: manifest.socket === true,
+                        styles: manifest.styles ?? [],
+                        recommends: manifest.relationships?.recommends ?? []
+                    } : null
                 };
             });
         },
@@ -1226,6 +1246,75 @@ function resolveActiveGMSender(userId) {
 
 function issue(code, message, details = null) {
     return { code, message, details };
+}
+
+function validateServedManifest(manifest) {
+    const errors = [];
+    if (manifest?.id !== MODULE_ID) {
+        errors.push(issue("manifest-id", `Served module.json id must be ${MODULE_ID}.`, {
+            value: manifest?.id ?? null
+        }));
+    }
+    if (manifest?.socket !== true) {
+        errors.push(issue("manifest-socket", "Served module.json must declare socket: true for client diagnostics."));
+    }
+    if (manifest?.compatibility?.minimum !== COMPATIBILITY_TARGETS.foundry.minimum
+        || manifest?.compatibility?.verified !== COMPATIBILITY_TARGETS.foundry.verified) {
+        errors.push(issue("manifest-foundry-compatibility", "Served module.json Foundry compatibility does not match the runtime targets.", {
+            manifest: manifest?.compatibility ?? null,
+            expected: COMPATIBILITY_TARGETS.foundry
+        }));
+    }
+    const dnd5e = manifest?.relationships?.systems?.find?.(relationship => relationship.id === "dnd5e");
+    if (dnd5e?.compatibility?.minimum !== COMPATIBILITY_TARGETS.dnd5e.minimum
+        || dnd5e?.compatibility?.verified !== COMPATIBILITY_TARGETS.dnd5e.verified) {
+        errors.push(issue("manifest-dnd5e-compatibility", "Served module.json dnd5e compatibility does not match the runtime targets.", {
+            manifest: dnd5e?.compatibility ?? null,
+            expected: COMPATIBILITY_TARGETS.dnd5e
+        }));
+    }
+    // The free release omits the install recommendation while the premium
+    // companion is private. Runtime integration is detected independently.
+    const activityRecommendations = manifest?.relationships?.recommends?.filter?.(
+        relationship => relationship.id === "5e-activity-importer"
+    ) ?? [];
+    const activityImporter = activityRecommendations[0];
+    if (activityRecommendations.length > 1 || (activityImporter && (
+        activityImporter.type !== "module"
+        || typeof activityImporter?.compatibility?.minimum !== "string"
+        || !activityImporter.compatibility.minimum.trim()
+        || foundry.utils.isNewerVersion(activityImporter.compatibility.minimum, manifest.version)
+        || activityImporter?.compatibility?.verified !== manifest?.version
+        || activityImporter?.manifest !== "https://github.com/GnollStack/5e-Activity-Importer/releases/latest/download/module.json"
+        || typeof activityImporter?.reason !== "string"
+        || !activityImporter.reason.trim()
+        || activityImporter.compatibility.maximum != null))) {
+        errors.push(issue("manifest-activity-importer-recommendation", "An Activity Importer recommendation, when present, must describe the coordinated optional release.", {
+            manifest: activityImporter ?? null,
+            expected: { verified: manifest?.version, minimum: "compatible release at or before the verified version" }
+        }));
+    }
+    if (manifest?.relationships?.requires?.some?.(relationship => relationship.id === "5e-activity-importer")) {
+        errors.push(issue("manifest-activity-importer-required", "The free Item Importer must not require Activity Importer."));
+    }
+    if (!Array.isArray(manifest?.styles)
+        || manifest.styles.some(style => !style || typeof style !== "object" || typeof style.src !== "string")) {
+        errors.push(issue("manifest-styles", "Served module.json styles must use the Foundry v13+ object shape."));
+    }
+    if (manifest?.license !== "LICENSE.txt") {
+        errors.push(issue("manifest-license", "Served module.json must reference the packaged LICENSE.txt.", {
+            value: manifest?.license ?? null
+        }));
+    }
+    const version = String(manifest?.version ?? "");
+    const download = String(manifest?.download ?? "");
+    if (download.startsWith("https://github.com/") && !download.includes(`/releases/download/V${version}/`)) {
+        errors.push(issue("manifest-download", "The GitHub download URL must be pinned to the served manifest version.", {
+            version,
+            download
+        }));
+    }
+    return errors;
 }
 
 function record(tests, name, fn) {

@@ -34,6 +34,47 @@ const FIXTURE_EFFECT_DATA = {
     changes: []
 };
 
+const FIXTURE_INLINE_ATTACHMENTS = [
+    {
+        key: "ACTIVITY_FORWARD",
+        name: "MCP Fixture Forward",
+        rawData: {
+            ACTIVITY_FORWARD: {
+                ACTIVITY: { Name: "MCP Fixture Forward", Icon: "n/a" },
+                FORWARD_TARGET: { Activity: "MCP Fixture Planner Target" }
+            }
+        }
+    },
+    {
+        key: "ACTIVITY_UTILITY",
+        name: "MCP Fixture Planner Target",
+        rawData: {
+            ACTIVITY_UTILITY: {
+                ACTIVITY: { Name: "MCP Fixture Planner Target", Icon: "n/a" },
+                UTILITY_ROLL: {
+                    "Roll Label": "MCP Planner Roll",
+                    "Roll Formula": "1d20",
+                    "Visible to All": false
+                }
+            }
+        }
+    },
+    {
+        key: "EFFECT",
+        name: "MCP Fixture Inline Effect",
+        rawData: {
+            EFFECT: {
+                DETAILS: {
+                    Name: "MCP Fixture Inline Effect",
+                    "Effect Suspended": false,
+                    "Apply Effect to Actor": false
+                },
+                CHANGES: []
+            }
+        }
+    }
+];
+
 export function getFixtureCounts(runId = null) {
     const fixtures = findFixtureItems(runId);
     return {
@@ -65,27 +106,41 @@ export async function runItemImporterAutomation(args = {}) {
     }
 
     const marker = createFixtureMarker(runId, "Item");
-    const createdItem = await createFixtureItem(marker);
-    steps.push({
-        step: "createItemFixture",
-        success: Boolean(createdItem),
-        item: summarizeItem(createdItem)
-    });
-
+    let createdItem = null;
+    let integration = null;
+    let creationError = null;
     let cleanupAfterResult = null;
-    if (cleanupAfter) {
-        cleanupAfterResult = await cleanupItemImporterFixtures({ confirmMutation: true, runId });
+    try {
+        const fixture = await createFixtureItem(marker);
+        createdItem = fixture.item;
+        integration = fixture.integration;
         steps.push({
-            step: "cleanupAfter",
-            ...cleanupAfterResult
+            step: "createItemFixture",
+            success: Boolean(createdItem),
+            item: summarizeItem(createdItem)
         });
+        steps.push({ step: "activityImporterIntegration", ...integration });
+    } catch (error) {
+        creationError = error?.message || String(error);
+        steps.push({ step: "createItemFixture", success: false, error: creationError });
+    } finally {
+        if (cleanupAfter) {
+            cleanupAfterResult = await cleanupItemImporterFixtures({ confirmMutation: true, runId });
+            steps.push({
+                step: "cleanupAfter",
+                ...cleanupAfterResult
+            });
+        }
     }
 
     const countsAfter = getWorldDocumentCounts();
     const remainingFixtures = getFixtureCounts(runId);
 
     return {
-        success: Boolean(createdItem) && (!cleanupAfter || remainingFixtures.total === 0),
+        success: Boolean(createdItem)
+            && !creationError
+            && integration?.success === true
+            && (!cleanupAfter || remainingFixtures.total === 0),
         runId,
         cleanupBefore,
         cleanupAfter,
@@ -94,6 +149,8 @@ export async function runItemImporterAutomation(args = {}) {
             after: countsAfter
         },
         created: summarizeItem(createdItem),
+        integration,
+        error: creationError,
         cleanupAfterResult,
         remainingFixtures,
         steps
@@ -120,14 +177,17 @@ export async function cleanupItemImporterFixtures(args = {}) {
     const after = getFixtureCounts(runId);
 
     return {
-        success: true,
+        success: after.total === 0,
         runId: runId || null,
         fixturePrefix: FIXTURE_PREFIX,
         fixtureFlag: FIXTURE_FLAG,
         before,
         after,
         deleted: itemIds.length,
-        deletedIds: itemIds
+        deletedIds: itemIds,
+        ...(after.total === 0 ? {} : {
+            error: `${after.total} Item Importer fixture document(s) remain after cleanup.`
+        })
     };
 }
 
@@ -153,7 +213,52 @@ async function createFixtureItem(marker) {
     if (createdEffects.length !== 1) {
         throw new Error(`Fixture Active Effect creation returned ${createdEffects.length} documents instead of 1.`);
     }
-    return createdItem;
+    const integration = await applyActivityIntegrationFixture(parsed.item, createdItem);
+    return { item: createdItem, integration };
+}
+
+async function applyActivityIntegrationFixture(parsedItem, createdItem) {
+    const activityImporter = game.modules.get("5e-activity-importer");
+    if (!activityImporter?.active) {
+        return {
+            success: true,
+            skipped: true,
+            reason: "5e-activity-importer is not active; standalone Item automation passed."
+        };
+    }
+
+    parsedItem.pendingActivities = ItemUtils.deepClone(FIXTURE_INLINE_ATTACHMENTS);
+    const result = await parsedItem.applyActivities(createdItem);
+    const activities = collectionValues(createdItem.system?.activities);
+    const effects = collectionValues(createdItem.effects);
+    const target = activities.find(activity => activity?.name === "MCP Fixture Planner Target");
+    const forward = activities.find(activity => activity?.name === "MCP Fixture Forward");
+    const forwardSource = forward?.toObject?.() ?? forward ?? {};
+    const targetId = target?.id ?? target?._id ?? null;
+    const forwardId = forward?.id ?? forward?._id ?? null;
+    const forwardTargetId = forwardSource.activity?.id ?? null;
+    const inlineEffect = effects.find(effect => effect?.name === "MCP Fixture Inline Effect");
+    const createdOrder = Array.isArray(result.createdActivityIds) ? result.createdActivityIds : [];
+    const success = result.addedActivities === 2
+        && result.addedEffects === 1
+        && !!targetId
+        && !!forwardId
+        && forwardTargetId === targetId
+        && createdOrder[0] === targetId
+        && createdOrder[1] === forwardId
+        && !!inlineEffect;
+
+    return {
+        success,
+        skipped: false,
+        plannerAvailable: typeof activityImporter.api?.plan === "function",
+        result,
+        targetId,
+        forwardId,
+        forwardTargetId,
+        createdOrder,
+        inlineEffectId: inlineEffect?.id ?? inlineEffect?._id ?? null
+    };
 }
 
 function findFixtureItems(runId = null) {

@@ -58,7 +58,8 @@ function asNullable(val) {
 
 function asExactFiniteNumber(val) {
     if (typeof val === 'number') return Number.isFinite(val) ? val : NaN;
-    const text = String(val).trim();
+    if (typeof val !== 'string') return NaN;
+    const text = val.trim();
     if (!/^[+\-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+\-]?\d+)?$/i.test(text)) return NaN;
     const parsed = Number(text);
     return Number.isFinite(parsed) ? parsed : NaN;
@@ -405,7 +406,7 @@ const TYPE_SECTION_KEYS = {
     },
     spell: {
         ITEM: ['Level', 'School', 'Ability'],
-        COMPONENTS: ['Vocal', 'Somatic', 'Material'],
+        COMPONENTS: ['Vocal', 'Somatic', 'Material', 'Ritual'],
         MATERIALS: ['Value', 'Cost', 'Supply', 'Consumed'],
         PREPARATION: ['Method', 'Prepared'],
         ACTIVATION: ['Type', 'Value', 'Condition'],
@@ -2024,11 +2025,19 @@ export class YamlItemParser {
             const mat = data?.MATERIALS || {};
             item.materialValue = asString(mat['Value'], '');
 
-            const costRaw = asNullable(mat['Cost']);
-            item.materialCost = costRaw !== null ? asInt(costRaw, 0) : null;
-
-            const supplyRaw = asNullable(mat['Supply']);
-            item.materialSupply = supplyRaw !== null ? asInt(supplyRaw, 0) : null;
+            for (const [field, property] of [['Cost', 'materialCost'], ['Supply', 'materialSupply']]) {
+                const raw = mat[field];
+                if (raw == null || (typeof raw === 'string' && asNullable(raw) === null)) {
+                    item[property] = null;
+                    continue;
+                }
+                const value = asExactFiniteNumber(raw);
+                if (!Number.isFinite(value) || value < 0) {
+                    this.addError(`Materials ${field} must be a finite non-negative number or n/a; received "${mat[field]}"`);
+                } else {
+                    item[property] = value;
+                }
+            }
 
             item.materialConsumed = asBool(mat['Consumed'], false);
         }
@@ -2042,8 +2051,10 @@ export class YamlItemParser {
             item.preparationMode = 'spell';
         } else {
             item.preparationMode = normalizedMethod;
-            item.ritual = (normalizedMethod === 'ritual');
         }
+        // Ritual eligibility is independent of the preparation method. Retain
+        // the legacy Method: ritual shorthand when no Ritual value is supplied.
+        item.ritual = asBool(asNullable(comp['Ritual']), item.preparationMode === 'ritual');
         item.prepared = asBool(prep['Prepared'], false);
 
         // Activation (required)

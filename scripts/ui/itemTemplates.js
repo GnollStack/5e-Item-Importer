@@ -1,6 +1,9 @@
 /**
  * 5e Item Importer - Example Templates
- * Template data for the quick-start dropdown (YAML format)
+ * Template data for the quick-start dropdown (YAML format).
+ * These examples demonstrate free/core Item imports and work without a companion.
+ * Premium/full generation requires explicit attachment entries and the premium
+ * Activity Importer companion; prompt mode names are never YAML fields.
  */
 
 export const ITEM_TEMPLATES = [
@@ -211,8 +214,9 @@ LOOT:
     },
     {
         id: "spell",
-        label: "Spell",
-        text: `SCHEMA_VERSION: 1
+        label: "Spell (Core Fields)",
+        text: `# Core spell fields only. Add Activities with Activity Importer for automated rolls.
+SCHEMA_VERSION: 1
 SPELL:
   ITEM:
     Name: "Magic Missile"
@@ -223,6 +227,7 @@ SPELL:
     Vocal: true
     Somatic: true
     Material: false
+    Ritual: false
   PREPARATION:
     Method: spell
     Prepared: true
@@ -239,16 +244,17 @@ SPELL:
     Concentration: false
   TARGETS:
     Type: creature
-    Count: 1
+    Count: 3
     Choice: true
-    Special: n/a
+    Special: "Up to three creatures; each dart can target the same or a different creature."
   USAGE:
     Uses Spent: 0
     Uses Max: n/a
   RECOVERY: []
   DESCRIPTION:
     Description: |
-      Three glowing darts of magical force strike creatures you can see within range.
+      <p>You create three glowing darts of magical force. Each dart hits a creature of your choice that you can see within range and deals [[/damage 1d4 + 1 force]] damage. The darts strike simultaneously, and you can direct them at one creature or several.</p>
+      <p><strong>At Higher Levels.</strong> One additional dart is created for each spell slot level above 1.</p>
   CHAT_FLAVOR:
     Chat Description: |
       n/a`

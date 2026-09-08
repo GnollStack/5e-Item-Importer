@@ -10,7 +10,8 @@ const NATURAL_ITEM_FIXTURE = [
     "This +1 longsword deals 1d8 slashing damage and has the versatile property. You have a +1 bonus to attack and damage rolls made with this magic weapon."
 ].join("\n");
 
-const ACTIVITY_HANDOFF_FIXTURE = `WEAPON:
+const ACTIVITY_HANDOFF_FIXTURE = `SCHEMA_VERSION: 1
+WEAPON:
   ITEM:
     Name: "Cross Module Test Blade"
     Rarity: "uncommon"
@@ -70,6 +71,12 @@ const ACTIVITY_HANDOFF_FIXTURE = `WEAPON:
     Description: |
       <p>A blade used to test Item Importer and Activity Importer handoff.</p>
   Activities:
+    - ACTIVITY_FORWARD:
+        ACTIVITY:
+          Name: "Cross Module Forward"
+          Icon: "n/a"
+        FORWARD_TARGET:
+          Activity: "Cross Module Fire Damage"
     - ACTIVITY_DAMAGE:
         ACTIVITY:
           Name: "Cross Module Fire Damage"
@@ -150,6 +157,25 @@ export async function runRuntimeSmokeTests() {
     }
 
     try {
+        const source = {
+            name: "Runtime Schema Validation",
+            type: "spell",
+            system: { level: 1, school: "div", materials: { cost: 0.5, supply: 1 } }
+        };
+        const valid = ItemUtils.validateItemData(source);
+        const invalid = ItemUtils.validateItemData({
+            ...source,
+            system: { ...source.system, materials: { cost: -50, supply: -1 } }
+        });
+        check("runtime generated Item validation uses the live schema", valid.valid && !invalid.valid, {
+            validErrors: valid.errors,
+            invalidErrors: invalid.errors
+        });
+    } catch (error) {
+        recordError("runtime Item schema validation", error);
+    }
+
+    try {
         const api = game.modules.get("5e-item-importer")?.api;
         const required = ["parse", "import", "exportCore", "exportFull"];
         const missing = required.filter((key) => typeof api?.[key] !== "function");
@@ -166,12 +192,20 @@ export async function runRuntimeSmokeTests() {
                 strict: true
             });
             check("runtime Activity Importer handoff", handoff?.success === true
-                && handoff?.pendingCount === 2
-                && handoff.pendingActivities?.every((entry) => entry.success), {
+                && handoff?.pendingCount === 3
+                && handoff.pendingActivities?.every((entry) => entry.success
+                    && entry.resultCount === 1
+                    && entry.resultTypes?.[0] === (entry.key === "EFFECT" ? "effect" : "activity")
+                    && (entry.key === "EFFECT"
+                        ? entry.activityTypes?.[0] == null
+                        : entry.activityTypes?.[0] === entry.key.slice("ACTIVITY_".length).toLowerCase())), {
                 pendingCount: handoff?.pendingCount ?? 0,
                 results: handoff?.pendingActivities?.map((entry) => ({
                     key: entry.key,
-                    success: entry.success
+                    success: entry.success,
+                    resultCount: entry.resultCount,
+                    resultType: entry.resultTypes?.[0] ?? null,
+                    activityType: entry.activityTypes?.[0] ?? null
                 })) ?? [],
                 errors: handoff?.errors ?? []
             });

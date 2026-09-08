@@ -15,8 +15,10 @@ import { ITEM_TEMPLATES } from "../../scripts/ui/itemTemplates.js";
 import { analyzeItemActivitiesText } from "../../scripts/activityIntegrationDiagnostics.js";
 import { buildRemainingBatchSource } from "../../scripts/ui/itemWindowActions.js";
 import { renderAttunementRequirement } from "../../scripts/ui/itemAttunementNote.js";
+import { runSpellFieldRegressionTests } from "../unit/itemCoreFeatureTests.js";
 
-const ACTIVITY_HANDOFF_FIXTURE = `WEAPON:
+const ACTIVITY_HANDOFF_FIXTURE = `SCHEMA_VERSION: 1
+WEAPON:
   ITEM:
     Name: "Cross Module Test Blade"
     Rarity: "uncommon"
@@ -76,6 +78,12 @@ const ACTIVITY_HANDOFF_FIXTURE = `WEAPON:
     Description: |
       <p>A blade used to test Item Importer and Activity Importer handoff.</p>
   Activities:
+    - ACTIVITY_FORWARD:
+        ACTIVITY:
+          Name: "Cross Module Forward"
+          Icon: "n/a"
+        FORWARD_TARGET:
+          Activity: "Cross Module Fire Damage"
     - ACTIVITY_DAMAGE:
         ACTIVITY:
           Name: "Cross Module Fire Damage"
@@ -184,6 +192,7 @@ export class ItemImporterTests {
         try {
             const validResult = ItemUtils.validateItemData({
                 name: "Test Item",
+                type: "loot",
                 system: {
                     price: { value: 100 },
                     weight: { value: 5 },
@@ -196,6 +205,41 @@ export class ItemImporterTests {
             check("validate invalid item data", invalidResult.valid === false && invalidResult.errors.length > 0, invalidResult);
         } catch (error) {
             recordError("Validation utilities", error);
+        }
+
+        try {
+            const source = {
+                name: "Schema Validation Spell",
+                type: "spell",
+                system: {
+                    level: 1,
+                    school: "div",
+                    properties: ["material"],
+                    materials: { value: "incense", cost: 0.5, supply: 2.5, consumed: true }
+                }
+            };
+            const original = JSON.stringify(source);
+            const valid = ItemUtils.validateItemData(source);
+            check("live Item validation accepts valid fractional material values without changing input",
+                valid.valid && JSON.stringify(source) === original, valid);
+
+            for (const field of ["cost", "supply"]) {
+                const invalid = ItemUtils.deepClone(source);
+                invalid.system.materials[field] = -1;
+                const validation = ItemUtils.validateItemData(invalid);
+                check(`live Item validation rejects negative material ${field}`,
+                    !validation.valid && validation.errors.some(error => error.includes(field)), validation);
+            }
+
+            const invalidLevel = ItemUtils.deepClone(source);
+            invalidLevel.system.level = -1;
+            const validation = ItemUtils.validateItemData(invalidLevel);
+            check("live Item validation catches schema failures outside general inventory checks",
+                !validation.valid && validation.errors.some(error => error.includes("level")), validation);
+            const invalidType = ItemUtils.validateItemData({ name: "Invalid Type", type: "unknown-import-type", system: {} });
+            check("live Item validation rejects unknown document types", !invalidType.valid, invalidType);
+        } catch (error) {
+            recordError("Live Item schema validation", error);
         }
 
         try {
@@ -1084,11 +1128,14 @@ export class ItemImporterTests {
 
         try {
             const harness = Object.create(ItemData.prototype);
+            const plannedAttackId = "AtkPlan000000001";
+            const existingActivityId = "ExistAct00000001";
+            const missingActivityId = "MissAct000000001";
             const attackResult = {
                 success: true,
                 resultType: "activity",
                 activityType: "attack",
-                activityData: { _id: "planned-attack", name: "Planned Attack" },
+                activityData: { _id: plannedAttackId, name: "Planned Attack" },
                 embeddedEffectResults: []
             };
             const effectResult = {
@@ -1119,7 +1166,7 @@ export class ItemImporterTests {
 
             const capableContext = {
                 type: "weapon",
-                system: { activities: new Map([["existing-activity", {}]]) },
+                system: { activities: new Map([[existingActivityId, {}]]) },
                 createActivity() {}
             };
             const invalidAttachmentPlan = [
@@ -1150,7 +1197,7 @@ export class ItemImporterTests {
                     success: true,
                     resultType: "activity",
                     activityType: "cast",
-                    activityData: { name: "Invalid Linked Cast", spell: { uuid: "Item.not-a-spell" } },
+                    activityData: { name: "Invalid Linked Cast", spell: { uuid: "Item.NotASpell0000001" } },
                     embeddedEffectResults: []
                 }
             ];
@@ -1180,7 +1227,7 @@ export class ItemImporterTests {
                     activityData: {
                         name: "Invalid Summon",
                         summon: { mode: "" },
-                        profiles: [{ uuid: "Item.not-an-actor" }]
+                        profiles: [{ uuid: "Actor.NotAnActor000001" }]
                     },
                     embeddedEffectResults: []
                 },
@@ -1191,7 +1238,7 @@ export class ItemImporterTests {
                     activityData: {
                         name: "Invalid Transform",
                         transform: { mode: "" },
-                        profiles: [{ uuid: "Item.not-an-actor" }]
+                        profiles: [{ uuid: "Actor.NotAnActor000001" }]
                     },
                     embeddedEffectResults: []
                 }
@@ -1209,14 +1256,14 @@ export class ItemImporterTests {
                     success: true,
                     resultType: "activity",
                     activityType: "forward",
-                    activityData: { name: "Forward Planned", activity: { id: "planned-attack" } },
+                    activityData: { name: "Forward Planned", activity: { id: plannedAttackId } },
                     embeddedEffectResults: []
                 },
                 {
                     success: true,
                     resultType: "activity",
                     activityType: "forward",
-                    activityData: { name: "Forward Existing", activity: { id: "existing-activity" } },
+                    activityData: { name: "Forward Existing", activity: { id: existingActivityId } },
                     embeddedEffectResults: []
                 }
             ], capableContext, { resolveUuid: null });
@@ -1224,13 +1271,138 @@ export class ItemImporterTests {
                 success: true,
                 resultType: "activity",
                 activityType: "forward",
-                activityData: { name: "Forward Missing", activity: { id: "missing-id" } },
+                activityData: { name: "Forward Missing", activity: { id: missingActivityId } },
                 embeddedEffectResults: []
             }], capableContext, { resolveUuid: null });
             check("Forward preflight accepts existing/planned IDs and rejects unknown targets",
                 validForwardIssues.length === 0
                 && invalidForwardIssues.some(issue => issue.includes("not on the Item or in this inline batch")),
                 { validForwardIssues, invalidForwardIssues }
+            );
+
+            const legacyPlannerHarness = Object.create(ItemData.prototype);
+            legacyPlannerHarness.planInlineActivityResults = async results => ({
+                supported: false,
+                validated: false,
+                success: true,
+                results,
+                issues: [],
+                warningIssues: [],
+                blockingIssues: []
+            });
+            const makeForwardFallbackItem = existing => {
+                const activities = new Map(existing);
+                let writes = 0;
+                return {
+                    item: {
+                        documentName: "Item",
+                        type: "weapon",
+                        name: "Forward Fallback Target",
+                        uuid: "Item.forward-fallback",
+                        system: { activities },
+                        effects: new Map(),
+                        async createActivity() {
+                            writes++;
+                            return null;
+                        },
+                        async createEmbeddedDocuments() {
+                            writes++;
+                            return [];
+                        }
+                    },
+                    writes: () => writes
+                };
+            };
+            const sameBatchForwardPlan = [
+                attackResult,
+                {
+                    success: true,
+                    resultType: "activity",
+                    activityType: "forward",
+                    activityData: {
+                        _id: "fallbackForward1",
+                        name: "Forward To Forward",
+                        activity: { id: "fallbackForward2" }
+                    },
+                    embeddedEffectResults: []
+                },
+                {
+                    success: true,
+                    resultType: "activity",
+                    activityType: "forward",
+                    activityData: {
+                        _id: "fallbackForward2",
+                        name: "Forward To Attack",
+                        activity: { id: plannedAttackId }
+                    },
+                    embeddedEffectResults: []
+                }
+            ];
+            const existingForwardPlan = [
+                attackResult,
+                {
+                    success: true,
+                    resultType: "activity",
+                    activityType: "forward",
+                    activityData: {
+                        _id: "fallbackForward3",
+                        name: "Forward To Existing Forward",
+                        activity: { id: "existingForward1" }
+                    },
+                    embeddedEffectResults: []
+                }
+            ];
+            const sameBatchTarget = makeForwardFallbackItem([]);
+            const existingTarget = makeForwardFallbackItem([["existingForward1", {
+                id: "existingForward1",
+                type: "forward",
+                name: "Existing Forward"
+            }]]);
+            const sameBatchIssues = await legacyPlannerHarness.preflightInlineActivityPlan(
+                sameBatchForwardPlan,
+                sameBatchTarget.item,
+                { resolveUuid: null }
+            );
+            const existingTargetIssues = await legacyPlannerHarness.preflightInlineActivityPlan(
+                existingForwardPlan,
+                existingTarget.item,
+                { resolveUuid: null }
+            );
+            const sameBatchSource = { type: "weapon", system: {} };
+            const existingTargetSource = { type: "weapon", system: {} };
+            const sameBatchSuppressed = sameBatchIssues.length === 0
+                && ItemData.preventGeneratedDefaultActivity(
+                    sameBatchSource,
+                    ItemData.getSuccessfulActivityTypes(sameBatchForwardPlan)
+                );
+            const existingTargetSuppressed = existingTargetIssues.length === 0
+                && ItemData.preventGeneratedDefaultActivity(
+                    existingTargetSource,
+                    ItemData.getSuccessfulActivityTypes(existingForwardPlan)
+                );
+            const sameBatchResult = await legacyPlannerHarness.applyActivities(
+                sameBatchTarget.item,
+                sameBatchForwardPlan
+            );
+            const existingTargetResult = await legacyPlannerHarness.applyActivities(
+                existingTarget.item,
+                existingForwardPlan
+            );
+            check("parser-only fallback rejects same-batch and existing Forward targets before writes",
+                sameBatchIssues.some(issue => issue.includes("targets another Forward activity"))
+                && existingTargetIssues.some(issue => issue.includes("targets another Forward activity"))
+                && sameBatchResult.addedActivities === 0
+                && existingTargetResult.addedActivities === 0
+                && sameBatchTarget.writes() === 0
+                && existingTarget.writes() === 0,
+                { sameBatchIssues, existingTargetIssues, sameBatchResult, existingTargetResult }
+            );
+            check("Forward-to-Forward fallback failures retain generated weapon baselines",
+                sameBatchSuppressed === false
+                && existingTargetSuppressed === false
+                && !sameBatchSource._stats
+                && !existingTargetSource._stats,
+                { sameBatchIssues, existingTargetIssues, sameBatchSource, existingTargetSource }
             );
 
             const persistedActivities = new Map();
@@ -1397,6 +1569,257 @@ export class ItemImporterTests {
         }
 
         try {
+            const isolatedActivityModule = api => ({
+                active: true,
+                api: api && typeof api === "object" ? api : {}
+            });
+            const isolatedPlannerModule = planner => isolatedActivityModule(
+                typeof planner === "function" ? { plan: planner } : {}
+            );
+            const useIsolatedActivityApi = (harness, api) => {
+                const module = isolatedActivityModule(api);
+                harness.planInlineActivityResults = (results, item) => ItemData.prototype.planInlineActivityResults.call(
+                    harness,
+                    results,
+                    item,
+                    module
+                );
+            };
+            const useIsolatedPlanner = (harness, planner) => {
+                useIsolatedActivityApi(harness, isolatedPlannerModule(planner).api);
+            };
+            const makePlannerItem = label => {
+                const activities = new Map();
+                const writes = [];
+                const item = {
+                    documentName: "Item",
+                    type: "weapon",
+                    name: label,
+                    uuid: `Item.${label.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}`,
+                    system: { activities },
+                    effects: new Map(),
+                    async createActivity(activityType, activityData) {
+                        const stored = {
+                            id: activityData._id,
+                            _id: activityData._id,
+                            type: activityType,
+                            name: activityData.name,
+                            identifier: activityData.identifier
+                        };
+                        writes.push({
+                            activityType,
+                            id: activityData._id,
+                            targetId: activityData.activity?.id ?? null
+                        });
+                        activities.set(activityData._id, stored);
+                        return stored;
+                    },
+                    async deleteActivity(id) {
+                        activities.delete(id);
+                    }
+                };
+                return { item, writes };
+            };
+            const sourceTarget = {
+                success: true,
+                resultType: "activity",
+                activityType: "attack",
+                activityData: { name: "Planner Target", identifier: "planner-target-identifier" },
+                embeddedEffectResults: []
+            };
+            const sourceForward = {
+                success: true,
+                resultType: "activity",
+                activityType: "forward",
+                activityData: { name: "Planner Forward", activity: { id: "Planner Target" } },
+                embeddedEffectResults: []
+            };
+
+            let plannerCall = null;
+            const orderedHarness = Object.create(ItemData.prototype);
+            useIsolatedPlanner(orderedHarness, async (results, options = {}) => {
+                plannerCall = {
+                    order: results.map(result => result.activityType),
+                    item: options.item
+                };
+                const [forward, target] = ItemUtils.deepClone(results);
+                target.activityData._id = "planTarget000001";
+                forward.activityData._id = "planForward00001";
+                forward.activityData.activity.id = target.activityData._id;
+                return {
+                    schemaVersion: 2,
+                    success: true,
+                    results: [target, forward],
+                    entries: [],
+                    errors: [],
+                    warnings: []
+                };
+            });
+            const orderedTarget = makePlannerItem("Planner Ordering");
+            const orderedResult = await orderedHarness.applyActivities(
+                orderedTarget.item,
+                [sourceForward, sourceTarget]
+            );
+            check("Activity planner receives the persisted Item and original parse order",
+                plannerCall?.item === orderedTarget.item
+                && plannerCall?.order?.join(",") === "forward,attack",
+                plannerCall
+            );
+            check("Activity planner result order and rewritten Forward ID drive attachment writes",
+                orderedResult.addedActivities === 2
+                && orderedTarget.writes.map(write => write.activityType).join(",") === "attack,forward"
+                && orderedTarget.writes[1]?.targetId === orderedTarget.writes[0]?.id
+                && orderedTarget.writes[0]?.id === "planTarget000001",
+                { orderedResult, writes: orderedTarget.writes }
+            );
+
+            const dryRunCalls = [];
+            let directPlannerCalled = false;
+            const schemaInvalidAttack = {
+                ...ItemUtils.deepClone(sourceTarget),
+                activityData: {
+                    ...ItemUtils.deepClone(sourceTarget.activityData),
+                    _id: "bad"
+                }
+            };
+            const schemaRejectingApi = {
+                async dryRun(results, options = {}) {
+                    dryRunCalls.push({ results, options });
+                    return {
+                        success: false,
+                        plan: {
+                            success: true,
+                            results: ItemUtils.deepClone(results),
+                            entries: [],
+                            errors: [],
+                            warnings: []
+                        },
+                        findings: {
+                            errors: [{
+                                message: "_id: must be a valid 16-character alphanumeric ID",
+                                resultIndex: 0,
+                                path: "activityData"
+                            }],
+                            warnings: []
+                        }
+                    };
+                },
+                async plan() {
+                    directPlannerCalled = true;
+                    throw new Error("direct plan must not run when dryRun is available");
+                }
+            };
+            const schemaHarness = Object.create(ItemData.prototype);
+            useIsolatedActivityApi(schemaHarness, schemaRejectingApi);
+            const precreatePlan = await schemaHarness.planInlineActivityResults([schemaInvalidAttack], null);
+            const baselineSource = { type: "weapon", system: {} };
+            const baselineSuppressed = precreatePlan.success
+                && ItemData.preventGeneratedDefaultActivity(
+                    baselineSource,
+                    ItemData.getSuccessfulActivityTypes(precreatePlan.results)
+                );
+            const schemaTarget = makePlannerItem("Schema Dry Run");
+            const schemaResult = await schemaHarness.applyActivities(schemaTarget.item, [schemaInvalidAttack]);
+            check("Activity dry-run is preferred and schema-invalid attack cannot suppress the generated baseline",
+                dryRunCalls.length === 2
+                && dryRunCalls[0].options.captureOnly === true
+                && !("item" in dryRunCalls[0].options)
+                && dryRunCalls[1].options.captureOnly === false
+                && dryRunCalls[1].options.item === schemaTarget.item
+                && directPlannerCalled === false
+                && precreatePlan.validated === true
+                && precreatePlan.success === false
+                && baselineSuppressed === false
+                && !baselineSource._stats
+                && schemaResult.addedActivities === 0
+                && schemaTarget.writes.length === 0
+                && schemaResult.issues.some(issue => issue.includes("16-character")), {
+                    dryRunCalls,
+                    directPlannerCalled,
+                    precreatePlan,
+                    baselineSource,
+                    schemaResult,
+                    writes: schemaTarget.writes
+                }
+            );
+
+            const failureCases = [
+                {
+                    name: "reported failure",
+                    issue: "mock planner rejected the batch",
+                    planner: async results => ({
+                        success: false,
+                        results: ItemUtils.deepClone(results),
+                        errors: [{ message: "mock planner rejected the batch", resultIndex: 0 }],
+                        warnings: []
+                    })
+                },
+                {
+                    name: "malformed response",
+                    issue: "malformed attachment plan",
+                    planner: async () => ({ success: true, results: null, errors: [], warnings: [] })
+                },
+                {
+                    name: "thrown exception",
+                    issue: "mock planner exploded",
+                    planner: async () => { throw new Error("mock planner exploded"); }
+                }
+            ];
+            for (const failureCase of failureCases) {
+                const failureHarness = Object.create(ItemData.prototype);
+                useIsolatedPlanner(failureHarness, failureCase.planner);
+                const failureTarget = makePlannerItem(`Planner ${failureCase.name}`);
+                const failureResult = await failureHarness.applyActivities(
+                    failureTarget.item,
+                    [sourceTarget]
+                );
+                check(`Activity planner ${failureCase.name} fails closed before attachment writes`,
+                    failureResult.addedActivities === 0
+                    && failureResult.addedEffects === 0
+                    && failureTarget.writes.length === 0
+                    && failureResult.issues.some(issue => issue.includes(failureCase.issue)),
+                    { failureResult, writes: failureTarget.writes }
+                );
+            }
+
+            const legacyHarness = Object.create(ItemData.prototype);
+            legacyHarness.planInlineActivityResults = (results, item) => ItemData.prototype.planInlineActivityResults.call(
+                legacyHarness,
+                results,
+                item,
+                isolatedPlannerModule(null)
+            );
+            const legacyTarget = makePlannerItem("Planner Legacy Fallback");
+            const legacyAttack = {
+                ...ItemUtils.deepClone(sourceTarget),
+                activityData: {
+                    ...ItemUtils.deepClone(sourceTarget.activityData),
+                    _id: "legacyTarget0001"
+                }
+            };
+            const legacyForward = {
+                ...ItemUtils.deepClone(sourceForward),
+                activityData: {
+                    ...ItemUtils.deepClone(sourceForward.activityData),
+                    _id: "legacyForward001",
+                    activity: { id: "legacyTarget0001" }
+                }
+            };
+            const legacyResult = await legacyHarness.applyActivities(
+                legacyTarget.item,
+                [legacyAttack, legacyForward]
+            );
+            check("Absent Activity planner preserves the legacy exact-ID attachment path",
+                legacyResult.addedActivities === 2
+                && legacyTarget.writes.map(write => write.activityType).join(",") === "attack,forward"
+                && legacyTarget.writes[1]?.targetId === "legacyTarget0001",
+                { legacyResult, writes: legacyTarget.writes }
+            );
+        } catch (error) {
+            recordError("Activity planner contract regressions", error);
+        }
+
+        try {
             if (game.modules?.get?.("5e-activity-importer")?.active) {
                 const handoff = await analyzeItemActivitiesText(ACTIVITY_HANDOFF_FIXTURE, {
                     parse: parseItemText,
@@ -1405,9 +1828,15 @@ export class ItemImporterTests {
                 });
 
                 check("activity importer handoff validates pending activities", handoff.success
-                    && handoff.parse?.item?.pendingActivities === 2
-                    && handoff.pendingCount === 2
-                    && handoff.pendingActivities?.every((entry) => entry.success)
+                    && handoff.parse?.item?.pendingActivities === 3
+                    && handoff.pendingCount === 3
+                    && handoff.pendingActivities?.every((entry) => entry.success
+                        && entry.resultCount === 1
+                        && entry.resultTypes?.[0] === (entry.key === "EFFECT" ? "effect" : "activity")
+                        && (entry.key === "EFFECT"
+                            ? entry.activityTypes?.[0] == null
+                            : entry.activityTypes?.[0] === entry.key.slice("ACTIVITY_".length).toLowerCase()))
+                    && handoff.pendingActivities?.some((entry) => entry.key === "ACTIVITY_FORWARD")
                     && handoff.pendingActivities?.some((entry) => entry.key === "ACTIVITY_DAMAGE")
                     && handoff.pendingActivities?.some((entry) => entry.key === "EFFECT"), handoff);
             } else {
@@ -1467,6 +1896,15 @@ export class ItemImporterTests {
             );
         } catch (error) {
             recordError("Attunement requirement disclosure", error);
+        }
+
+        try {
+            const core = await runSpellFieldRegressionTests({ log: false });
+            for (const result of core.results) {
+                check(`spell fields: ${result.name}`, result.passed, result.details ?? undefined);
+            }
+        } catch (error) {
+            recordError("Spell field regressions", error);
         }
 
         const passed = tests.filter((test) => test.success).length;
@@ -1668,9 +2106,10 @@ export class ItemImporterTests {
         // Test valid item
         const validItem = {
             name: "Test Item",
+            type: "loot",
             system: {
                 price: { value: 100 },
-                weight: 5,
+                weight: { value: 5, units: "lb" },
                 quantity: 1
             }
         };

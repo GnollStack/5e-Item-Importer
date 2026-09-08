@@ -16,6 +16,24 @@ function splitPropertyPath(path) {
     return path.split(".").filter(Boolean);
 }
 
+/** Preserve authored values while allowing lossless Foundry serialization. */
+function validationChanges(value, cleaned) {
+    if (value instanceof Set) value = [...value];
+    if (Array.isArray(value)) {
+        return value.map((entry, index) => validationChanges(entry, cleaned?.[index]));
+    }
+    if (value && typeof value === "object") {
+        return Object.fromEntries(Object.entries(value).map(([key, entry]) => [
+            key, validationChanges(entry, cleaned?.[key])
+        ]));
+    }
+    // FormulaFields serialize numeric constants as strings. Accept that exact
+    // representation change, while retaining numbers which cleaning clamped or
+    // rounded so clean:false validation can reject them.
+    if (typeof value === "number" && Number.isFinite(value) && cleaned === String(value)) return cleaned;
+    return value;
+}
+
 /**
  * Main utilities class
  */
@@ -755,22 +773,31 @@ export class ItemUtils {
     // ==========================================
 
     /**
-     * Validate item data against rules
+     * Validate generated Item data against the active Foundry/dnd5e schema.
+     * Construction uses a clone and never persists an Item or runs create hooks.
      * @param {Object} itemData - Item data to validate
      * @returns {Object} { valid: boolean, errors: string[] }
      */
     static validateItemData(itemData) {
         const errors = [];
 
-        if (!itemData.name || itemData.name.trim().length === 0) {
+        if (!itemData || typeof itemData !== "object" || Array.isArray(itemData)) {
+            return { valid: false, errors: ["Item data must be an object"] };
+        }
+
+        if (typeof itemData.name !== "string" || itemData.name.trim().length === 0) {
             errors.push("Item name is required");
         }
 
-        if (itemData.name && itemData.name.length > 100) {
+        if (typeof itemData.name === "string" && itemData.name.length > 100) {
             errors.push("Item name too long (max 100 characters)");
         }
 
-        if (itemData.system?.price?.value && itemData.system.price.value < 0) {
+        if (typeof itemData.type !== "string" || !itemData.type.trim()) {
+            errors.push("Item type is required");
+        }
+
+        if (itemData.system?.price?.value < 0) {
             errors.push("Item price cannot be negative");
         }
 
@@ -778,8 +805,29 @@ export class ItemUtils {
             errors.push("Item weight cannot be negative");
         }
 
-        if (itemData.system?.quantity && itemData.system.quantity < 0) {
+        if (itemData.system?.quantity < 0) {
             errors.push("Item quantity cannot be negative");
+        }
+
+        const ItemClass = globalThis.CONFIG?.Item?.documentClass;
+        if (typeof ItemClass !== "function") {
+            errors.push("The Foundry Item schema is unavailable; validate this Item in a running Foundry world.");
+        } else if (errors.length === 0) {
+            try {
+                const document = new ItemClass(ItemUtils.deepClone(itemData), { strict: true });
+                // The constructor supplies required defaults, but NumberField cleaning
+                // also clamps/rounds invalid values. Validate the original values as a
+                // write-free change set so those errors cannot disappear during cleaning.
+                document.validate({
+                    changes: validationChanges(ItemUtils.deepClone(itemData), document.toObject()),
+                    clean: false,
+                    strict: true,
+                    fallback: false,
+                    dropInvalidEmbedded: false
+                });
+            } catch (error) {
+                errors.push(`Item schema validation failed: ${error?.message || String(error)}`);
+            }
         }
 
         return {

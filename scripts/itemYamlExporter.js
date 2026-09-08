@@ -490,13 +490,14 @@ function buildSpell(item) {
   data.COMPONENTS = {
     Vocal: bool(firstDefined(item?.vocal, properties.has("vocal"))),
     Somatic: bool(firstDefined(item?.somatic, properties.has("somatic"))),
-    Material: bool(firstDefined(item?.material, properties.has("material")))
+    Material: bool(firstDefined(item?.material, properties.has("material"))),
+    Ritual: bool(firstDefined(item?.ritual, properties.has("ritual")))
   };
   if (data.COMPONENTS.Material) {
     data.MATERIALS = {
       Value: read(item, "materialValue", "system.materials.value") ?? "",
-      Cost: integer(read(item, "materialCost", "system.materials.cost"), 0),
-      Supply: integer(read(item, "materialSupply", "system.materials.supply"), 0),
+      Cost: finite(read(item, "materialCost", "system.materials.cost"), 0),
+      Supply: finite(read(item, "materialSupply", "system.materials.supply"), 0),
       Consumed: bool(read(item, "materialConsumed", "system.materials.consumed"))
     };
   }

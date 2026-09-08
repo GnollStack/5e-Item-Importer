@@ -20,7 +20,7 @@
 
 ## Overview
 
-5e Item Importer turns item text into Foundry Items. Paste a normal stat block for a quick import, or use one of the strict YAML templates when you want exact control.
+**5e Item Importer is free and works standalone.** It turns item text into Foundry Items. **5e Activity Importer is a forthcoming premium companion and is not included in this release.** Paste a normal stat block for a quick import, or use one of the strict YAML templates when you want exact control.
 
 ---
 
@@ -952,7 +952,9 @@ For import-ready examples, use the [validated custom YAML examples](#validated-c
 <details>
 <summary><strong>Strict YAML rules worth knowing</strong></summary>
 
-For mixed weapon damage, use a dnd5e typed custom formula such as `1d8[piercing] + 1d6[lightning]` and set `Damage Type` to the weapon's primary damage type, such as `piercing`. Do the same for `Versatile Damage Type`. The primary type gives dnd5e a default for system-added ability and magic bonuses, while bracketed formula terms keep extra damage such as lightning separate for resistance and immunity. Use `n/a` only for fully self-contained typed formulas that will not receive system-added ability, magic, or ammunition bonuses. For saves, conditions, healing, and other effects that need automation beyond base item fields, keep the rules in the description text unless the user explicitly wants Activity Importer support.
+For mixed weapon damage, use a dnd5e typed custom formula such as `1d8[piercing] + 1d6[lightning]` and set `Damage Type` to the weapon's primary damage type, such as `piercing`. Do the same for `Versatile Damage Type`. The primary type gives dnd5e a default for system-added ability and magic bonuses, while bracketed formula terms keep extra damage such as lightning separate for resistance and immunity. Use `n/a` only for fully self-contained typed formulas that will not receive system-added ability, magic, or ammunition bonuses. Description enrichers provide clickable text; they do not generate activity mechanics. For functional source-defined saves, damage, healing, conditions, and passive bonuses, include the appropriate `Activities`/`effects` arrays when Activity Importer is available for the workflow or its support is requested. Use the companion strict templates and preserve the source rules. Core Item imports work independently: omit attachment sections and keep the complete rules in the description when companion support is unavailable or unspecified.
+
+Spell ritual capability is independent of preparation. Use `COMPONENTS.Ritual: true` with `PREPARATION.Method: spell` for a normal ritual-capable spell. Explicit ritual booleans take precedence; older YAML without the field retains the `Method: ritual` fallback. Material cost and supply must be nonnegative.
 
 Strict YAML reports unknown sections and field names as warnings so typos are not silently ignored. A parse with validation errors returns no importable item; correct the reported fields before importing.
 
@@ -1089,10 +1091,10 @@ https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.j
 
 | Requirement | Version |
 | --- | --- |
-| Foundry VTT | v14+ (verified through v14.363) |
-| D&D 5e System | v5.3.3+ (verified through v5.3.3) |
+| Foundry VTT | v14+ (verified through v14.367) |
+| D&D 5e System | v5.3.0+ (verified through v5.3.3) |
 
-This release line intentionally targets Foundry VTT v14 and dnd5e v5.3.x. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.
+Both the free Item Importer and premium Activity Importer require Foundry VTT v14+ and dnd5e v5.3.0+, with matching verified targets of Foundry 14.367 and dnd5e 5.3.3. Release 14.1.2 was re-tested on 2026-09-07 with Foundry 14.367 and dnd5e 5.3.3: the shipped runtime suite passed 10/10 and the source suite passed 152/152, without creating world documents. Separate isolated checks passed 14/14 core parse/export/reimport cases across all seven Item types with Activity Importer absent or inactive. A clean free-module archive also built without access to the companion repository. Earlier paired fixture checks verified persisted activities/effects and successful cleanup. The declared dnd5e 5.3.0 minimum has not been separately re-tested. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.
 
 ---
 
@@ -1168,6 +1170,8 @@ This module represents **many hours** of development.
 This module is licensed under the **GnollStack Proprietary EULA**.
 It is **Free for Personal Use**, meaning you can use it in your home games, stream it, or modify it for your own table without restriction.
 
+The bundled js-yaml 4.3.2 dependency remains under its MIT license; its copyright and permission notice are included in `THIRD_PARTY_NOTICES.txt`.
+
 However, **Commercial Redistribution is Strictly Prohibited.**
 You may **NOT** sell this module, bundle it within paid content (such as Patreon maps or adventures), or host it as a commercial service without prior written consent.
 
@@ -1187,7 +1191,7 @@ For licensing inquiries or permission slips:
 
 <div align="center">
 
-**Author:** [GnollStack](https://github.com/GnollStack) · **Compatibility:** Foundry VTT v14+ (verified v14.363)
+**Author:** [GnollStack](https://github.com/GnollStack) · **Compatibility:** Foundry VTT v14+ (verified v14.367)
 
 [⬆ Back to Top](#5e-item-importer)
 

@@ -1643,15 +1643,37 @@ export class ItemData {
           preParsedActivityIssues = prepared.issues;
           preParsedActivityBlockingIssues = prepared.blockingIssues;
 
+          // Planning is advisory before persistence: it lets a current Activity
+          // Importer resolve same-batch Forward aliases and order dependencies
+          // before deciding whether dnd5e's generated baseline may be suppressed.
+          // Keep the original parse order for the later provenance check, and
+          // re-plan authoritatively against the persisted Item before any write.
+          const planned = preParsedActivityBlockingIssues.length === 0
+            ? await this.planInlineActivityResults(preparedActivityResults, existingItem)
+            : null;
+          if (planned?.warningIssues?.length) {
+            preParsedActivityIssues = ItemData.dedupeInlineIssues([
+              ...preParsedActivityIssues,
+              ...planned.warningIssues
+            ]);
+          }
+          const suppressionResults = planned?.supported && planned.success
+            ? planned.results
+            : preparedActivityResults;
+
           const preflightIssues = preParsedActivityBlockingIssues.length > 0
             ? preParsedActivityBlockingIssues
-            : await this.preflightInlineActivityPlan(
-              preparedActivityResults,
-              { type: itemData.type, system: itemData.system },
-              { checkCapability: false }
-            );
+            : (planned?.supported && !planned.success)
+              ? planned.blockingIssues
+              : await this.preflightInlineActivityPlan(
+                suppressionResults,
+                existingItem?.documentName === "Item"
+                  ? existingItem
+                  : { type: itemData.type, system: itemData.system },
+                { checkCapability: false }
+              );
           if (preflightIssues.length === 0) {
-            const successfulActivityTypes = ItemData.getSuccessfulActivityTypes(preparedActivityResults);
+            const successfulActivityTypes = ItemData.getSuccessfulActivityTypes(suppressionResults);
             if (ItemData.preventGeneratedDefaultActivity(itemData, successfulActivityTypes)) {
               const defaultType = ItemData.DEFAULT_ACTIVITY_BY_ITEM_TYPE[itemData.type];
               ItemUtils.log(`Preventing generated default ${defaultType} activity because the complete inline attachment plan passed preflight.`);
@@ -2070,6 +2092,124 @@ export class ItemData {
   }
 
   /**
+   * Ask a current Activity Importer to validate and deterministically plan the
+   * attachment batch. Prefer the companion dry-run contract because it checks
+   * parser and Foundry document schemas in addition to dependency planning.
+   * Planner-only versions retain deterministic ordering, while older
+   * parser-only versions retain the local exact-ID preflight path. Once either
+   * planning service is present, failures are terminal for that attachment
+   * invocation and are never silently downgraded.
+   *
+   * @param {Array<Object>} results - Parsed inline attachment results
+   * @param {Object|null} item - Optional persisted Foundry Item context
+   * @param {Object|null|undefined} activityImporterOverride - Optional isolated companion module for diagnostics/tests
+   * @returns {Promise<Object>} Normalized planner result
+   */
+  async planInlineActivityResults(results, item = null, activityImporterOverride = undefined) {
+    const sourceResults = Array.isArray(results) ? results : [];
+    const activityImporter = activityImporterOverride === undefined
+      ? game.modules.get("5e-activity-importer")
+      : activityImporterOverride;
+    const activityApi = activityImporter?.active ? activityImporter.api : null;
+    const dryRunner = activityApi?.dryRun;
+    const planner = activityApi?.plan;
+    if (typeof dryRunner !== "function" && typeof planner !== "function") {
+      return {
+        supported: false,
+        validated: false,
+        success: true,
+        results: sourceResults,
+        issues: [],
+        warningIssues: [],
+        blockingIssues: []
+      };
+    }
+
+    const normalizeFindings = findings => (Array.isArray(findings) ? findings : [])
+      .map(finding => {
+        if (typeof finding === "string") return finding.trim();
+        const message = typeof finding?.message === "string" ? finding.message.trim() : "";
+        if (!message) return "";
+        const location = Number.isInteger(finding?.resultIndex)
+          ? ` [inline block ${finding.resultIndex + 1}${finding.path ? `, ${finding.path}` : ""}]`
+          : (finding?.path ? ` [${finding.path}]` : "");
+        return `${message}${location}`;
+      })
+      .filter(Boolean);
+    const malformed = message => ({
+      supported: true,
+      validated: typeof dryRunner === "function",
+      success: false,
+      results: sourceResults,
+      issues: [message],
+      warningIssues: [],
+      blockingIssues: [message]
+    });
+
+    try {
+      const persistedItem = item?.documentName === "Item" ? item : null;
+      let plan;
+      let serviceSuccess;
+      let serviceWarnings = [];
+      let serviceErrors = [];
+      if (typeof dryRunner === "function") {
+        const dryRun = await dryRunner.call(activityApi, sourceResults, {
+          ...(persistedItem ? { item: persistedItem } : {}),
+          checkIcons: false,
+          captureOnly: !persistedItem
+        });
+        if (!dryRun || typeof dryRun !== "object"
+          || typeof dryRun.success !== "boolean"
+          || !dryRun.plan || typeof dryRun.plan !== "object") {
+          return malformed("5e-activity-importer returned a malformed attachment dry-run; skipped the entire inline attachment batch.");
+        }
+        plan = dryRun.plan;
+        serviceSuccess = dryRun.success;
+        serviceWarnings = normalizeFindings(dryRun.findings?.warnings);
+        serviceErrors = normalizeFindings(dryRun.findings?.errors);
+      } else {
+        plan = await planner.call(activityApi, sourceResults, persistedItem ? { item: persistedItem } : {});
+        serviceSuccess = plan?.success;
+      }
+      if (!plan || typeof plan !== "object"
+        || typeof plan.success !== "boolean"
+        || !Array.isArray(plan.results)
+        || plan.results.length !== sourceResults.length) {
+        return malformed("5e-activity-importer returned a malformed attachment plan; skipped the entire inline attachment batch.");
+      }
+
+      const warningIssues = ItemData.dedupeInlineIssues([
+        ...serviceWarnings,
+        ...normalizeFindings(plan.warnings)
+      ]);
+      const blockingIssues = ItemData.dedupeInlineIssues([
+        ...serviceErrors,
+        ...normalizeFindings(plan.errors)
+      ]);
+      const success = serviceSuccess === true && plan.success === true;
+      if (!success && blockingIssues.length === 0) {
+        blockingIssues.push("5e-activity-importer could not produce a valid attachment plan.");
+      }
+      if (success && blockingIssues.length > 0) {
+        return malformed("5e-activity-importer returned an inconsistent attachment plan; skipped the entire inline attachment batch.");
+      }
+      return {
+        supported: true,
+        validated: typeof dryRunner === "function",
+        success,
+        results: plan.results,
+        issues: ItemData.dedupeInlineIssues([...warningIssues, ...blockingIssues]),
+        warningIssues: ItemData.dedupeInlineIssues(warningIssues),
+        blockingIssues: ItemData.dedupeInlineIssues(blockingIssues)
+      };
+    } catch (error) {
+      return malformed(
+        `5e-activity-importer attachment planning failed: ${error?.message || String(error)}`
+      );
+    }
+  }
+
+  /**
    * Keep attachment integration soft after the base Item has been persisted.
    * An unexpected attachment exception must not report the already-created Item
    * as a failed creation, which could cause a retry to create a duplicate.
@@ -2131,6 +2271,16 @@ export class ItemData {
         .filter(id => typeof id === "string" && id.trim())
         .map(id => id.trim())
     );
+    const plannedActivityTypes = new Map(
+      activityResults
+        .map(result => {
+          const id = typeof result.activityData?._id === "string"
+            ? result.activityData._id.trim()
+            : "";
+          return id ? [id, result.activityType] : null;
+        })
+        .filter(Boolean)
+    );
     const uuidResolver = typeof resolveUuid === "function"
       ? uuid => resolveUuid.call(globalThis, uuid)
       : null;
@@ -2150,6 +2300,17 @@ export class ItemData {
       return !!existingActivities
         && typeof existingActivities === "object"
         && Object.prototype.hasOwnProperty.call(existingActivities, id);
+    };
+    const getExistingActivityType = id => {
+      const activity = typeof existingActivities?.get === "function"
+        ? existingActivities.get(id)
+        : (existingActivities
+          && typeof existingActivities === "object"
+          && Object.prototype.hasOwnProperty.call(existingActivities, id)
+            ? existingActivities[id]
+            : null);
+      const data = activity?.toObject?.() ?? activity;
+      return typeof data?.type === "string" ? data.type.trim() : null;
     };
 
     for (const result of activityResults) {
@@ -2199,6 +2360,8 @@ export class ItemData {
           issues.push(`${label} requires a target activity ID.`);
         } else if (!hasExistingActivity(targetId) && !plannedActivityIds.has(targetId)) {
           issues.push(`${label} targets activity ID "${targetId}", which is not on the Item or in this inline batch.`);
+        } else if ((plannedActivityTypes.get(targetId) ?? getExistingActivityType(targetId)) === "forward") {
+          issues.push(`${label} targets another Forward activity; dnd5e Forward activities require a non-Forward target.`);
         }
       }
     }
@@ -2220,6 +2383,46 @@ export class ItemData {
         ?? document?.flags?.[MODULE_NAME]?.strictYaml
         ?? null
     ).filter(Boolean).map(ItemData.inlineAttachmentSignature));
+  }
+
+  /** Validate parsed attachment sources against the live Foundry/dnd5e schemas. */
+  async validateInlineActivitySchemas(results) {
+    const issues = [];
+    const effectClass = globalThis.ActiveEffect?.implementation
+      ?? globalThis.ActiveEffect
+      ?? globalThis.CONFIG?.ActiveEffect?.documentClass;
+    const validateSource = async (source, documentClass, label, wrapperType = null) => {
+      if (typeof documentClass?.cleanData !== "function") {
+        if (wrapperType) issues.push(`${label} uses activity type "${wrapperType}", which is unavailable in the active dnd5e system.`);
+        return;
+      }
+      try {
+        const cloned = ItemUtils.deepClone(source);
+        const input = wrapperType ? { type: wrapperType, ...cloned } : cloned;
+        await documentClass.cleanData(input, { partial: false });
+        new documentClass(ItemUtils.deepClone(input), { strict: true });
+      } catch (error) {
+        issues.push(`${label} does not match the active document schema: ${error?.message || String(error)}`);
+      }
+    };
+
+    for (const result of Array.isArray(results) ? results : []) {
+      if (!result?.success) continue;
+      if (result.resultType === "effect" && result.effectData) {
+        await validateSource(result.effectData, effectClass, result.effectData.name || "Inline effect");
+        continue;
+      }
+      if (!result.activityData || !result.activityType) continue;
+      const label = result.activityData.name || result.activityType;
+      const activityClass = globalThis.CONFIG?.DND5E?.activityTypes?.[result.activityType]?.documentClass;
+      await validateSource(result.activityData, activityClass, label, result.activityType);
+      for (const embedded of result.embeddedEffectResults ?? []) {
+        if (embedded?.success && embedded.effectData) {
+          await validateSource(embedded.effectData, effectClass, embedded.effectData.name || `${label} applied effect`);
+        }
+      }
+    }
+    return ItemData.dedupeInlineIssues(issues);
   }
 
   /** Validate the complete attachment plan before any embedded documents are created. */
@@ -2267,6 +2470,9 @@ export class ItemData {
       }
     }
 
+    if (preflightIssues.length === 0) {
+      preflightIssues.push(...await this.validateInlineActivitySchemas(results));
+    }
     if (preflightIssues.length === 0) {
       preflightIssues.push(...await this.validateInlineActivityReferences(results, itemContext, resolveUuid));
     }
@@ -2478,14 +2684,21 @@ export class ItemData {
       return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues };
     }
 
+    const planned = await this.planInlineActivityResults(missingResults, createdItem);
+    issues.push(...planned.issues);
+    if (planned.supported && !planned.success) {
+      return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues };
+    }
+    const plannedResults = planned.results;
+
     // A partially valid batch is more dangerous than a skipped soft integration.
-    const preflightIssues = await this.preflightInlineActivityPlan(missingResults, createdItem);
+    const preflightIssues = await this.preflightInlineActivityPlan(plannedResults, createdItem);
     if (preflightIssues.length > 0) {
       issues.push(...preflightIssues);
       return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues };
     }
 
-    const importPlan = this.prepareInlineAttachmentPlan(missingResults, createdItem);
+    const importPlan = this.prepareInlineAttachmentPlan(plannedResults, createdItem);
 
     // Apply each parsed result to the created item
     for (const result of importPlan) {

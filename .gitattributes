@@ -1,1 +1,2 @@
 packs/** binary
+scripts/vendor/js-yaml.mjs text eol=lf
