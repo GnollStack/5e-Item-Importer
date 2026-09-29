@@ -1196,5 +1196,3 @@ For licensing inquiries or permission slips:
 [⬆ Back to Top](#5e-item-importer)
 
 </div>
-
-Use the [authoring guide](docs/template-authoring.md) to select references, distinguish creation from preservation, and validate the result. The [concrete examples](docs/examples/README.md) state their destination and dependencies. Import validation and gameplay verification are separate.
