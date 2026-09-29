@@ -1,0 +1,24 @@
+SCHEMA_VERSION: 2
+TOOL:
+  ITEM:
+    Name: Alchemist's Supplies
+    Rarity: common
+    Tool Type: art
+    Base Tool: alchemist
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+  COST_AND_WEIGHT:
+    Price Value: 50
+    Price Denomination: gp
+    Weight Value: 8
+    Weight Units: lb
+  PROPERTIES:
+    Magical: false
+  ABILITY_CHECK:
+    Proficient: Automatic
+    Ability: int
+  DESCRIPTION:
+    Description: >
+      This set of alchemist's supplies includes glass beakers, a metal frame, a stirring rod, a
+      mortar and pestle, and common alchemical ingredients.

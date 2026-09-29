@@ -1,0 +1,363 @@
+SCHEMA_VERSION: 2
+WEAPON:
+  ITEM:
+    Name: "Stormglass Requiem"
+    Icon: "icons/svg/lightning.svg"
+    Identifier: "stormglass-requiem"
+    Sort: 0
+    Rarity: legendary
+    Weapon Type: martialM
+    Base Weapon: glaive
+  SOURCE:
+    Book: "The Stormglass Arsenal"
+    Page: "17"
+    Custom: "Original homebrew"
+    License: "Private"
+    Rules: "2024"
+    Revision: 1.5
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+    Equipped: true
+  COST_AND_WEIGHT:
+    Price Value: 45000
+    Price Denomination: gp
+    Weight Value: 6.5
+    Weight Units: lb
+  PROPERTIES:
+    NPC Equipment: false
+    Adamantine: false
+    Ammunition: false
+    Finesse: false
+    Firearm: false
+    Focus: false
+    Heavy: true
+    Light: false
+    Loading: false
+    Magical: true
+    Reach: true
+    Reload: false
+    Returning: false
+    Silvered: true
+    Special: false
+    Thrown: false
+    Two-Handed: true
+    Versatile: false
+  ATTUNEMENT:
+    Attunement: required
+    Attunement By: "A creature proficient with martial weapons"
+    Attuned: true
+    Magic Bonus: "2"
+  RANGE:
+    Reach: 10
+    Range Normal: null
+    Range Long: null
+    Range Units: ft
+  DAMAGE:
+    DAMAGE_DATA:
+      Dice Count: 1
+      Die Denomination: 10
+      Bonus: ""
+      Damage Types: [slashing]
+      Custom Enabled: false
+      Custom Formula: "2d8"
+      Scaling Mode: none
+      Scaling Dice Count: 0
+      Scaling Formula: ""
+  MASTERY:
+    Mastery: graze
+  PROFICIENCY:
+    Proficient: Automatic
+  USAGE:
+    Uses Spent: 0
+    Uses Max: "0"
+  RECOVERY: []
+  DESCRIPTION:
+    Description: |
+      <h2>Stormglass Requiem</h2>
+      <p><em>Weapon (glaive), legendary; requires attunement by a creature proficient with martial weapons.</em></p>
+      <p>A silver-edged blade of smoky glass traps a miniature thunderstorm. You gain a +2 bonus to attack and damage rolls made with this magic weapon. It deals 1d10 slashing damage, has a reach of 10 feet, and has the Heavy, Reach, Two-Handed, and Silvered properties. Its mastery property is Graze.</p>
+      <h3>Resonant Rend</h3>
+      <p>As an action, expend one use of this activity to make a melee attack with the glaive. It has uses equal to your proficiency bonus and regains all expended uses when you finish a long rest.</p>
+      <p>On a hit, deal the weapon's normal damage plus 1d6 lightning and 1d6 thunder damage. This attack scores a critical hit on a 19 or 20 and adds an extra 1d6 to its critical damage.</p>
+      <p>The target suffers Resonant Shackles for 1 round, expiring at the end of its turn: it is Deafened, and its walking, climbing, and swimming speeds are halved.</p>
+      <h3>Tempest Unbound</h3>
+      <p>As an action, expend one charge of this activity to release a cone whose length in feet is 15 + five times your proficiency bonus. This activity has four charges and regains all expended charges at dawn.</p>
+      <p>Each creature in the cone makes a Constitution saving throw against DC 8 + your proficiency bonus + your Strength modifier. A creature takes 3d8 lightning and 3d8 thunder damage on a failed save, or half as much damage on a successful save.</p>
+      <p>You may expend up to three additional charges. Each additional charge adds 1d8 lightning and 1d8 thunder damage.</p>
+      <p>A creature that fails the save also suffers Storm-Sundered for 1 round, expiring at the end of its turn: it is Blinded and Deafened, its flying speed becomes 0, and it cannot hover.</p>
+  UNIDENTIFIED_DESCRIPTION:
+    Unidentified Name: "Smoky Glass Glaive"
+    Unidentified Description: |
+      <p>Silver filaments crawl through a smoky glass blade. A distant peal of thunder follows each swing.</p>
+  CHAT_FLAVOR:
+    Chat Description: |
+      <p>[[lookup @name]]{The wielder} draws a crackling arc through the air.</p>
+  Activities:
+    - ACTIVITY_ATTACK:
+        ACTIVITY:
+          Activity ID: stormglassrend01
+          Name: "Resonant Rend"
+          Icon: "icons/svg/sword.svg"
+          Sort: 0
+        CHAT_FLAVOR:
+          Chat Description: |
+            <p>Expend one use to strike with the glaive. On a hit, add lightning and thunder damage and apply Resonant Shackles for 1 round.</p>
+        ATTACK:
+          Attack Type: melee
+          Attack Class: weapon
+        BEHAVIOR:
+          Consume Spell Slot: false
+          Measured Template Prompt: false
+        VISIBILITY:
+          Require Magic: true
+          Require Identification: true
+          Require Attunement: true
+          Level Limit Minimum: null
+          Level Limit Maximum: null
+          Class Identifier: ""
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: action
+          Activation Cost: 1
+          Condition: "Wielding Stormglass Requiem with both hands"
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Duration Amount: ""
+          Special Duration: ""
+          Concentration: false
+        CONSUMPTION:
+          - Consumption Type: activityUses
+            Amount: "1"
+            Scaling Mode: none
+            Scaling Formula: ""
+        SCALING:
+          Allow Scaling: false
+          Max Scaling: "0"
+        USAGE:
+          Uses Spent: 0
+          Uses Max: "@prof"
+        RECOVERY:
+          - Period: lr
+            Type: recoverAll
+            Formula: ""
+        RANGE:
+          Override Range: true
+          Range: true
+          Range Units: ft
+          Range Value: "10"
+          Special Range: ""
+        TARGETS:
+          Override Target: true
+          Target Type: creature
+          Target Amount: "1"
+          Special Targeting: "One creature within reach"
+          Choose Targets: false
+          Template Type: ""
+          Template Count: "1"
+          Template Measurement: "10 + @prof"
+          Template Dimensions: "5"
+          Template Height: "5"
+          Template Unit: ft
+          Template Contiguous: false
+          Template Stationary: false
+        ATTACK_DETAILS:
+          Attack Ability: str
+          To Hit Bonus: ""
+          Flat To Hit: false
+          Critical Threshold: 19
+        ATTACK_DAMAGE:
+          Include Base Damage: true
+          Extra Critical Damage: "1d6"
+          DAMAGE_PARTS:
+            - DAMAGE_DATA:
+                Dice Count: 1
+                Die Denomination: 6
+                Bonus: ""
+                Damage Types: [lightning]
+                Custom Enabled: false
+                Custom Formula: "2d4 + @prof"
+                Scaling Mode: none
+                Scaling Dice Count: 0
+                Scaling Formula: ""
+            - DAMAGE_DATA:
+                Dice Count: 1
+                Die Denomination: 6
+                Bonus: ""
+                Damage Types: [thunder]
+                Custom Enabled: false
+                Custom Formula: "1d8"
+                Scaling Mode: none
+                Scaling Dice Count: 0
+                Scaling Formula: ""
+        APPLIED_EFFECTS:
+          - DETAILS:
+              Effect ID: resonantshackle1
+              Name: "Resonant Shackles"
+              Icon: "icons/svg/sound.svg"
+              Effect Type: base
+              Origin: n/a
+              Sort: 0
+              Show Icon: 1
+              Icon Tint Color: "#66ccff"
+              Effect Suspended: false
+              Apply Effect to Actor: false
+              Status Conditions: [deafened]
+            EFFECT_DESCRIPTION:
+              Effect Description: |
+                <p>Resonance clings to your limbs. You are Deafened; your walking, climbing, and swimming speeds are halved for 1 round, expiring at the end of your turn.</p>
+            DURATION:
+              Value: 1
+              Units: rounds
+              Effect Expiry: turnEnd
+              Effect Expired: false
+              Start: null
+            APPLICATION:
+              Level Minimum: null
+              Level Maximum: null
+            CHANGES:
+              - Attribute Key: system.attributes.movement.walk
+                Change Type: multiply
+                Change Phase: final
+                Value: 0.5
+                Priority: 20
+              - Attribute Key: system.attributes.movement.climb
+                Change Type: multiply
+                Change Phase: final
+                Value: 0.5
+                Priority: 20
+              - Attribute Key: system.attributes.movement.swim
+                Change Type: multiply
+                Change Phase: final
+                Value: 0.5
+                Priority: 20
+    - ACTIVITY_SAVE:
+        ACTIVITY:
+          Activity ID: stormglassburst1
+          Name: "Tempest Unbound"
+          Icon: "icons/svg/lightning.svg"
+          Sort: 100000
+        CHAT_FLAVOR:
+          Chat Description: |
+            <p>A cone of stormglass erupts. Make the Constitution save; take half damage on a success. On a failure, apply Storm-Sundered for 1 round. Each extra scaling step spends one extra charge and adds 1d8 to each damage part.</p>
+        BEHAVIOR:
+          Consume Spell Slot: false
+          Measured Template Prompt: true
+        VISIBILITY:
+          Require Magic: true
+          Require Identification: true
+          Require Attunement: true
+          Level Limit Minimum: null
+          Level Limit Maximum: null
+          Class Identifier: ""
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: action
+          Activation Cost: 1
+          Condition: "Wielding Stormglass Requiem with both hands"
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Duration Amount: ""
+          Special Duration: ""
+          Concentration: false
+        CONSUMPTION:
+          - Consumption Type: activityUses
+            Amount: "1"
+            Scaling Mode: amount
+            Scaling Formula: "1"
+        SCALING:
+          Allow Scaling: true
+          Max Scaling: "3"
+        USAGE:
+          Uses Spent: 0
+          Uses Max: "4"
+        RECOVERY:
+          - Period: dawn
+            Type: recoverAll
+            Formula: ""
+        RANGE:
+          Override Range: true
+          Range: true
+          Range Units: self
+          Range Value: ""
+          Special Range: "Cone originating from the wielder"
+        TARGETS:
+          Override Target: true
+          Target Type: creature
+          Target Amount: ""
+          Special Targeting: "Every creature in the cone"
+          Choose Targets: false
+          Template Type: cone
+          Template Count: "1"
+          Template Measurement: "15 + 5 * @prof"
+          Template Dimensions: "5"
+          Template Height: "10 + @prof"
+          Template Unit: ft
+          Template Contiguous: true
+          Template Stationary: false
+        SAVE_DETAILS:
+          Challenge Ability: con
+          DC Calculation: custom
+          DC Formula: "8 + @prof + @abilities.str.mod"
+        SAVE_DAMAGE:
+          Damage on Save: half
+          DAMAGE_PARTS:
+            - DAMAGE_DATA:
+                Dice Count: 3
+                Die Denomination: 8
+                Bonus: ""
+                Damage Types: [lightning]
+                Custom Enabled: false
+                Custom Formula: "4d6 + @prof"
+                Scaling Mode: whole
+                Scaling Dice Count: 1
+                Scaling Formula: ""
+            - DAMAGE_DATA:
+                Dice Count: 3
+                Die Denomination: 8
+                Bonus: ""
+                Damage Types: [thunder]
+                Custom Enabled: false
+                Custom Formula: "4d6"
+                Scaling Mode: whole
+                Scaling Dice Count: 1
+                Scaling Formula: ""
+        APPLIED_EFFECTS:
+          - DETAILS:
+              Effect ID: stormsundered001
+              Name: "Storm-Sundered"
+              Icon: "icons/svg/blind.svg"
+              Effect Type: base
+              Origin: n/a
+              Sort: 100000
+              Show Icon: 1
+              Icon Tint Color: "#aa88ff"
+              Effect Suspended: false
+              Apply Effect to Actor: false
+              Status Conditions: [blinded, deafened]
+            EFFECT_DESCRIPTION:
+              Effect Description: |
+                <p>Stormglass fills your senses. You are Blinded and Deafened, your flying speed is 0, and you cannot hover for 1 round, expiring at the end of your turn.</p>
+            DURATION:
+              Value: 1
+              Units: rounds
+              Effect Expiry: turnEnd
+              Effect Expired: false
+              Start: null
+            APPLICATION:
+              Level Minimum: null
+              Level Maximum: null
+              On Save: false
+            CHANGES:
+              - Attribute Key: system.attributes.movement.fly
+                Change Type: override
+                Change Phase: final
+                Value: 0
+                Priority: 50
+              - Attribute Key: system.attributes.movement.hover
+                Change Type: override
+                Change Phase: final
+                Value: false
+                Priority: 50

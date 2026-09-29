@@ -159,7 +159,7 @@ export async function runSpellFieldRegressionTests(options = {}) {
           && nativeParsed.success && nativeParsed.warnings.length === 0
           && nativeParsed.item?.ritual === ritual
           && nativeParsed.item?.preparationMode === method
-          && nativeParsed.item?.prepared === true,
+          && nativeParsed.item?.prepared === 1,
         { exported, errors: parsed.errors, warnings: parsed.warnings, system,
           nativeExport, nativeErrors: nativeParsed.errors, nativeWarnings: nativeParsed.warnings });
     }
@@ -351,7 +351,7 @@ export async function runItemCoreFeatureTests(options = {}) {
         && parsed.item?.type === fixture.type
         && fixture.validate(parsed.item)
         && foundryData?.type === fixture.type
-        && parsed.trace?.normalizedStrictTemplate?.includes("SCHEMA_VERSION: 1"),
+        && parsed.trace?.normalizedStrictTemplate?.includes("SCHEMA_VERSION: 2"),
       { parsed, foundryData });
   }
 
@@ -387,9 +387,9 @@ export async function runItemCoreFeatureTests(options = {}) {
         && item.activationType === "bonus"
         && item.vocal
         && item.somatic
-        && item.range?.value === 60
+        && item.range?.value === "60"
         && item.range?.units === "ft"
-        && item.duration?.value === 1
+        && item.duration?.value === "1"
         && item.duration?.units === "minute"
     }
   ].map((fixture) => {

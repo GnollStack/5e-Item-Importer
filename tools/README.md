@@ -58,3 +58,14 @@ For the current free-only publication, run the standalone Item Importer builder 
 ```
 
 The standalone builder writes `dist/5e-item-importer.zip` and `dist/module.json`, validates its own release contract, and requires no sibling checkout. Production archives exclude tests, tools, GitHub metadata, private LLM instructions, and `dist/`. Verification also checks required runtime assets, safe ZIP paths, pinned GitHub download tags, matching standalone manifests, and the vetted js-yaml 4.3.2 bundle and MIT notice.
+
+## MIDI catalog selections and parity
+
+The same assemble/render/diff commands accept MIDI pages. Select layer:midi in the MCP query; --layer midi can project a complete all-layer snapshot offline. It cannot invent missing layers. Follow every nextCursor, retaining filters and catalog metadata.
+
+The parity check now covers sixteen shared files, including fieldCatalogMidi.js, fieldCatalogMidiRules.js, Test-MidiFieldCatalog.mjs and midiFieldCatalogTests.js. Provider-specific coverage stays independent. Run node --experimental-vm-modules tools/Test-MidiFieldCatalog.mjs alongside the native and report checks. See [the MIDI guide](../docs/midi-field-catalog.md).
+
+
+## Template authoring checks
+
+Run `node --experimental-vm-modules tools/Test-TemplateAuthoring.mjs` for marked example/file parity, source parser results, prerequisites and semantic assertions. Run `node --test tools/template-authoring.test.mjs` for negative documentation cases. The existing explicit YAML/completeness suites additionally check the declared MIDI template mappings. Keep native completeness, MIDI tests, full read-only smoke suites and shared-helper parity passing. These checks do not execute gameplay or establish independent LLM generation reliability.

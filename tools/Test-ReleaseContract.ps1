@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 function New-TestManifest {
     param([string]$Id, [string]$Version = "14.1.3")
     $companionId = Get-ImporterCompanionId $Id
-    return [pscustomobject]@{
+    $manifest = [pscustomobject]@{
         id = $Id; version = $Version
         compatibility = [pscustomobject]@{ minimum = "14"; verified = "14.367" }
         manifest = "https://example.invalid/$Id/module.json"
@@ -20,12 +20,20 @@ function New-TestManifest {
             })
             recommends = @([pscustomobject]@{
                 id = $companionId; type = "module"
-                manifest = "https://example.invalid/$companionId/module.json"
+                manifest = $(if ($companionId -eq "5e-activity-importer") {
+                    "https://r2.foundryvtt.com/packages-public/$companionId/module.json"
+                } else { "https://example.invalid/$companionId/module.json" })
                 compatibility = [pscustomobject]@{ minimum = "14.1.2"; verified = $Version }
                 reason = "Optional companion features."
             })
         }
     }
+    if ($Id -eq "5e-activity-importer") {
+        $manifest.manifest = "https://r2.foundryvtt.com/packages-public/$Id/module.json"
+        $manifest.PSObject.Properties.Remove("download")
+        $manifest | Add-Member protected $true
+    }
+    return $manifest
 }
 
 $checks = 0
@@ -44,7 +52,7 @@ foreach ($id in @("5e-item-importer", "5e-activity-importer")) {
     $checks++
     $fixture = New-TestManifest $id
     $fixture.relationships.recommends[0].compatibility.verified = "14.1.2"
-    Assert-Rejected { Assert-ImporterReleaseManifest $fixture } "verify companion version"
+    Assert-ImporterReleaseManifest $fixture | Out-Null
     $checks++
     $fixture = New-TestManifest $id
     $fixture.relationships.recommends[0].compatibility.minimum = "14.2.0"
@@ -59,10 +67,41 @@ foreach ($id in @("5e-item-importer", "5e-activity-importer")) {
     Assert-Rejected { Assert-ImporterReleaseManifest $fixture } "companion maximum"
     $checks++
     $fixture = New-TestManifest $id
-    $fixture.download = "https://github.com/example/$id/releases/download/V14.1.2/$id.zip"
-    Assert-Rejected { Assert-ImporterReleaseManifest $fixture } "pinned to V14.1.3"
+    $fixture | Add-Member -NotePropertyName download -NotePropertyValue "https://github.com/example/$id/releases/download/V14.1.2/$id.zip" -Force
+    $expected = if ($id -eq "5e-activity-importer") { "omit the download field" } else { "pinned to V14.1.3" }
+    Assert-Rejected { Assert-ImporterReleaseManifest $fixture } $expected
+    $checks++
+    foreach ($verified in @("14.1.1", "14.1.4", "not-a-version")) {
+        $fixture = New-TestManifest $id
+        $fixture.relationships.recommends[0].compatibility.verified = $verified
+        Assert-Rejected { Assert-ImporterReleaseManifest $fixture } "companion verified version"
+        $checks++
+    }
+    Assert-ImporterReleaseManifest (New-TestManifest $id "14.1.4") | Out-Null
     $checks++
 }
+
+foreach ($protection in @($false, "true", $null)) {
+    $fixture = New-TestManifest "5e-activity-importer"
+    if ($null -eq $protection) { $fixture.PSObject.Properties.Remove("protected") }
+    else { $fixture.protected = $protection }
+    Assert-Rejected { Assert-ImporterReleaseManifest $fixture } "protected: true"
+    $checks++
+}
+$fixture = New-TestManifest "5e-activity-importer"
+$fixture.manifest = "https://r2.foundryvtt.com/packages-public/other-module/module.json"
+Assert-Rejected { Assert-ImporterReleaseManifest $fixture } "module-specific Foundry manifest"
+$checks++
+foreach ($download in @("", $null)) {
+    $fixture = New-TestManifest "5e-activity-importer"
+    $fixture | Add-Member download $download
+    Assert-Rejected { Assert-ImporterReleaseManifest $fixture } "omit the download field"
+    $checks++
+}
+$fixture = New-TestManifest "5e-item-importer"
+$fixture.PSObject.Properties.Remove("download")
+Assert-Rejected { Assert-ImporterReleaseManifest $fixture } "declare a download URL"
+$checks++
 
 foreach ($shape in @("omitted", "empty")) {
     $fixture = New-TestManifest "5e-item-importer"
@@ -116,7 +155,7 @@ try {
     Assert-Rejected { Assert-ImporterReleasePair $itemRoot $activityRoot } "versions differ"
     $checks++
     $activity = New-TestManifest "5e-activity-importer"
-    $activity.manifest = "https://example.invalid/changed/module.json"
+    $activity.relationships.recommends[0].manifest = "https://example.invalid/changed/module.json"
     $activity | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $activityRoot "module.json")
     Assert-Rejected { Assert-ImporterReleasePair $itemRoot $activityRoot } "companion URL"
     $checks++

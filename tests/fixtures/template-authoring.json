@@ -1,0 +1,190 @@
+[
+  {
+    "id": "core-weapon",
+    "file": "docs/examples/core-weapon.yaml",
+    "template": "templates/YAML Templates/Strict Weapon Template.md",
+    "type": "weapon",
+    "midi": false,
+    "intent": "A free/core weapon import. Preserve the complete description; it does not automatically create source-specific activities or effects.",
+    "prerequisite": "5e Item Importer. Activity Importer is not required for this example.",
+    "expectedNames": [
+      "Longsword +1"
+    ],
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "weapon"
+      }
+    ]
+  },
+  {
+    "id": "core-equipment",
+    "file": "docs/examples/core-equipment.yaml",
+    "template": "templates/YAML Templates/Strict Equipment Template.md",
+    "type": "equipment",
+    "midi": false,
+    "intent": "A free/core equipment import. Preserve the complete description; it does not automatically create source-specific activities or effects.",
+    "prerequisite": "5e Item Importer. Activity Importer is not required for this example.",
+    "expectedNames": [
+      "Cloak of Protection"
+    ],
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "equipment"
+      }
+    ]
+  },
+  {
+    "id": "core-consumable",
+    "file": "docs/examples/core-consumable.yaml",
+    "template": "templates/YAML Templates/Strict Consumable Template.md",
+    "type": "consumable",
+    "midi": false,
+    "intent": "A free/core consumable import. Preserve the complete description; it does not automatically create source-specific activities or effects.",
+    "prerequisite": "5e Item Importer. Activity Importer is not required for this example.",
+    "expectedNames": [
+      "Potion of Healing"
+    ],
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "consumable"
+      }
+    ]
+  },
+  {
+    "id": "core-tool",
+    "file": "docs/examples/core-tool.yaml",
+    "template": "templates/YAML Templates/Strict Tool Template.md",
+    "type": "tool",
+    "midi": false,
+    "intent": "A free/core tool import. Preserve the complete description; it does not automatically create source-specific activities or effects.",
+    "prerequisite": "5e Item Importer. Activity Importer is not required for this example.",
+    "expectedNames": [
+      "Alchemist's Supplies"
+    ],
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "tool"
+      }
+    ]
+  },
+  {
+    "id": "core-container",
+    "file": "docs/examples/core-container.yaml",
+    "template": "templates/YAML Templates/Strict Container Template.md",
+    "type": "container",
+    "midi": false,
+    "intent": "A free/core container import. Preserve the complete description; it does not automatically create source-specific activities or effects.",
+    "prerequisite": "5e Item Importer. Activity Importer is not required for this example.",
+    "expectedNames": [
+      "Bag of Holding"
+    ],
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "container"
+      }
+    ]
+  },
+  {
+    "id": "core-loot",
+    "file": "docs/examples/core-loot.yaml",
+    "template": "templates/YAML Templates/Strict Loot Template.md",
+    "type": "loot",
+    "midi": false,
+    "intent": "A free/core loot import. Preserve the complete description; it does not automatically create source-specific activities or effects.",
+    "prerequisite": "5e Item Importer. Activity Importer is not required for this example.",
+    "expectedNames": [
+      "Ruby"
+    ],
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "loot"
+      }
+    ]
+  },
+  {
+    "id": "core-spell",
+    "file": "docs/examples/core-spell.yaml",
+    "template": "templates/YAML Templates/Strict Spell Template.md",
+    "type": "spell",
+    "midi": false,
+    "intent": "A free/core spell import. Preserve the complete description; it does not automatically create source-specific activities or effects.",
+    "prerequisite": "5e Item Importer. Activity Importer is not required for this example.",
+    "expectedNames": [
+      "Magic Missile"
+    ],
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "spell"
+      }
+    ]
+  },
+  {
+    "id": "full-native-weapon",
+    "file": "docs/examples/full-native-weapon.yaml",
+    "type": "weapon",
+    "midi": false,
+    "intent": "A complete native item with two authored activities, shared parent-item charges and a passive ward.",
+    "prerequisite": "Both importers; equip and attune the weapon to use its passive ward.",
+    "expectedNames": [
+      "Sentinel's Edge"
+    ],
+    "attachments": 3,
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "weapon"
+      },
+      {
+        "path": "0.built.system.magicalBonus",
+        "value": "1"
+      },
+      {
+        "path": "0.built.system.uses.max",
+        "value": 3
+      },
+      {
+        "path": "0.built.system.damage.base.number",
+        "value": 1
+      },
+      {
+        "path": "0.built.system.damage.base.types",
+        "value": [
+          "slashing"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "full-midi-weapon",
+    "file": "docs/examples/full-midi-weapon.yaml",
+    "type": "weapon",
+    "midi": true,
+    "intent": "Tempest's Oath: five activities, six shared charges, a hidden MIDI save follow-up, an applied prone effect and a passive AC ward.",
+    "prerequisite": "Both importers and MIDI-QOL. Check module automation settings and token targets. End the prone effect when the creature stands; the catalog has not tested this combat sequence.",
+    "expectedNames": [
+      "Tempest's Oath"
+    ],
+    "attachments": 6,
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "weapon"
+      },
+      {
+        "path": "0.built.system.magicalBonus",
+        "value": "2"
+      },
+      {
+        "path": "0.built.system.uses.max",
+        "value": 6
+      }
+    ]
+  }
+]

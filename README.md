@@ -1196,3 +1196,21 @@ For licensing inquiries or permission slips:
 [⬆ Back to Top](#5e-item-importer)
 
 </div>
+
+
+## Explicit YAML v2
+
+The [field coverage reference](docs/explicit-yaml-v2.md) documents native D&D5e 5.3.3 controls, stored inactive values, formula-preserving exports, DAMAGE_DATA and compatibility aliases. Full templates show the complete controls; existing compact YAML remains accepted.
+
+## Native field catalog
+
+The [native field catalog guide](docs/native-field-catalog.md) explains the read-only MCP field queries, value probes, YAML coverage annotations, and offline reference/version-comparison tools. Discovery includes catalog-only native types without adding new import support.
+
+## MIDI field catalog
+
+The [MIDI field catalog guide](docs/midi-field-catalog.md) covers the optional layer:midi selection, attributed schema differences, unschematized flags, configuration dependencies and separate YAML support stages. New discovery does not add parser or live export support.
+
+
+## Explicit template authoring
+
+Use the [authoring guide](docs/template-authoring.md) to select references, distinguish creation from preservation, and validate the result. The [concrete examples](docs/examples/README.md) state their destination and dependencies. Import validation and gameplay verification are separate.

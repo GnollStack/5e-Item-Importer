@@ -6,7 +6,7 @@
  */
 
 export const ITEM_YAML_SCHEMA_KEY = "SCHEMA_VERSION";
-export const ITEM_YAML_SCHEMA_VERSION = 1;
+export const ITEM_YAML_SCHEMA_VERSION = 2;
 
 const LEGACY_SCHEMA_KEYS = ["Schema Version", "schemaVersion", "schema_version"];
 const ITEM_ROOT_KEYS = [

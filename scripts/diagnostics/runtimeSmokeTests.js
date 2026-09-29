@@ -148,7 +148,7 @@ export async function runRuntimeSmokeTests() {
         await parsed?.item?.buildFoundryData?.({ deterministicIcons: true });
         const foundryData = parsed?.item?.toJSON?.().foundryData;
         check("runtime generated weapon data", foundryData?.system?.type?.baseItem === "longsword"
-            && foundryData?.system?.magicalBonus === 1, {
+            && foundryData?.system?.magicalBonus === "1", {
             baseItem: foundryData?.system?.type?.baseItem ?? null,
             magicalBonus: foundryData?.system?.magicalBonus ?? null
         });

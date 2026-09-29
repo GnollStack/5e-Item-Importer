@@ -1,0 +1,77 @@
+{
+  "verifiedAt": "2026-09-14T03:22:21Z",
+  "target": {
+    "foundry": "14.367",
+    "dnd5e": "5.3.3",
+    "itemImporter": "14.1.2",
+    "activityImporter": "14.1.2"
+  },
+  "scope": "Tighten full LLM reference templates for the existing seven Item roots, eleven Activity roots and Effects; preserve legacy parser support and module independence.",
+  "changes": [
+    "Cast spell level, Summon temporary HP, Forward activation and Cast/Transform measured-template prompts are in the main templates.",
+    "Main Activity references use canonical override names, canonical Check mappings and canonical Transform CUSTOM OPTIONS; conflicting legacy toggles are removed.",
+    "Formula, decimal, nullable, typed effect-value, list and inactive-setting guidance is reconciled with current parser behavior.",
+    "Item references use canonical Consumable Magic Bonus, omit unsupported Loot Equipped and document fixed Container quantity and unsupported Tool proficiency 1.5.",
+    "Compact activity/effect examples use canonical range, duration, change-type and status-list labels.",
+    "Source-only completeness checks run automatically in the existing explicit YAML suite; they check YAML structures rather than prose mentions."
+  ],
+  "verification": {
+    "offlineExplicitYaml": {
+      "item": {
+        "passed": 146,
+        "failed": 0
+      },
+      "activity": {
+        "passed": 108,
+        "failed": 0
+      },
+      "includesCompleteness": true
+    },
+    "completeness": {
+      "itemTemplates": {
+        "passed": 7,
+        "failed": 0,
+        "declaredLocations": 343
+      },
+      "activityEffectTemplates": {
+        "passed": 24,
+        "failed": 0,
+        "declaredMappingEntries": 802
+      },
+      "syntheticRegressions": {
+        "passed": 13,
+        "failed": 0
+      },
+      "helperParity": {
+        "files": 9,
+        "passed": true
+      }
+    },
+    "liveMcp": {
+      "item": {
+        "passed": 187,
+        "failed": 0,
+        "warnings": 0
+      },
+      "activity": {
+        "passed": 256,
+        "failed": 0,
+        "warnings": 0
+      },
+      "worldDocumentCountsUnchanged": true,
+      "worldDocumentsCreated": 0
+    },
+    "installedSync": true
+  },
+  "documentedAlternatives": [
+    "An adjacent, parsed commented RECOVERY entry documents the optional empty list shape.",
+    "Complete named Active Effect start fields represent the object alternative to mutually exclusive Start: null.",
+    "Container quantity is fixed at one by the current builder and omitted by canonical export."
+  ],
+  "limits": [
+    "Completeness covers current declared importer mappings; it does not establish support for every native field, every enum combination, or unreviewed sheet behavior.",
+    "No new Item/Activity types, parser features, third-party automation or platform upgrades.",
+    "Live tests ran with both importers and existing MIDI-QOL/DAE integrations active.",
+    "Existing native field catalog snapshots remain historical captures; current MCP queries reflect the corrected Tool proficiency mapping."
+  ]
+}

@@ -1,0 +1,420 @@
+SCHEMA_VERSION: 2
+WEAPON:
+  SOURCE:
+    Custom: Homebrew - MIDI catalog test item
+    Rules: "2024"
+  ITEM:
+    Name: Tempest's Oath
+    Identifier: tempests-oath
+    Rarity: veryRare
+    Weapon Type: martialM
+    Base Weapon: longsword
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+    Equipped: true
+  COST_AND_WEIGHT:
+    Price Value: 18000
+    Price Denomination: gp
+    Weight Value: 3
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+    Versatile: true
+  ATTUNEMENT:
+    Attunement: required
+    Attuned: true
+    Magic Bonus: "2"
+  PROFICIENCY:
+    Proficient: Automatic
+  RANGE:
+    Reach: 5
+    Range Units: ft
+  DAMAGE:
+    DAMAGE_DATA:
+      Dice Count: 1
+      Die Denomination: 8
+      Bonus: ""
+      Damage Types:
+        - slashing
+      Custom Enabled: false
+      Custom Formula: ""
+      Scaling Mode: none
+      Scaling Dice Count: 0
+      Scaling Formula: ""
+  VERSATILE_DAMAGE:
+    DAMAGE_DATA:
+      Dice Count: 1
+      Die Denomination: 10
+      Bonus: ""
+      Damage Types:
+        - slashing
+      Custom Enabled: false
+      Custom Formula: ""
+      Scaling Mode: none
+      Scaling Dice Count: 0
+      Scaling Formula: ""
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 6
+  RECOVERY:
+    - Period: lr
+      Type: recoverAll
+  DESCRIPTION:
+    Description: |
+      <p><strong>Weapon (longsword), very rare (requires attunement)</strong></p>
+      <p>Blue-white lightning coils beneath the surface of this dark steel blade.
+      You gain a +2 bonus to attack and damage rolls made with this magic weapon.
+      Each hit deals an additional 1d6 lightning damage. While equipped and attuned,
+      its Stormward grants you a +1 bonus to AC.</p>
+      <p><strong>Charges.</strong> The sword has 6 charges and regains all expended
+      charges when you finish a long rest. Its abilities share this pool.</p>
+      <p><strong>Stormsteel Strike.</strong> Make one attack with the sword,
+      dealing its normal weapon damage plus 1d6 lightning damage on a hit.</p>
+      <p><strong>Thunderous Strike (1 charge).</strong> As an action, expend
+      1 charge and make one attack with the sword. On a hit, it deals its normal
+      damage plus 1d6 lightning and 2d6 thunder damage. The creature hit must
+      also succeed on a DC 15 Strength saving throw or fall prone. This save is
+      handled by the hidden Storm Impact follow-up activity. A creature can
+      end the prone condition by standing normally.</p>
+      <p><strong>Call the Storm (2 charges).</strong> As an action, expend
+      2 charges and choose a point within 60 feet. Hostile creatures in a
+      15-foot-radius sphere centered there make a DC 15 Dexterity saving throw,
+      taking 4d6 lightning damage on a failed save, or half as much on a success.</p>
+      <p><strong>Stormguard (1 charge).</strong> As a bonus action, expend
+      1 charge to gain 2d6 + 4 temporary hit points. These follow the normal
+      temporary hit point rules and do not stack with existing temporary hit points.</p>
+  UNIDENTIFIED_DESCRIPTION:
+    Unidentified Name: Storm-Etched Longsword
+    Unidentified Description: |
+      <p>A dark longsword etched with branching silver lines.
+      Its pommel hums quietly before a thunderstorm.</p>
+  effects:
+    - DETAILS:
+        Name: Stormward
+        Effect Type: base
+        Effect Suspended: false
+        Apply Effect to Actor: true
+        Status Conditions: []
+      EFFECT_DESCRIPTION:
+        Effect Description: <p>While this weapon is equipped and attuned, gain +1 AC.</p>
+      DURATION:
+        Value: null
+        Units: seconds
+      CHANGES:
+        - Attribute Key: system.attributes.ac.bonus
+          Change Type: add
+          Change Phase: initial
+          Value: 1
+          Priority: 20
+  Activities:
+    - ACTIVITY_ATTACK:
+        ACTIVITY:
+          Name: Stormsteel Strike
+        CHAT_FLAVOR:
+          Chat Description: <p>[[lookup @name]]{The wielder} strikes with a blade wreathed in lightning.</p>
+        VISIBILITY:
+          Require Magic: true
+          Require Identification: true
+          Require Attunement: true
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: action
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Concentration: false
+        CONSUMPTION: []
+        RANGE:
+          Override Range: true
+          Range Units: ft
+          Range Value: 5
+        TARGETS:
+          Override Target: true
+          Target Type: creatureOrObject
+          Target Amount: 1
+          Choose Targets: true
+        ATTACK_DETAILS:
+          Attack Ability: str
+          Flat To Hit: false
+          Critical Threshold: 20
+        ATTACK_DAMAGE:
+          Include Base Damage: true
+          DAMAGE_PARTS:
+            - DAMAGE_DATA:
+                Dice Count: 1
+                Die Denomination: 6
+                Bonus: ""
+                Damage Types:
+                  - lightning
+                Custom Enabled: false
+                Custom Formula: ""
+                Scaling Mode: none
+                Scaling Dice Count: 0
+                Scaling Formula: ""
+        MIDI CONDITIONS:
+          Identifier: stormsteel-strike
+          Display Activity Name: true
+          Magic Damage: true
+          Target Confirmation: always
+          Use Other Activity: none
+          Trigger Activity: none
+          Apply Convenient Effects: none
+        MIDI ATTACK:
+          Attack Roll Per Target: default
+          Fumble Threshold: 1
+    - ACTIVITY_ATTACK:
+        ACTIVITY:
+          Name: Thunderous Strike
+        CHAT_FLAVOR:
+          Chat Description: >-
+            <p>[[lookup @name]]{The wielder} expends a charge, releasing a thunderclap on
+            impact.</p>
+        VISIBILITY:
+          Require Magic: true
+          Require Identification: true
+          Require Attunement: true
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: action
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Concentration: false
+        CONSUMPTION:
+          - Consumption Type: itemUses
+            Amount: "1"
+            Scaling Mode: none
+        RANGE:
+          Override Range: true
+          Range Units: ft
+          Range Value: 5
+        TARGETS:
+          Override Target: true
+          Target Type: creature
+          Target Amount: 1
+          Choose Targets: true
+        ATTACK_DETAILS:
+          Attack Ability: str
+          Flat To Hit: false
+          Critical Threshold: 20
+        ATTACK_DAMAGE:
+          Include Base Damage: true
+          DAMAGE_PARTS:
+            - DAMAGE_DATA:
+                Dice Count: 1
+                Die Denomination: 6
+                Bonus: ""
+                Damage Types:
+                  - lightning
+                Custom Enabled: false
+                Custom Formula: ""
+                Scaling Mode: none
+                Scaling Dice Count: 0
+                Scaling Formula: ""
+            - DAMAGE_DATA:
+                Dice Count: 2
+                Die Denomination: 6
+                Bonus: ""
+                Damage Types:
+                  - thunder
+                Custom Enabled: false
+                Custom Formula: ""
+                Scaling Mode: none
+                Scaling Dice Count: 0
+                Scaling Formula: ""
+        MIDI CONDITIONS:
+          Identifier: thunderous-strike
+          Display Activity Name: true
+          Magic Damage: true
+          Auto Consume: false
+          Force Consume Dialog: always
+          Target Confirmation: always
+          Use Other Activity: none
+          Trigger Activity: storm-impact
+          Trigger Targets: hitTargets
+          Roll As: self
+          Trigger Consume Resources: false
+          Trigger Configure Dialog: false
+          Apply Convenient Effects: none
+    - ACTIVITY_SAVE:
+        ACTIVITY:
+          Name: Storm Impact
+        CHAT_FLAVOR:
+          Chat Description: >-
+            <p>A creature hit by Thunderous Strike must succeed on a DC 15 Strength save or fall
+            prone.</p>
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: special
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Concentration: false
+        CONSUMPTION: []
+        RANGE:
+          Override Range: true
+          Range Units: ft
+          Range Value: 5
+        TARGETS:
+          Override Target: true
+          Target Type: creature
+          Target Amount: 1
+          Choose Targets: false
+        SAVE_DETAILS:
+          Challenge Ability: str
+          DC Calculation: custom
+          DC Formula: "15"
+        SAVE_DAMAGE:
+          Damage on Save: none
+          DAMAGE_PARTS: []
+        MIDI SAVE FIELDS:
+          Friendly Save: default
+          Magic Effect: true
+        APPLIED_EFFECTS:
+          - DETAILS:
+              Name: Storm Impact - Prone
+              Effect Type: base
+              Effect Suspended: false
+              Apply Effect to Actor: false
+              Status Conditions:
+                - prone
+            EFFECT_DESCRIPTION:
+              Effect Description: >-
+                <p>Knocked prone by Thunderous Strike. End this condition when the creature
+                stands.</p>
+            DURATION:
+              Value: null
+              Units: seconds
+            APPLICATION:
+              Save On Save: false
+            CHANGES: []
+        MIDI CONDITIONS:
+          Identifier: storm-impact
+          Automation Only: true
+          Other Activity Compatible: false
+          Display Activity Name: true
+          Target Confirmation: never
+          Choose Effects: false
+          Toggle Effect: false
+          Use Other Activity: none
+          Trigger Activity: none
+          Apply Convenient Effects: none
+    - ACTIVITY_SAVE:
+        ACTIVITY:
+          Name: Call the Storm
+        CHAT_FLAVOR:
+          Chat Description: <p>[[lookup @name]]{The wielder} calls down a sphere of crackling lightning.</p>
+        BEHAVIOR:
+          Measured Template Prompt: true
+        VISIBILITY:
+          Require Magic: true
+          Require Identification: true
+          Require Attunement: true
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: action
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Concentration: false
+        CONSUMPTION:
+          - Consumption Type: itemUses
+            Amount: "2"
+            Scaling Mode: none
+        RANGE:
+          Override Range: true
+          Range Units: ft
+          Range Value: 60
+        TARGETS:
+          Override Target: true
+          Target Type: enemy
+          Choose Targets: false
+          Template Type: sphere
+          Template Count: "1"
+          Template Measurement: 15
+          Template Height: 30
+          Template Unit: ft
+        SAVE_DETAILS:
+          Challenge Ability: dex
+          DC Calculation: custom
+          DC Formula: "15"
+        SAVE_DAMAGE:
+          Damage on Save: half
+          DAMAGE_PARTS:
+            - DAMAGE_DATA:
+                Dice Count: 4
+                Die Denomination: 6
+                Bonus: ""
+                Damage Types:
+                  - lightning
+                Custom Enabled: false
+                Custom Formula: ""
+                Scaling Mode: none
+                Scaling Dice Count: 0
+                Scaling Formula: ""
+        MIDI SAVE FIELDS:
+          Friendly Save: default
+          Magic Effect: true
+        MIDI CONDITIONS:
+          Identifier: call-the-storm
+          Display Activity Name: true
+          Magic Damage: true
+          Auto Consume: false
+          Force Consume Dialog: always
+          Target Confirmation: always
+          AoE Target Type: enemy
+          Target on Template Draw: alwaysIgnoreDefeated
+          Use Other Activity: none
+          Trigger Activity: none
+          Apply Convenient Effects: none
+    - ACTIVITY_HEAL:
+        ACTIVITY:
+          Name: Stormguard
+        CHAT_FLAVOR:
+          Chat Description: >-
+            <p>A shell of stormlight surrounds [[lookup @name]]{the wielder}, granting temporary hit
+            points.</p>
+        VISIBILITY:
+          Require Magic: true
+          Require Identification: true
+          Require Attunement: true
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: bonus
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Concentration: false
+        CONSUMPTION:
+          - Consumption Type: itemUses
+            Amount: "1"
+            Scaling Mode: none
+        RANGE:
+          Override Range: true
+          Range Units: self
+        TARGETS:
+          Override Target: true
+          Target Type: self
+          Target Amount: 1
+          Choose Targets: false
+        HEALING:
+          DAMAGE_DATA:
+            Dice Count: 2
+            Die Denomination: 6
+            Bonus: "4"
+            Damage Types:
+              - temphp
+            Custom Enabled: false
+            Custom Formula: ""
+            Scaling Mode: none
+            Scaling Dice Count: 0
+            Scaling Formula: ""
+        MIDI CONDITIONS:
+          Identifier: stormguard
+          Display Activity Name: true
+          Auto Consume: false
+          Force Consume Dialog: always
+          Target Confirmation: never
+          Trigger Activity: none
+          Apply Convenient Effects: none

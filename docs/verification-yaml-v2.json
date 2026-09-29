@@ -1,0 +1,102 @@
+{
+  "verifiedAt": "2026-09-13T21:00:04Z",
+  "target": {
+    "foundry": "14.367",
+    "dnd5e": "5.3.3"
+  },
+  "live": {
+    "item": {
+      "passed": 185,
+      "failed": 0
+    },
+    "activity": {
+      "passed": 256,
+      "failed": 0
+    }
+  },
+  "offline": {
+    "item": {
+      "passed": 137,
+      "failed": 0
+    },
+    "activity": {
+      "passed": 84,
+      "failed": 0
+    }
+  },
+  "controlled": {
+    "item": {
+      "success": true,
+      "steps": 12,
+      "itemTypes": 7,
+      "pairedInlineAttachments": true,
+      "deletedItems": 8,
+      "remainingFixtures": 0
+    },
+    "activity": {
+      "success": true,
+      "steps": 28,
+      "activityTypes": 11,
+      "effectDurationUnits": 8,
+      "deletedItems": 2,
+      "remainingFixtures": 0
+    }
+  },
+  "integrations": {
+    "midiQol": "14.0.9",
+    "dae": "14.0.12",
+    "bothImportersActive": true
+  },
+  "limitations": [
+    "Native activity round-trip fixtures explicitly project out named MIDI extensions added by the active module. Strict production serialization continues to reject unsupported third-party persisted data.",
+    "Existing MIDI/DAE import fixtures and template validation pass; expanded third-party export is deferred."
+  ],
+  "worldCountsUnchanged": {
+    "actors": 20,
+    "items": 29,
+    "scenes": 2,
+    "activeSceneTokens": 7
+  },
+  "stormglassFollowup": {
+    "date": "2026-09-13",
+    "fixture": "tests/fixtures/stormglass-requiem.yaml",
+    "liveItem": {
+      "passed": 187,
+      "failed": 0,
+      "warnings": []
+    },
+    "offlineItem": {
+      "passed": 139,
+      "failed": 0
+    },
+    "controlled": {
+      "success": true,
+      "activityCount": 2,
+      "effectCount": 2,
+      "linksValid": true,
+      "comparison": {
+        "matches": 50,
+        "mismatches": 0,
+        "missing": 0,
+        "extra": 0
+      },
+      "issues": [],
+      "deletedItems": 2,
+      "remainingFixtures": 0,
+      "counts": {
+        "before": {
+          "actors": 20,
+          "items": 30,
+          "scenes": 2,
+          "activeSceneTokens": 7
+        },
+        "after": {
+          "actors": 20,
+          "items": 30,
+          "scenes": 2,
+          "activeSceneTokens": 7
+        }
+      }
+    }
+  }
+}

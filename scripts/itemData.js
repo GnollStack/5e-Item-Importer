@@ -4,6 +4,8 @@
  */
 
 import jsyaml from './vendor/js-yaml.mjs';
+import { applyExplicitSource } from './explicitYamlFields.js';
+import { preparedState } from './itemExplicitFields.js';
 import { ItemUtils } from "./itemUtils.js";
 import {
   MODULE_NAME,
@@ -282,14 +284,14 @@ export class ItemData {
     }
 
     // Equipped state (weapon, equipment, consumable, tool only — not loot/container/spell)
-    const equippableTypes = ["weapon", "equipment", "consumable", "tool"];
+    const equippableTypes = ["weapon", "equipment", "consumable", "tool", "container"];
     if (equippableTypes.includes(this.type) && this.equipped) {
       this.setProperty("system.equipped", true);
       ItemUtils.log("Equipped set to true");
     }
 
     // Attunement - Uses the string directly ("required", "optional", or "")
-    if (this.type !== "spell") {
+    if (equippableTypes.includes(this.type)) {
       if (this.attunement === "none") {
         this.setProperty("system.attunement", "");
       } else {
@@ -301,10 +303,10 @@ export class ItemData {
     }
 
     // Try to find matching icon using priority: Semantic → Compendium → System
-    let icon = null;
+    let icon = this.explicitSource?.img || null;
 
     // 1. First try semantic random icons (if enabled)
-    switch (this.type) {
+    switch (icon ? null : this.type) {
       case "weapon":
         icon = await getRandomWeaponIcon(
           this.baseWeapon,
@@ -420,6 +422,19 @@ export class ItemData {
     // Custom properties are module-owned and restricted to registered IDs.
     await this.#applyCustomPropertyFlags(options);
 
+    applyExplicitSource(this.#dnd5e, this.explicitSource);
+    if (this.explicitPropertyStates) {
+      const properties = new Set(this.#dnd5e.system.properties ?? []);
+      for (const [code,enabled] of Object.entries(this.explicitPropertyStates)) {
+        if (enabled) properties.add(code); else properties.delete(code);
+      }
+      this.#dnd5e.system.properties = [...properties];
+    }
+    if (this.type === "tool" && this.toolFocus !== undefined) {
+      const properties = new Set(this.#dnd5e.system.properties ?? []);
+      if (this.toolFocus) properties.add("foc"); else properties.delete("foc");
+      this.#dnd5e.system.properties = properties;
+    }
     ItemUtils.log("Foundry data built", this.#dnd5e);
   }
 
@@ -646,7 +661,7 @@ export class ItemData {
 
     // Reload amount
     if (this.reloadAmount !== null && this.reloadAmount !== undefined) {
-      this.setProperty("system.reload", this.reloadAmount);
+      this.setProperty("flags.5e-item-importer.reloadAmount", this.reloadAmount);
       ItemUtils.log("Reload amount set to", this.reloadAmount);
     }
 
@@ -1213,7 +1228,7 @@ export class ItemData {
     // Preparation
     const preparationMethod = this.preparationMode === "prepared" ? "spell" : (this.preparationMode || "spell");
     this.setProperty("system.method", preparationMethod);
-    this.setProperty("system.prepared", this.prepared ? 1 : 0);
+    this.setProperty("system.prepared", preparedState(this.prepared));
     ItemUtils.log("Preparation set", {
       method: preparationMethod,
       prepared: this.prepared
@@ -1222,7 +1237,7 @@ export class ItemData {
     // Activation
     if (this.activationType) {
       this.setProperty("system.activation.type", this.activationType);
-      this.setProperty("system.activation.value", this.activationValue || 1);
+      this.setProperty("system.activation.value", this.activationValue ?? 1);
 
       if (this.activationCondition) {
         this.setProperty("system.activation.condition", this.activationCondition);
@@ -1636,6 +1651,7 @@ export class ItemData {
       let preparedActivityResults = options.parsedActivityResults ?? null;
       let preParsedActivityIssues = [];
       let preParsedActivityBlockingIssues = [];
+      let replaceGeneratedBaseline = false;
       if (this.pendingActivities.length > 0 && this.shouldReplaceGeneratedDefaultActivities()) {
         const prepared = await this.collectActivityResults(preparedActivityResults);
         if (prepared.results) {
@@ -1676,7 +1692,8 @@ export class ItemData {
             const successfulActivityTypes = ItemData.getSuccessfulActivityTypes(suppressionResults);
             if (ItemData.preventGeneratedDefaultActivity(itemData, successfulActivityTypes)) {
               const defaultType = ItemData.DEFAULT_ACTIVITY_BY_ITEM_TYPE[itemData.type];
-              ItemUtils.log(`Preventing generated default ${defaultType} activity because the complete inline attachment plan passed preflight.`);
+              replaceGeneratedBaseline = operation === "create";
+              ItemUtils.log(`Replacing the generated default ${defaultType} activity after the complete inline attachment plan succeeds.`);
             }
           } else {
             ItemUtils.warn("Keeping the generated default activity because the inline attachment plan did not pass preflight.");
@@ -1725,6 +1742,11 @@ export class ItemData {
       if (createdItem) {
         ItemUtils.log(`Item ${operation === "create" ? "created" : operation} successfully`, createdItem);
 
+        // 5.3.3 also generates defaults in _preCreate, after migration checks.
+        // Capture only a sole baseline on a fresh Item whose input had none.
+        const baseline = replaceGeneratedBaseline
+          ? ItemData.captureGeneratedBaseline(itemData, createdItem) : null;
+
         // Apply inline activities/effects if present
         if (this.pendingActivities.length > 0) {
           if (cancellationRequested()) {
@@ -1745,6 +1767,10 @@ export class ItemData {
               preParsedActivityIssues,
               preParsedActivityBlockingIssues
             );
+          }
+          if (baseline && activityResults.issues.length === 0) {
+            const cleanupIssue = await ItemData.removeReplacedBaseline(createdItem, baseline, activityResults);
+            if (cleanupIssue) activityResults.issues.push(cleanupIssue);
           }
           for (const issue of activityResults.issues) {
             ItemUtils.warn(`Activity/Effect issue: ${issue}`);
@@ -1915,6 +1941,7 @@ export class ItemData {
    * dnd5e creates generated weapon/tool activities as a migration for
    * legacy-looking item data; setting the current system version prevents that
    * migration without sending null deletion markers through ActivityField.
+   * D&D5e 5.3.3 may still generate a baseline later in _preCreate.
    *
    * @param {object} itemData - Candidate item source data
    * @returns {object}
@@ -1932,17 +1959,52 @@ export class ItemData {
   }
 
   /**
-   * Suppress dnd5e's generated baseline activity when inline activity data is
-   * already replacing that primary activity.
+   * Prepare a current source when inline data replaces the primary activity.
+   * Fresh imports separately capture and remove _preCreate's baseline only
+   * after the authored replacement has been successfully attached.
    *
    * @param {object} itemData - Candidate item source data
    * @param {Set<string>} parsedActivityTypes - Successfully parsed inline activity types
-   * @returns {boolean} True if source data was marked to skip baseline generation
+   * @returns {boolean} True if source data was marked for baseline replacement
    */
   static preventGeneratedDefaultActivity(itemData, parsedActivityTypes) {
     if (!ItemData.shouldSuppressGeneratedDefaultActivity(itemData?.type, parsedActivityTypes)) return false;
     ItemData.markAsCurrentDnd5eSource(itemData);
     return true;
+  }
+
+  /** Capture only the native baseline generated for this fresh import. */
+  static captureGeneratedBaseline(input, createdItem) {
+    const expectedType = ItemData.DEFAULT_ACTIVITY_BY_ITEM_TYPE[input.type];
+    if (!expectedType || Object.keys(input.system?.activities ?? {}).length) return null;
+    const activities = Array.from(createdItem.system?.activities?.values?.() ?? []);
+    if (activities.length !== 1 || activities[0].type !== expectedType) return null;
+    const activity = activities[0];
+    return {
+      id: activity.id ?? activity._id,
+      type: expectedType,
+      signature: ItemData.stableSignature(activity._source ?? activity.toObject?.() ?? activity)
+    };
+  }
+
+  /** Remove a captured baseline only after its authored replacement exists. */
+  static async removeReplacedBaseline(item, baseline, result) {
+    if (!baseline || result.issues?.length) return null;
+    const replaced = result.createdActivityIds?.some(id => id !== baseline.id
+      && item.system.activities.get(id)?.type === baseline.type);
+    if (!replaced) return null;
+    const activity = item.system.activities.get(baseline.id);
+    if (!activity) return null;
+    if (ItemData.stableSignature(activity._source ?? activity.toObject?.() ?? activity) !== baseline.signature) {
+      return "Kept the generated default activity because it changed during the inline import.";
+    }
+    try {
+      await item.deleteActivity(baseline.id);
+      if (item.system.activities.has(baseline.id)) return "The authored activities imported, but their generated default activity could not be removed.";
+    } catch (error) {
+      if (item.system.activities.has(baseline.id)) return "The authored activities imported, but removing their generated default activity failed: " + error.message;
+    }
+    return null;
   }
 
   /**
@@ -2802,6 +2864,12 @@ export class ItemData {
           if (typeof createdItem.system.activities?.has !== "function"
             || !createdItem.system.activities.has(activityId)) {
             throw new Error("dnd5e did not create the required activity document");
+          }
+          // dnd5e appends a fresh sort value in createActivity, including when YAML supplied zero.
+          if (Number.isInteger(activityData.sort)) {
+            const storedSort = () => createdItem.system.activities.get(activityId)?._source?.sort ?? createdItem.system.activities.get(activityId)?.sort;
+            if (storedSort() !== activityData.sort) await createdItem.updateActivity(activityId, { sort: activityData.sort });
+            if (storedSort() !== activityData.sort) throw new Error("dnd5e did not retain the imported activity sort order");
           }
           addedActivities++;
           addedEffects += effectsToCreate.length;

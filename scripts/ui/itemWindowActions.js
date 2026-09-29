@@ -734,7 +734,7 @@ export async function importItems() {
             if (wantsComparison) {
                 try {
                     const expectedProps = extractExpectedItemProps(parseResult);
-                    const actualProps = extractActualItemProps(result.item);
+                    const actualProps = extractActualItemProps(result.item, parseResult);
                     const diffReport = compareProperties(expectedProps, actualProps);
                     batchComparisons.push({
                         label: parseResult.item.name || `Item ${i + 1}`,
@@ -858,7 +858,7 @@ export async function importItems() {
  */
 async function showItemComparison(parseResult, createdItem) {
     const expectedProps = extractExpectedItemProps(parseResult);
-    const actualProps = extractActualItemProps(createdItem);
+    const actualProps = extractActualItemProps(createdItem, parseResult);
     const diffReport = compareProperties(expectedProps, actualProps);
 
     const comparisons = [{

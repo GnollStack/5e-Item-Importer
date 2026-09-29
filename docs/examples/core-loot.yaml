@@ -1,0 +1,19 @@
+SCHEMA_VERSION: 2
+LOOT:
+  ITEM:
+    Name: Ruby
+    Rarity: common
+    Loot Type: gem
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+  COST_AND_WEIGHT:
+    Price Value: 100
+    Price Denomination: gp
+    Weight Value: 0
+    Weight Units: lb
+  PROPERTIES:
+    Magical: false
+  DESCRIPTION:
+    Description: |
+      A clear red gemstone about one inch across, suitable as treasure or a spell component.

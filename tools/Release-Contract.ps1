@@ -33,7 +33,25 @@ function Assert-ImporterReleaseManifest {
         throw "$($Manifest.id) must recommend exactly one $companionId companion."
     }
     $recommendation = $null
-    $urls = @($Manifest.manifest, $Manifest.download)
+    $urls = @($Manifest.manifest)
+    $download = $Manifest.PSObject.Properties["download"]
+    if ($Manifest.id -eq "5e-activity-importer") {
+        $protection = $Manifest.PSObject.Properties["protected"]
+        if ($null -eq $protection -or $protection.Value -isnot [bool] -or $protection.Value -ne $true) {
+            throw "Hosted premium releases must declare protected: true."
+        }
+        if ([string]$Manifest.manifest -cne "https://r2.foundryvtt.com/packages-public/$($Manifest.id)/module.json") {
+            throw "Hosted premium releases must use the module-specific Foundry manifest URL."
+        }
+        if ($null -ne $download) {
+            throw "Hosted premium releases must omit the download field."
+        }
+    } else {
+        if ($null -eq $download -or [string]::IsNullOrWhiteSpace([string]$download.Value)) {
+            throw "Free releases must declare a download URL."
+        }
+        $urls += $download.Value
+    }
     if ($recommendations.Count -eq 1) {
         $recommendation = $recommendations[0]
         if ($recommendation.type -ne "module") {
@@ -43,8 +61,11 @@ function Assert-ImporterReleaseManifest {
         if ($minimum -notmatch '^\d+\.\d+\.\d+$' -or [version]$minimum -gt [version]$releaseVersion) {
             throw "$($Manifest.id) companion minimum must be a release version no newer than $releaseVersion."
         }
-        if ([string]$recommendation.compatibility.verified -cne $releaseVersion) {
-            throw "$($Manifest.id) must verify companion version $releaseVersion for this paired release."
+        # Recorded verification is evidence, not a value to advance with every package patch.
+        $verified = [string]$recommendation.compatibility.verified
+        if ($verified -notmatch '^\d+\.\d+\.\d+$' -or
+            [version]$verified -lt [version]$minimum -or [version]$verified -gt [version]$releaseVersion) {
+            throw "$($Manifest.id) companion verified version must be between its minimum and $releaseVersion."
         }
         if ([string]::IsNullOrWhiteSpace([string]$recommendation.reason)) {
             throw "$($Manifest.id) companion recommendation must explain its optional features."
@@ -61,8 +82,8 @@ function Assert-ImporterReleaseManifest {
             throw "$($Manifest.id) release and companion URLs must be absolute HTTP(S) URLs."
         }
     }
-    if ([string]$Manifest.download -match '^https://github\.com/.+/releases/' -and
-        [string]$Manifest.download -notmatch "/releases/download/V$([regex]::Escape($releaseVersion))/") {
+    if ($null -ne $download -and [string]$download.Value -match '^https://github\.com/.+/releases/' -and
+        [string]$download.Value -notmatch "/releases/download/V$([regex]::Escape($releaseVersion))/") {
         throw "$($Manifest.id) GitHub download must be pinned to V$releaseVersion."
     }
     return $recommendation
@@ -75,7 +96,7 @@ function Assert-ImporterReleasePair {
     )
     $roots = @((Resolve-Path -LiteralPath $ModuleRoot).Path, (Resolve-Path -LiteralPath $CompanionRoot).Path)
     $manifests = @($roots | ForEach-Object {
-        Get-Content -LiteralPath (Join-Path $_ "module.json") -Raw | ConvertFrom-Json
+        Get-Content -LiteralPath (Join-Path $_ "module.json") -Raw -Encoding UTF8 | ConvertFrom-Json
     })
     # Key by id because a null free-module recommendation has no pipeline output.
     $recommendations = @{}

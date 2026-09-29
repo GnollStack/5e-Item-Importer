@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "Release-Contract.ps1")
 
 $moduleRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$manifest = Get-Content -LiteralPath (Join-Path $moduleRoot "module.json") -Raw | ConvertFrom-Json
+$manifest = Get-Content -LiteralPath (Join-Path $moduleRoot "module.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 if ([string]::IsNullOrWhiteSpace($CompanionPath)) {
     $CompanionPath = Join-Path (Split-Path $moduleRoot -Parent) (Get-ImporterCompanionId $manifest.id)
 }
@@ -69,7 +69,7 @@ foreach ($module in ($pair.Modules | Sort-Object { $_.Manifest.id })) {
     $archivePath = Join-Path $destination "$id.zip"
     $standalonePath = Join-Path $destination "module.json"
     & (Join-Path $module.Root "tools/Verify-Release.ps1") -ArchivePath $archivePath -StandaloneManifestPath $standalonePath | Out-Host
-    $builtManifest = Get-Content -LiteralPath $standalonePath -Raw | ConvertFrom-Json
+    $builtManifest = Get-Content -LiteralPath $standalonePath -Raw -Encoding UTF8 | ConvertFrom-Json
     if (($builtManifest | ConvertTo-Json -Depth 100 -Compress) -cne
         ($module.Manifest | ConvertTo-Json -Depth 100 -Compress)) {
         throw "$id manifest changed during the paired build; rebuild from stable source."

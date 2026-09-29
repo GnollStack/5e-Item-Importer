@@ -1,94 +1,57 @@
-# Strict_Spell_Template_v2.md
+# Strict Spell Item authoring reference
 
-## INSTRUCTIONS
+## Destination and prerequisites
 
-**Free and premium generation modes:**
-- 5e Activity Importer is a forthcoming premium companion, not included with this free release. Use free/core output unless premium output is explicitly requested or companion availability is confirmed.
-- **Free/core (default):** 5e Item Importer is free and works alone. Generate core Item fields and the complete source rules in descriptions. Omit `Activities` and `effects` entirely; description enrichers do not create those mechanics.
-- **Premium/full:** Use this mode only when the user explicitly requests it or confirms that 5e Activity Importer is available. Add only source-defined, supported activities/effects using that premium companion's strict templates. Keep the complete rules in the Item description as well. Activity Importer must be active when importing attachments.
-- If module availability is unspecified, use free/core mode. Merely receiving this template does not establish premium availability. An explicit free/core request takes precedence even when both modules are installed.
-- These mode names are prompt instructions, not YAML fields. Do not emit mode, edition, purchase, or licensing metadata.
-- Loot and Container support passive `effects` only; never emit `Activities` for those types.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 2` and the `SPELL` root.
 
-**How to use this template:**
-- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
-- Begin every YAML document with `SCHEMA_VERSION: 1` before the Item type key.
-- Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
-- For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
+Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-**dnd5e Description Features:**
-- `DESCRIPTION.Description` and `CHAT_FLAVOR.Chat Description` preserve Foundry/dnd5e text features for Foundry to resolve when displayed.
-- You can use dnd5e enrichers such as `[[/damage 1d6 fire average]]`, roll-data formulas such as `@prof` or `@abilities.str.mod`, dynamic lookups such as `[[lookup @name]]{the creature}`, System HTML classes, and pass-through document links such as `@UUID[...]` or `@Embed[...]`.
-- Use stock dnd5e `[[lookup @name]]` text for active narration and chat flavor: sentence start `[[lookup @name]]{The creature} drinks the potion.`; mid-sentence `When [[lookup @name]]{the creature} hits with this weapon...`. This normally resolves to the actor name; the optional Token Name Lookup companion can prefer token aliases at render time without changing item syntax.
-- Keep passive rules text natural. Do not force dynamic name lookups into every description.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 5.3.3 / Foundry 14.367; MIDI annotations, when used, target MIDI-QOL 14.0.9. Package versions and YAML versions are separate.
 
-**Batching multiple items:**
-Combine different item types in one block by stacking top-level keys:
-```text
-SCHEMA_VERSION: 1
-SPELL:
-  ITEM:
-    Name: "Fireball"
-    # additional fields omitted in this batching example
-WEAPON:
-  ITEM:
-    Name: "Staff of Fire"
-    # additional fields omitted in this batching example
-```
-For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```text
-SCHEMA_VERSION: 1
-SPELL:
-  ITEM:
-    Name: "Fireball"
-    # additional fields omitted in this batching example
----
-SCHEMA_VERSION: 1
-SPELL:
-  ITEM:
-    Name: "Lightning Bolt"
-    # additional fields omitted in this batching example
-```
-You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
+## Generate or preserve
 
-**For LLM generation:**
-- Output ONLY the yaml code block. No commentary before or after.
-- Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
-- Booleans: `true` or `false` (lowercase, no quotes).
-- Required scalar fields that do not apply: use the literal string `n/a`.
-- **Omit conditional sections entirely** (e.g., MATERIALS, AREA) when their condition is not met. Do not fill omitted sections with `n/a` values.
-- For functional source-defined mechanics, use the companion Activities/Active Effects workflow below in premium/full mode. For a core Item import without companion support, omit both sections and retain the rules in the description.
-- Do not include template comments (`# ...`) in the final YAML output.
-- Do not omit individual fields from required sections just because their value is `n/a`.
-- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
-- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
+**Create from a description:** include fields needed for the stated mechanics and any explicitly supplied settings. Omit unrelated optional sections. Do not populate every placeholder or copy example bonuses into a different item. Ask for missing information that changes the mechanics or a required reference; use a documented default only when it does not change the source intent. Invent mechanics only when the user explicitly requests homebrew design.
 
-**YAML Syntax Rules (do not violate):**
-- Every key needs a SPACE after the colon: `KEY: value`, never `KEY:value`. js-yaml will reject the file with a confusing "multiline key" error otherwise.
-- Empty arrays are written `KEY: []` and empty mappings `KEY: {}` — both with the space.
-- Indentation is exactly 2 spaces per level. No tabs. No 4-space jumps.
+**Preserve supplied data:** retain every supported supplied value, including stored inactive settings, false, zero, empty collections and documented nulls. Keep the controlling toggle independent. Unsupported values remain a reported limitation; do not silently replace them with a guess.
 
-**Default assumptions when source text is silent:**
-- Ability: `n/a` unless the spell uses a fixed ability override.
-- Preparation Method: `spell`; Prepared: `true` unless explicitly at-will, innate, ritual-only, or pact magic. A normally prepared spell that can also be cast as a ritual keeps `Method: spell`.
-- Components Ritual: `false` unless the spell is ritual-capable; use `true` independently of its preparation method.
-- Material Cost and Supply: finite nonnegative numbers (integers or decimals); use `0` when no cost or tracked supply is specified.
-- Activation Condition: `n/a` unless a trigger or special condition is stated.
-- Duration Concentration: `false` unless concentration is explicitly required.
-- Uses Spent: `0`; Uses Max: `n/a` unless the spell item tracks limited uses outside normal spell slots.
-- RECOVERY: `[]` when no limited-use recovery applies.
-- Chat Description: `n/a` unless special chat flavor is needed.
+**Final output:** one YAML code block, with two-space indentation and a space after each colon. Replace every bracket placeholder and remove template comments. Preserve formulas as quoted strings and descriptions as HTML or plain text. Use native YAML booleans and numbers. Do not add prompt-mode, compatibility-report or licensing keys to YAML. If a required fact is missing, ask before producing final importable YAML.
 
----
+## Reading the reference
+
+| Label | Meaning |
+| --- | --- |
+| Required | Needed for valid input at the indicated location. |
+| Conditionally required | Needed when the stated choice or intended mechanic requires it; distinguish parser rejection from runtime prerequisites. |
+| Optional | May be omitted in newly authored input when no value is supplied. |
+| Context-dependent | Needs a parent Item, actor, accessible document, registry or workflow context. |
+| Compatibility input | An accepted older spelling/representation; use the canonical spelling for new YAML. |
+
+The first YAML block is a **complete field reference**, not a ready-made item to import unchanged. Placeholders describe choices, not default values. Later examples contain concrete values.
+
+Missing, `null`, `false`, `0`, `""`, `[]` and `{}` are distinct. Use `n/a` only for fields that document it as an unset marker. Never use it as a universal substitute for null or empty data. `CHANGES.Value` retains its YAML type, including the literal text `n/a`. Formula syntax acceptance does not establish that referenced variables exist.
+
+For new physical Items, ordinary defaults are quantity 1, identified true, equipped false and zero unspecified price/weight. Omit unsupplied rarity, attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+
+## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 1
+SCHEMA_VERSION: 2
 SPELL:
+  SOURCE:
+    Book: "[text|n/a]"
+    Page: "[text|n/a]"
+    Custom: "[text|n/a]"
+    License: "[text|n/a]"
+    Rules: "[2014|2024|text]"
+    Revision: 1 # Finite number, including decimals; native default 1.
+
   ITEM:
+    Icon: "[filepath|n/a]"
+    Identifier: "[text|n/a]"
+    Sort: 0 # Integer ordering value; preserve an authored zero.
     Name: "[text]"
     Level: "[0|1|2|3|4|5|6|7|8|9]"
-    School: "[abj|con|div|enc|evo|ill|nec|trs]"
+    School: "[abj|con|div|enc|evo|ill|nec|trs|n/a]" # n/a stores an empty school.
     Ability: "[str|dex|con|int|wis|cha|n/a]"
 
   COMPONENTS:
@@ -98,7 +61,7 @@ SPELL:
     Ritual: "[true|false]"
 
   MATERIALS:
-    # (Required only if Material is true)
+    # Used when Material is true; retain all supplied settings when it is false.
     Value: "[text]"
     Cost: "[integer|decimal]"
     Supply: "[integer|decimal]"
@@ -106,50 +69,56 @@ SPELL:
 
   PREPARATION:
     Method: "[atwill|innate|ritual|pact|spell]"
-    Prepared: "[true|false]"
+    Prepared: "[unprepared|prepared|always]"
+    Source Item: "[identifier|n/a]"
 
   ACTIVATION:
     Type: "[action|bonus|reaction|minute|hour|day|special]"
-    Value: "[integer]"
+    Value: "[integer]" # Nonnegative activation cost; preserve when timing hides the count.
     Condition: "[text|n/a]"
 
   RANGE:
+    # Value and Special remain stored for self/touch/spec/any units.
+    Special: "[text|n/a]"
     Units: "[self|touch|spec|any|ft|mi|m|km]"
-    Value: "[integer|n/a]"
+    Value: "[formula|n/a]"
 
   DURATION:
+    # Preserve Value and Special even when the selected unit hides those controls.
+    Special: "[text|n/a]"
     Units: "[inst|spec|turn|round|minute|hour|day|month|year|disp|dstr|perm]"
-    Value: "[integer|n/a]"
+    Value: "[formula|n/a]"
     Concentration: "[true|false]"
 
   TARGETS:
-    Type: "[self|ally|enemy|creature|object|space|creatureOrObject|any|willing]"
-    Count: "[integer|n/a]"
+    Type: "[self|ally|enemy|creature|object|space|creatureOrObject|any|willing|n/a]"
+    Count: "[formula|n/a]"
     Choice: "[true|false]"
     Special: "[text|n/a]"
 
   AREA:
-    # (Required only if spell has an area of effect)
-    Shape: "[cone|cube|cylinder|radius|line|sphere|circle|square|wall]"
-    Size: "[integer]"
+    Stationary: false
+    # Used when Shape selects an area; retain dimensions and booleans with no shape.
+    Shape: "[cone|cube|cylinder|radius|line|sphere|circle|square|wall|n/a]"
+    Size: "[formula|n/a]"
     Units: "[ft|mi|m|km]"
-    Count: "[integer|n/a]"
-    Width: "[integer|n/a]"
-    Height: "[integer|n/a]"
-    Contiguous: "[true|false|n/a]"
+    Count: "[formula|n/a]"
+    Width: "[formula|n/a]"
+    Height: "[formula|n/a]"
+    Contiguous: "[true|false]" # Preserve independently of Shape and Count.
 
   USAGE:
     # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
-    # Uses Max = total number of charges the item can hold.
+    # Uses Max = maximum count or deterministic formula, e.g. "1 + @prof" (no dice).
     # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
     Uses Spent: "[integer|n/a]"
-    Uses Max: "[integer|n/a]"
+    Uses Max: "[integer|formula|n/a]"
 
   # Optional, repeatable. Use [] when there is no recovery.
-  # If Uses Max > 0, replace [] with a list of entries shaped like:
+  # With a positive Uses Max or a formula maximum, replace [] with entries shaped like:
   #   - Period: "[lr|sr|day|dawn|dusk|recharge]"
   #     Type: "[recoverAll|loseAll|formula]"
-  #     Formula: "[text|n/a]"
+  #     Formula: "[formula|n/a]" # Required for Type formula; recharge uses a 2..6 threshold.
   RECOVERY: []
 
   DESCRIPTION:
@@ -162,6 +131,78 @@ SPELL:
 
 ```
 
+## Configuration rules
+
+This is a native Spell Item, not a physical inventory item: rarity, quantity, price, weight and unidentified-description fields are not current spell authoring controls. Use Prepared:unprepared/prepared/always for native 0/1/2 state. COMPONENTS.Ritual is independent of Method; use Method:spell for an ordinary ritual-capable prepared spell. Preserve material cost/supply, consumed state and inactive components independently. Source-specific attacks, saves, healing and effects require companion attachments in full output.
+
+
+## Concrete example
+
+A free/core spell import. Preserve the complete description; it does not automatically create source-specific activities or effects.
+
+5e Item Importer. Activity Importer is not required for this example.
+
+<!-- AUTHORING-EXAMPLE:START -->
+```yaml
+SCHEMA_VERSION: 2
+SPELL:
+  ITEM:
+    Name: Magic Missile
+    Level: 1
+    School: evo
+    Ability: n/a
+  COMPONENTS:
+    Vocal: true
+    Somatic: true
+    Material: false
+    Ritual: false
+  PREPARATION:
+    Method: spell
+    Prepared: true
+  ACTIVATION:
+    Type: action
+    Value: 1
+    Condition: n/a
+  RANGE:
+    Units: ft
+    Value: 120
+  DURATION:
+    Units: inst
+    Value: n/a
+    Concentration: false
+  TARGETS:
+    Type: creature
+    Count: 3
+    Choice: true
+    Special: Up to three creatures; each dart can target the same or a different creature.
+  USAGE:
+    Uses Spent: 0
+    Uses Max: n/a
+  RECOVERY: []
+  DESCRIPTION:
+    Description: >
+      <p>You create three glowing darts of magical force. Each dart hits a creature of your choice
+      that you can see within range and deals [[/damage 1d4 + 1 force]] damage. The darts strike
+      simultaneously, and you can direct them at one creature or several.</p>
+
+      <p><strong>At Higher Levels.</strong> One additional dart is created for each spell slot level
+      above 1.</p>
+  CHAT_FLAVOR:
+    Chat Description: |
+      n/a
+```
+<!-- AUTHORING-EXAMPLE:END -->
+
+The [standalone YAML file](../../docs/examples/core-spell.yaml) matches this block. See [example prerequisites and validation](../../docs/examples/README.md). Examples establish the stated stored data and validation scope; they do not certify every gameplay combination.
+
+## Compatibility and support
+
+Use canonical keys in new YAML. Legacy aliases in the reference tables are compatibility input; never combine conflicting aliases with canonical fields. Native schema choices, sheet choices and importer coverage can differ. Unknown fields are not generic YAML extension points.
+
+Full Item export needs companion serializers for its attachments; unsupported attachments can block full export. Keep source rules in descriptions for manual mechanics.
+
+## Detailed field and text reference
+
 ## OPTIONAL ACTIVITIES AND ACTIVE EFFECTS
 
 The core Item fields and description import without `5e-activity-importer`. Description enrichers create clickable text; they do not construct attack, saving throw, damage, healing, or condition activities. The importer does not generate those mechanics from strict YAML description text. Some item types receive generic system defaults, which do not reproduce arbitrary source rules.
@@ -173,7 +214,9 @@ In free/core mode, or when companion support is unavailable or unspecified, omit
 Append supported sections at the same indentation as `DESCRIPTION` and `CHAT_FLAVOR`, beneath the Item type key:
 - `Activities` is an array. Each entry contains exactly one `ACTIVITY_*` key and the corresponding activity body. Multiple activities of the same type are separate array entries; do not insert `---` inside this array.
 - `effects` is an array of effect bodies beginning with `DETAILS`, without an `EFFECT:` wrapper. Use these for passive item effects. Effects applied by an activity belong in that activity's `APPLIED_EFFECTS` array instead; do not duplicate them here.
-- For each effect on Foundry 14, populate at most one duration unit (Seconds, Rounds, or Turns), using `n/a` for the other units.
+- For effects on Foundry 14, use DURATION.Value and DURATION.Units; units may be years, months, days, hours, minutes, seconds, rounds, or turns. Use a nonnegative integer Value, or null for no finite duration.
+
+Use canonical string `Change Type` and a status list. Preserve the YAML type of each `CHANGES[].Value`: a number, boolean, string, list, mapping, or null must match the intended change. Do not quote everything. Legacy numeric `Change Mode` and separate duration labels remain accepted input. Optional Activity ID and Effect ID values must contain exactly 16 alphanumeric characters; omit them when stable references are unnecessary.
 
 The completed examples below demonstrate array nesting for a passive +1 AC ward and an action that deals 1d6 fire damage. They are illustrative only: include them only if the source actually grants those mechanics, and use the full matching companion template for the requested activity type.
 
@@ -181,24 +224,20 @@ The completed examples below demonstrate array nesting for a passive +1 AC ward 
   effects:
     - DETAILS:
         Name: "Armor Ward"
-        Icon Tint Color: n/a
+        Effect Type: base
         Effect Suspended: false
         Apply Effect to Actor: true
-        Status Conditions: n/a
-        Separate Status Conditions: n/a
+        Status Conditions: []
       EFFECT_DESCRIPTION:
         Effect Description: "Grants +1 AC while this item's passive effect is active."
       DURATION:
-        Effect Duration (Seconds): n/a
-        Effect Start Time: n/a
-        Effect Duration (combat) Rounds: n/a
-        Effect Duration (combat) Turns: n/a
-        Effect Start (combat) Rounds: n/a
-        Effect Start (combat) Turns: n/a
+        Value: null
+        Units: seconds
       CHANGES:
         - Attribute Key: system.attributes.ac.bonus
-          Change Mode: 2
-          Value: "1"
+          Change Type: add
+          Change Phase: initial
+          Value: 1
           Priority: 20
   Activities:
     - ACTIVITY_DAMAGE:
@@ -221,10 +260,16 @@ The completed examples below demonstrate array nesting for a passive +1 AC ward 
           Extra Critical Damage Formula: n/a
         DAMAGE:
           DAMAGE_PARTS:
-            - Custom Damage Formula: true
-              Damage Formula: "1d6"
-              Damage Type: fire
-              Damage Scaling: No Scaling
+            - DAMAGE_DATA:
+                Dice Count: 1
+                Die Denomination: 6
+                Bonus: ""
+                Damage Types: [fire]
+                Custom Enabled: false
+                Custom Formula: ""
+                Scaling Mode: none
+                Scaling Dice Count: 1
+                Scaling Formula: ""
         APPLIED_EFFECTS: []
 ```
 
@@ -363,7 +408,7 @@ These fields are optional and only needed for spells with unusual area geometry.
 | `day` | Daily (any time) |
 | `dawn` | At dawn |
 | `dusk` | At dusk |
-| `recharge` | Roll d6 at dawn; recharge on X+ |
+| `recharge` | Recharge threshold: set Formula to 2, 3, 4, 5, or 6 |
 
 ### **Recovery Types**
 | Type | Formula | Result |
@@ -497,3 +542,23 @@ These fields are optional and only needed for spells with unusual area geometry.
 ```
 
 ---
+
+
+## Explicit fields in Item YAML schema 2
+
+Verification target: D&D5e 5.3.3 / Foundry 14.367. Item YAML versions 0 and 1 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+
+| Field | Stored value / default |
+|---|---|
+| ITEM.Icon | Native image path. A supplied path takes priority over automatic icon selection. |
+| ITEM.Identifier / ITEM.Sort | Native identifier / integer ordering value; zero is valid. |
+| SOURCE.Book, Page, Custom, License, Rules, Revision | Native source information. Revision is numeric (default 1); page is text. |
+| ATTUNEMENT.Attuned | Current item state, separate from the attunement requirement. Applies to equippable types, including Container. Default false. |
+| Formula fields | Preserve the complete formula string. Numeric fields reject expressions and fractional values when the native field requires integers. |
+| Inactive controls | Retain supplied values without enabling the controlling property or override. Omit a conditional section only when no stored settings need preservation. |
+
+DAMAGE_DATA is the canonical damage representation for Weapon base/versatile damage and Consumable damage. It preserves Dice Count, Die Denomination, Bonus, the Damage Types list, Custom Enabled, Custom Formula, Scaling Mode, Scaling Dice Count, and Scaling Formula. Dice values are nonnegative integers or null; formulas are strings; Custom Enabled defaults false; Scaling Mode defaults none. An inactive custom formula and inactive structured damage remain stored together. Do not combine populated legacy damage shorthand with DAMAGE_DATA. Legacy formula/type labels remain accepted on input. Consumable DAMAGE.Replace defaults false; old ammunition Damage Replace remains an alias.
+
+Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
+
+Spell PREPARATION.Prepared exports unprepared/prepared/always and accepts native 0/1/2 or legacy booleans. Source Item stores the spellcasting source identifier. RANGE.Special, DURATION.Special, and AREA.Stationary retain their native values. Range, duration, target count, and every area dimension/count accept formulas. Material settings remain stored when Material is false.

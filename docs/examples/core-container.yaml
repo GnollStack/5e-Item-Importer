@@ -1,0 +1,27 @@
+SCHEMA_VERSION: 2
+CONTAINER:
+  ITEM:
+    Name: Bag of Holding
+    Rarity: uncommon
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+  COST_AND_WEIGHT:
+    Price Value: 400
+    Price Denomination: gp
+    Weight Value: 5
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+    Weightless Contents: true
+  ATTUNEMENT:
+    Attunement: none
+  CAPACITY:
+    Weight Capacity Value: 500
+    Weight Capacity Units: lb
+    Volume Capacity Value: 64
+    Volume Capacity Units: cubicFoot
+  DESCRIPTION:
+    Description: >
+      This bag has an interior space considerably larger than its outside dimensions. The bag can
+      hold up to 500 pounds, not exceeding a volume of 64 cubic feet.

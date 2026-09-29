@@ -10,7 +10,7 @@ export const ITEM_TEMPLATES = [
     {
         id: "weapon",
         label: "Magic Weapon",
-        text: `SCHEMA_VERSION: 1
+        text: `SCHEMA_VERSION: 2
 WEAPON:
   ITEM:
     Name: "Longsword +1"
@@ -57,7 +57,7 @@ WEAPON:
     {
         id: "armor",
         label: "Wondrous Item",
-        text: `SCHEMA_VERSION: 1
+        text: `SCHEMA_VERSION: 2
 EQUIPMENT:
   ITEM:
     Name: "Cloak of Protection"
@@ -88,7 +88,7 @@ EQUIPMENT:
     {
         id: "potion",
         label: "Potion",
-        text: `SCHEMA_VERSION: 1
+        text: `SCHEMA_VERSION: 2
 CONSUMABLE:
   ITEM:
     Name: "Potion of Healing"
@@ -120,7 +120,7 @@ CONSUMABLE:
     {
         id: "tool",
         label: "Tool",
-        text: `SCHEMA_VERSION: 1
+        text: `SCHEMA_VERSION: 2
 TOOL:
   ITEM:
     Name: "Alchemist's Supplies"
@@ -152,7 +152,7 @@ TOOL:
     {
         id: "container",
         label: "Container",
-        text: `SCHEMA_VERSION: 1
+        text: `SCHEMA_VERSION: 2
 CONTAINER:
   ITEM:
     Name: "Bag of Holding"
@@ -188,7 +188,7 @@ CONTAINER:
     {
         id: "loot",
         label: "Loot/Gear",
-        text: `SCHEMA_VERSION: 1
+        text: `SCHEMA_VERSION: 2
 LOOT:
   ITEM:
     Name: "Ruby"
@@ -216,7 +216,7 @@ LOOT:
         id: "spell",
         label: "Spell (Core Fields)",
         text: `# Core spell fields only. Add Activities with Activity Importer for automated rolls.
-SCHEMA_VERSION: 1
+SCHEMA_VERSION: 2
 SPELL:
   ITEM:
     Name: "Magic Missile"
@@ -262,7 +262,7 @@ SPELL:
     {
         id: "batch",
         label: "Multi-Item Batch",
-        text: `SCHEMA_VERSION: 1
+        text: `SCHEMA_VERSION: 2
 WEAPON:
   ITEM:
     Name: "Shortsword +1"
@@ -331,7 +331,7 @@ LOOT:
     {
         id: "mixed-damage-weapon",
         label: "Mixed Damage Weapon",
-        text: `SCHEMA_VERSION: 1
+        text: `SCHEMA_VERSION: 2
 WEAPON:
   ITEM:
     Name: "Flame Tongue Longsword"

@@ -185,7 +185,7 @@ async function importOne(window, parseResult, {
 function addComparison(comparisons, parseResult, document, label) {
     try {
         const expectedProps = extractExpectedItemProps(parseResult);
-        const actualProps = extractActualItemProps(document);
+        const actualProps = extractActualItemProps(document, parseResult);
         comparisons.push({
             label,
             diffReport: compareProperties(expectedProps, actualProps),

@@ -15,6 +15,7 @@ import { ITEM_TEMPLATES } from "../../scripts/ui/itemTemplates.js";
 import { analyzeItemActivitiesText } from "../../scripts/activityIntegrationDiagnostics.js";
 import { buildRemainingBatchSource } from "../../scripts/ui/itemWindowActions.js";
 import { renderAttunementRequirement } from "../../scripts/ui/itemAttunementNote.js";
+import { runExplicitItemYamlTests } from "../unit/explicitYamlTests.js";
 import { runSpellFieldRegressionTests } from "../unit/itemCoreFeatureTests.js";
 
 const ACTIVITY_HANDOFF_FIXTURE = `SCHEMA_VERSION: 1
@@ -281,7 +282,7 @@ export class ItemImporterTests {
                 check("parser fixture natural +1 longsword builds correctly",
                     foundryData?.system?.type?.baseItem === "longsword"
                     && foundryData?.system?.damage?.versatile?.custom?.formula === "1d10"
-                    && foundryData?.system?.magicalBonus === 1,
+                    && foundryData?.system?.magicalBonus === "1",
                     {
                         baseItem: foundryData?.system?.type?.baseItem,
                         versatile: foundryData?.system?.damage?.versatile?.custom?.formula,
@@ -671,12 +672,10 @@ export class ItemImporterTests {
                 "    Attunement: bespoke",
                 "    Attunement By: a wizard"
             ].join("\n"));
-            check("equipment attunement normalizes invalid values and clears restrictions",
-                invalidEquipmentAttunement.success === true
-                && invalidEquipmentAttunement.item?.attunement === ""
-                && invalidEquipmentAttunement.item?.attunementRequirement === null
-                && invalidEquipmentAttunement.warnings?.some((warning) => warning.includes("Invalid Attunement value"))
-                && invalidEquipmentAttunement.warnings?.some((warning) => warning.includes("Attunement By is ignored")),
+            check("equipment attunement rejects unsupported native values",
+                invalidEquipmentAttunement.success === false
+                && invalidEquipmentAttunement.item === null
+                && invalidEquipmentAttunement.errors?.some((error) => error.includes("ATTUNEMENT.Attunement")),
                 invalidEquipmentAttunement
             );
 
@@ -1025,7 +1024,7 @@ export class ItemImporterTests {
             check("template magic weapon uses base item, mastery, and magic bonus",
                 weapon?.foundryData?.system?.type?.baseItem === "longsword"
                 && weapon?.foundryData?.system?.mastery === "sap"
-                && weapon?.foundryData?.system?.magicalBonus === 1
+                && weapon?.foundryData?.system?.magicalBonus === "1"
                 && weapon?.properties.includes("mgc")
                 && weapon?.properties.includes("ver"),
                 {
@@ -1907,6 +1906,10 @@ export class ItemImporterTests {
             recordError("Spell field regressions", error);
         }
 
+        try {
+            const explicit = await runExplicitItemYamlTests();
+            for (const result of explicit.results) check("schema 2: " + result.name, result.passed, result.details);
+        } catch (error) { recordError("Explicit YAML regressions", error); }
         const passed = tests.filter((test) => test.success).length;
         const failed = tests.length - passed;
 

@@ -1,0 +1,150 @@
+SCHEMA_VERSION: 2
+WEAPON:
+  ITEM:
+    Name: Sentinel's Edge
+    Rarity: rare
+    Weapon Type: martialM
+    Base Weapon: longsword
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+  COST_AND_WEIGHT:
+    Price Value: 500
+    Price Denomination: gp
+    Weight Value: 3
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+    Versatile: true
+  ATTUNEMENT:
+    Attunement: required
+    Magic Bonus: 1
+  RANGE:
+    Reach: 5
+  DAMAGE:
+    DAMAGE_DATA:
+      Dice Count: 1
+      Die Denomination: 8
+      Bonus: ""
+      Damage Types:
+        - slashing
+      Custom Enabled: false
+      Custom Formula: ""
+      Scaling Mode: none
+      Scaling Dice Count: 0
+      Scaling Formula: ""
+  VERSATILE_DAMAGE:
+    DAMAGE_DATA:
+      Dice Count: 1
+      Die Denomination: 10
+      Bonus: ""
+      Damage Types:
+        - slashing
+      Custom Enabled: false
+      Custom Formula: ""
+      Scaling Mode: none
+      Scaling Dice Count: 0
+      Scaling Formula: ""
+  MASTERY:
+    Mastery: sap
+  DESCRIPTION:
+    Description: >-
+      <p>A +1 longsword with 3 charges, all recovered on a long rest. Its Ember Strike adds 1d6 fire
+      damage to a normal weapon hit. Spend 1 charge as a bonus action to gain 1d6 + 2 temporary hit
+      points. While the weapon is equipped and attuned, its passive ward grants +1 AC.</p>
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 3
+  RECOVERY:
+    - Period: lr
+      Type: recoverAll
+  Activities:
+    - ACTIVITY_ATTACK:
+        ACTIVITY:
+          Name: Ember Strike
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: action
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Concentration: false
+        CONSUMPTION: []
+        RANGE:
+          Override Range: true
+          Range Units: ft
+          Range Value: 5
+        TARGETS:
+          Override Target: true
+          Target Type: creature
+          Target Amount: 1
+          Choose Targets: true
+        ATTACK_DETAILS:
+          Attack Ability: str
+          Flat To Hit: false
+          Critical Threshold: 20
+        ATTACK_DAMAGE:
+          Include Base Damage: true
+          DAMAGE_PARTS:
+            - DAMAGE_DATA:
+                Dice Count: 1
+                Die Denomination: 6
+                Bonus: ""
+                Damage Types:
+                  - fire
+                Custom Enabled: false
+                Custom Formula: ""
+                Scaling Mode: none
+                Scaling Dice Count: 0
+                Scaling Formula: ""
+    - ACTIVITY_HEAL:
+        ACTIVITY:
+          Name: Sentinel Guard
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: bonus
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Concentration: false
+        CONSUMPTION:
+          - Consumption Type: itemUses
+            Amount: "1"
+            Scaling Mode: none
+        RANGE:
+          Override Range: true
+          Range Units: self
+        TARGETS:
+          Override Target: true
+          Target Type: self
+          Target Amount: 1
+        HEALING:
+          DAMAGE_DATA:
+            Dice Count: 1
+            Die Denomination: 6
+            Bonus: "2"
+            Damage Types:
+              - temphp
+            Custom Enabled: false
+            Custom Formula: ""
+            Scaling Mode: none
+            Scaling Dice Count: 0
+            Scaling Formula: ""
+  effects:
+    - DETAILS:
+        Name: Sentinel Ward
+        Effect Type: base
+        Effect Suspended: false
+        Apply Effect to Actor: true
+        Status Conditions: []
+      EFFECT_DESCRIPTION:
+        Effect Description: <p>Sentinel Ward.</p>
+      DURATION:
+        Value: null
+        Units: minutes
+      CHANGES:
+        - Attribute Key: system.attributes.ac.bonus
+          Change Type: add
+          Change Phase: initial
+          Value: 1
+          Priority: 20

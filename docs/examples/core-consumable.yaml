@@ -1,0 +1,24 @@
+SCHEMA_VERSION: 2
+CONSUMABLE:
+  ITEM:
+    Name: Potion of Healing
+    Rarity: common
+    Consumable Type: potion
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+  COST_AND_WEIGHT:
+    Price Value: 50
+    Price Denomination: gp
+    Weight Value: 0.5
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 1
+    Destroy on Empty: true
+  DESCRIPTION:
+    Description: >
+      [[lookup @name]]{The creature} regains [[/heal 2d4 + 2 average]] hit points when they drink
+      this potion. The potion's red liquid glimmers when agitated.

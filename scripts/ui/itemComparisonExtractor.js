@@ -8,6 +8,31 @@
 // Formatting helpers (mirrors itemWindowRenderer.js)
 // ==========================================
 
+import { itemExplicitRows, explicitItemSource } from "../itemExplicitFields.js";
+import { damageDataToYaml } from "../explicitYamlFields.js";
+
+
+function appendDamageSummary(props, damage, versatile = false) {
+    if (!damage) return;
+    if (!versatile) {
+        const types = damage.types instanceof Set ? [...damage.types] : damage.types;
+        if (types?.length) props.push({section:"Combat Statistics",label:"Damage Type",value:types.join(", ")});
+    }
+    let formula = "";
+    if (damage.custom?.enabled && damage.custom.formula) formula = damage.custom.formula;
+    else if (damage.number && damage.denomination) {
+        formula = damage.number + "d" + damage.denomination;
+        if (damage.bonus) formula += " + " + damage.bonus;
+    }
+    if (formula) props.push({section:"Combat Statistics",label:versatile ? "Versatile" : "Damage",value:formula});
+}
+
+function isDefaultDamage(damage) {
+    if (!damage) return false;
+    const empty = {number:null,denomination:null,bonus:"",types:[],custom:{enabled:false,formula:""},scaling:{mode:"",number:1,formula:""}};
+    return JSON.stringify(damageDataToYaml(damage)) === JSON.stringify(damageDataToYaml(empty));
+}
+
 const WEAPON_TYPES = {
     simpleM: "Simple Melee", simpleR: "Simple Ranged",
     martialM: "Martial Melee", martialR: "Martial Ranged",
@@ -162,15 +187,20 @@ export function extractExpectedItemProps(parseResult) {
         props.push({ section: "Basic Properties", label: "Loot Type", value: LOOT_TYPES[item.lootType] || item.lootType });
     }
 
+    // Explicit damage is stored separately from legacy formula shorthand.
+    const storedDamage = explicitItemSource(item).system?.damage;
+    if (storedDamage?.base) appendDamageSummary(props, storedDamage.base);
+    if (storedDamage?.versatile) appendDamageSummary(props, storedDamage.versatile, true);
+
     // Combat Statistics
-    if (item.damage?.type) {
+    if (!storedDamage?.base && item.damage?.type) {
         const types = Array.isArray(item.damage.type) ? item.damage.type.join(", ") : item.damage.type;
         props.push({ section: "Combat Statistics", label: "Damage Type", value: types });
     }
-    if (item.damage?.formula) {
+    if (!storedDamage?.base && item.damage?.formula) {
         props.push({ section: "Combat Statistics", label: "Damage", value: item.damage.formula });
     }
-    if (item.versatileDamage?.formula) {
+    if (!storedDamage?.versatile && item.versatileDamage?.formula) {
         props.push({ section: "Combat Statistics", label: "Versatile", value: item.versatileDamage.formula });
     }
     if (item.range && (item.range.value || item.range.long)) {
@@ -247,7 +277,7 @@ export function extractExpectedItemProps(parseResult) {
         props.push({ section: "Description", label: "Unidentified Description", value: stripHtmlForComparison(item.unidentifiedDescription) });
     }
 
-    return props;
+    return [...props, ...itemExplicitRows(item)];
 }
 
 /**
@@ -293,9 +323,11 @@ function extractSpellProps(item, props) {
 /**
  * Extract actual properties from a created Foundry Item document.
  * @param {Object} foundryItem - Foundry Item document
+ * @param {Object|null} parseResult - Expected input, used to distinguish omitted native defaults.
  * @returns {Array<{section: string, label: string, value: string}>}
  */
-export function extractActualItemProps(foundryItem) {
+export function extractActualItemProps(foundryItem, parseResult = null) {
+    if (foundryItem._source?.system) foundryItem = { ...foundryItem._source, type: foundryItem.type };
     const props = [];
     const sys = foundryItem.system;
 
@@ -375,7 +407,15 @@ export function extractActualItemProps(foundryItem) {
         props.push({ section: "Description", label: "Unidentified Description", value: stripHtmlForComparison(sys.unidentified.description) });
     }
 
-    return props;
+    let explicit = itemExplicitRows(foundryItem);
+    const expected = parseResult?.item;
+    if (expected && explicitItemSource(expected).system?.damage?.versatile === undefined
+        && !expected.versatileDamage?.formula && isDefaultDamage(sys.damage?.versatile)) {
+        // Ignore only the complete untouched native default. Authored empty
+        // damage, inactive formulas, and non-default zero values remain visible.
+        explicit = explicit.filter(row => row.section !== "VERSATILE_DAMAGE");
+    }
+    return [...props, ...explicit];
 }
 
 /**
@@ -385,35 +425,8 @@ function extractActualCombatProps(foundryItem, props) {
     const sys = foundryItem.system;
     const type = foundryItem.type;
 
-    // Damage
-    if (sys.damage?.base) {
-        const base = sys.damage.base;
-        if (base.types) {
-            const types = Array.isArray(base.types) ? base.types : (base.types instanceof Set ? Array.from(base.types) : []);
-            if (types.length > 0) props.push({ section: "Combat Statistics", label: "Damage Type", value: types.join(", ") });
-        }
-        // Reconstruct formula
-        let formula = "";
-        if (base.custom?.enabled && base.custom?.formula) {
-            formula = base.custom.formula;
-        } else if (base.number && base.denomination) {
-            formula = `${base.number}d${base.denomination}`;
-            if (base.bonus) formula += ` + ${base.bonus}`;
-        }
-        if (formula) props.push({ section: "Combat Statistics", label: "Damage", value: formula });
-    }
-
-    // Versatile
-    if (sys.damage?.versatile) {
-        const v = sys.damage.versatile;
-        let formula = "";
-        if (v.custom?.enabled && v.custom?.formula) formula = v.custom.formula;
-        else if (v.number && v.denomination) {
-            formula = `${v.number}d${v.denomination}`;
-            if (v.bonus) formula += ` + ${v.bonus}`;
-        }
-        if (formula) props.push({ section: "Combat Statistics", label: "Versatile", value: formula });
-    }
+    appendDamageSummary(props, sys.damage?.base);
+    appendDamageSummary(props, sys.damage?.versatile, true);
 
     // Range and Reach (separate rows, matching expected side)
     if (sys.range && (sys.range.value || sys.range.long)) {

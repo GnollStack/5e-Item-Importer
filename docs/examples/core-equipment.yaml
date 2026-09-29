@@ -1,0 +1,23 @@
+SCHEMA_VERSION: 2
+EQUIPMENT:
+  ITEM:
+    Name: Cloak of Protection
+    Rarity: uncommon
+    Equipment Type: wondrous
+    Base Equipment: n/a
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+  COST_AND_WEIGHT:
+    Price Value: 400
+    Price Denomination: gp
+    Weight Value: 2
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+  ATTUNEMENT:
+    Attunement: required
+  DESCRIPTION:
+    Description: >
+      While wearing this cloak, [[lookup @name]]{the creature} gains a +1 bonus to AC and saving
+      throws.

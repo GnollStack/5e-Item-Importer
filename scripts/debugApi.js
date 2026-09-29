@@ -7,6 +7,12 @@
 
 import { MODULE_ID, MODULE_NAME, MODULE_TITLE, getPacks } from "./itemConfig.js";
 import { ItemUtils } from "./itemUtils.js";
+import { createFieldCatalogService } from "./fieldCatalogService.js";
+import { discoverNativeCatalog } from "./itemFieldCatalogNative.js";
+import { decorateCatalogFields } from "./itemFieldCatalogCoverage.js";
+import { extendMidiCatalog } from "./fieldCatalogMidi.js";
+import { decorateMidiCatalogFields } from "./itemFieldCatalogMidiCoverage.js";
+
 import { analyzeItemActivitiesText } from "./activityIntegrationDiagnostics.js";
 import {
     FIXTURE_FLAG,
@@ -16,10 +22,16 @@ import {
     runItemImporterAutomation
 } from "./diagnosticsAutomation.js";
 
+const fieldCatalog = createFieldCatalogService({ provider: "5e-item-importer", discover: discoverNativeCatalog, decorate: decorateCatalogFields,
+    extend: catalog => extendMidiCatalog(catalog, "5e-item-importer"), decorateExtensions: decorateMidiCatalogFields });
+
 const SOCKET_CHANNEL = `module.${MODULE_ID}`;
 const SOCKET_REQUEST = "diagnostics.collect.request";
 const SOCKET_RESPONSE = "diagnostics.collect.response";
 const READ_ONLY_ACTIONS = [
+    "getFieldCatalog",
+    "getFieldDetails",
+    "probeFieldValues",
     "getStatus",
     "validateSettings",
     "validateAssets",
@@ -70,6 +82,16 @@ const MODULE_ASSETS = Object.freeze([
     "scripts/itemWindow.js",
     "scripts/itemConfig.js",
     "scripts/debugApi.js",
+    "scripts/fieldCatalogCore.js",
+    "scripts/fieldCatalogService.js",
+    "scripts/fieldCatalogMidi.js",
+    "scripts/fieldCatalogMidiRules.js",
+    "scripts/itemFieldCatalogMidiCoverage.js",
+    "scripts/itemFieldCatalogNative.js",
+    "scripts/itemFieldCatalogCoverage.js",
+    "scripts/diagnostics/fieldCatalogChecks.js",
+    "docs/native-field-catalog.md",
+    "docs/midi-field-catalog.md",
     "scripts/diagnosticsAutomation.js",
     "scripts/diagnostics/runtimeSmokeTests.js",
     "scripts/parserRouting.js",
@@ -651,6 +673,9 @@ export function createDiagnosticsApi({ parse, openWindow }) {
     scheduleSocketListener();
 
     const actions = {
+        getFieldCatalog(input = {}) { return withGate("getFieldCatalog", () => fieldCatalog.getFieldCatalog(input)); },
+        getFieldDetails(input = {}) { return withGate("getFieldDetails", () => fieldCatalog.getFieldDetails(input)); },
+        probeFieldValues(input = {}) { return withGate("probeFieldValues", () => fieldCatalog.probeFieldValues(input)); },
         getStatus() {
             return withGate("getStatus", (availability) => {
                 const modulePackage = game.modules.get(MODULE_NAME);
@@ -843,7 +868,7 @@ export function createDiagnosticsApi({ parse, openWindow }) {
             return withGate("runSmokeTests", async () => {
                 const tests = [];
                 const beforeCounts = getWorldDocumentCounts();
-                const requestedSuite = input.suite === "full" ? "full" : "runtime";
+                const requestedSuite = ["full", "catalog"].includes(input.suite) ? input.suite : "runtime";
 
                 record(tests, "diagnostics action allowlist matches contract", () => {
                     const actual = Object.keys(game.modules.get(MODULE_NAME)?.api?.diagnostics?.actions ?? {}).sort();
@@ -854,7 +879,10 @@ export function createDiagnosticsApi({ parse, openWindow }) {
 
                 let runSuite;
                 try {
-                    if (requestedSuite === "full") {
+                    if (requestedSuite === "catalog") {
+                        const { runFieldCatalogChecks } = await import("./diagnostics/fieldCatalogChecks.js");
+                        runSuite = () => runFieldCatalogChecks(MODULE_NAME);
+                    } else if (requestedSuite === "full") {
                         const { ItemImporterTests } = await import("../tests/foundry/itemImporterTests.js");
                         runSuite = ItemImporterTests?.runStructured?.bind(ItemImporterTests);
                     } else {
@@ -1143,6 +1171,9 @@ export function createDiagnosticsApi({ parse, openWindow }) {
         getAvailability,
         getMutationAvailability,
         getRefreshAvailability,
+        getFieldCatalog: actions.getFieldCatalog,
+        getFieldDetails: actions.getFieldDetails,
+        probeFieldValues: actions.probeFieldValues,
         getStatus: actions.getStatus,
         validateSettings: actions.validateSettings,
         validateAssets: actions.validateAssets,

@@ -120,6 +120,14 @@ export async function runItemImporterAutomation(args = {}) {
             item: summarizeItem(createdItem)
         });
         steps.push({ step: "activityImporterIntegration", ...integration });
+        if (args.suite === "stormglass") {
+            const { createStormglassFixture } = await import("./diagnostics/stormglassFixture.js");
+            steps.push(await createStormglassFixture(name => createFixtureMarker(runId, name)));
+        }
+        if (args.suite === "explicit") {
+            const { createExplicitItemFixtures } = await import("./diagnostics/explicitImportFixtures.js");
+            steps.push(...await createExplicitItemFixtures(name => createFixtureMarker(runId, name)));
+        }
     } catch (error) {
         creationError = error?.message || String(error);
         steps.push({ step: "createItemFixture", success: false, error: creationError });
@@ -140,6 +148,7 @@ export async function runItemImporterAutomation(args = {}) {
         success: Boolean(createdItem)
             && !creationError
             && integration?.success === true
+            && steps.every(step => step.success !== false)
             && (!cleanupAfter || remainingFixtures.total === 0),
         runId,
         cleanupBefore,

@@ -1,0 +1,127 @@
+{
+  "formatVersion": 1,
+  "kind": "native-field-catalog-verification",
+  "verifiedAt": "2026-09-14",
+  "target": {
+    "foundry": "14.367",
+    "dnd5e": "5.3.3",
+    "importerPackageVersion": "14.1.2"
+  },
+  "scope": "Read-only native schemas, reviewed sheet annotations, declared YAML coverage, isolated candidate probes, and offline reports.",
+  "nativeDiscovery": {
+    "item": {
+      "types": 13,
+      "advancementTypes": 8,
+      "scaleValueVariants": 5,
+      "fields": 1132,
+      "pages": 6,
+      "unresolvedFields": 0,
+      "unreviewedSheetFields": 1052,
+      "coverageNeedsReview": 1
+    },
+    "activity": {
+      "types": 12,
+      "effectModels": 2,
+      "fields": 1106,
+      "pages": 6,
+      "unresolvedFields": 0,
+      "unreviewedSheetFields": 649,
+      "coverageNeedsReview": 0
+    },
+    "note": "Field totals include structural nodes and variant records. Schema discovery completeness does not imply complete sheet review or YAML support."
+  },
+  "checks": {
+    "liveCatalog": {
+      "item": {
+        "passed": 17,
+        "failed": 0
+      },
+      "activity": {
+        "passed": 14,
+        "failed": 0
+      },
+      "transport": "Actual call_module_debug_action MCP bridge",
+      "worldSourcesUnchanged": true,
+      "worldCountsUnchanged": true
+    },
+    "existingLiveRegressions": {
+      "item": {
+        "passed": 187,
+        "failed": 0
+      },
+      "activity": {
+        "passed": 256,
+        "failed": 0
+      }
+    },
+    "offlineCatalog": {
+      "core": {
+        "passedPerRepository": 17,
+        "failed": 0
+      },
+      "service": {
+        "passedPerRepository": 10,
+        "failed": 0
+      },
+      "reports": {
+        "passed": 13,
+        "failed": 0
+      }
+    },
+    "independentProviders": {
+      "method": "Actual provider functions under synthetic companion-absent/inactive environments; instrumented world collection getters",
+      "passed": true,
+      "worldReads": 0
+    },
+    "coverage": {
+      "discoveredPathAuditsPassed": true,
+      "evidenceReferences": {
+        "item": 23,
+        "activity": 17,
+        "missing": 0
+      },
+      "note": "References are declared evidence, not automatic per-field verified support."
+    },
+    "reporting": {
+      "completeActualCapturesAssembled": true,
+      "markdownRendered": true,
+      "deterministicSelfComparison": true,
+      "syntheticAddedRemovedVariantsConstraintsChoicesCoverageChanges": true
+    },
+    "parity": {
+      "sharedRuntimeAndReportFiles": 6,
+      "passed": true,
+      "coreTestsAndRunnerIdentical": true
+    },
+    "contexts": {
+      "validSpellAndActivityModelSourcesAccepted": true,
+      "mismatchedSourceTypeIncomplete": true,
+      "candidatePolymorphicActivitiesIncomplete": true
+    },
+    "privateMaintenance": {
+      "item": {
+        "failures": 0,
+        "existingWarnings": 9
+      },
+      "activity": {
+        "failures": 0,
+        "existingWarnings": 10
+      }
+    },
+    "assets": {
+      "catalogRuntimeAndGuidePassed": true,
+      "allModuleAssetsPassed": false,
+      "preExistingMissing": [
+        "5e-item-importer/THIRD_PARTY_NOTICES.txt",
+        "5e-activity-importer/THIRD_PARTY_NOTICES.txt"
+      ]
+    }
+  },
+  "boundaries": [
+    "No new YAML support, bridge protocol, settings, browser UI, document migration, or world fixtures.",
+    "Runtime environment contains active third-party modules; native constructor discovery is distinct from active replacements and CONFIG choices.",
+    "Parent preparation, collection/variant context, link existence, gameplay semantics, and unresolved callbacks remain explicitly incomplete where applicable.",
+    "Snapshot equality compares declared metadata; it does not prove unchanged callback implementation or closure behavior.",
+    "Machine-specific captures and generated reports are kept outside shipped documentation."
+  ]
+}

@@ -1,98 +1,59 @@
-# Strict_Container_Template_v3.md
+# Strict Container Item authoring reference
 
-## INSTRUCTIONS
+## Destination and prerequisites
 
-**Free and premium generation modes:**
-- 5e Activity Importer is a forthcoming premium companion, not included with this free release. Use free/core output unless premium output is explicitly requested or companion availability is confirmed.
-- **Free/core (default):** 5e Item Importer is free and works alone. Generate core Item fields and the complete source rules in descriptions. Omit `Activities` and `effects` entirely; description enrichers do not create those mechanics.
-- **Premium/full:** Use this mode only when the user explicitly requests it or confirms that 5e Activity Importer is available. Add only source-defined, supported activities/effects using that premium companion's strict templates. Keep the complete rules in the Item description as well. Activity Importer must be active when importing attachments.
-- If module availability is unspecified, use free/core mode. Merely receiving this template does not establish premium availability. An explicit free/core request takes precedence even when both modules are installed.
-- These mode names are prompt instructions, not YAML fields. Do not emit mode, edition, purchase, or licensing metadata.
-- Loot and Container support passive `effects` only; never emit `Activities` for those types.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 2` and the `CONTAINER` root.
 
-**How to use this template:**
-- Output every field shown in required sections. Use `n/a` for required scalar fields that do not apply.
-- Begin every YAML document with `SCHEMA_VERSION: 1` before the Item type key.
-- Wrap the completed YAML in a single ```` ```yaml ```` code fence.
-- Omit entire conditional sections when their condition is not met. Do not output a conditional section filled with `n/a`.
-- For DESCRIPTION fields, use HTML with Foundry VTT Enrichers (see reference at the bottom of this template).
+Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-**dnd5e Description Features:**
-- `DESCRIPTION.Description` and `CHAT_FLAVOR.Chat Description` preserve Foundry/dnd5e text features for Foundry to resolve when displayed.
-- You can use dnd5e enrichers such as `[[/damage 1d6 fire average]]`, roll-data formulas such as `@prof` or `@abilities.str.mod`, dynamic lookups such as `[[lookup @name]]{the creature}`, System HTML classes, and pass-through document links such as `@UUID[...]` or `@Embed[...]`.
-- Use stock dnd5e `[[lookup @name]]` text for active narration and chat flavor: sentence start `[[lookup @name]]{The creature} drinks the potion.`; mid-sentence `When [[lookup @name]]{the creature} hits with this weapon...`. This normally resolves to the actor name; the optional Token Name Lookup companion can prefer token aliases at render time without changing item syntax.
-- Keep passive rules text natural. Do not force dynamic name lookups into every description.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 5.3.3 / Foundry 14.367; MIDI annotations, when used, target MIDI-QOL 14.0.9. Package versions and YAML versions are separate.
 
-**Batching multiple items:**
-Combine different item types in one block by stacking top-level keys:
-```text
-SCHEMA_VERSION: 1
-CONTAINER:
-  ITEM:
-    Name: "Bag of Holding"
-    # additional fields omitted in this batching example
-WEAPON:
-  ITEM:
-    Name: "Longsword +1"
-    # additional fields omitted in this batching example
-```
-For multiple items of the **same type**, separate them with `---` (YAML document separator):
-```text
-SCHEMA_VERSION: 1
-CONTAINER:
-  ITEM:
-    Name: "Bag of Holding"
-    # additional fields omitted in this batching example
----
-SCHEMA_VERSION: 1
-CONTAINER:
-  ITEM:
-    Name: "Handy Haversack"
-    # additional fields omitted in this batching example
-```
-You can mix both methods. Supported top-level keys: `SPELL`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, `CONTAINER`.
+## Generate or preserve
 
-**For LLM generation:**
-- Output ONLY the yaml code block. No commentary before or after.
-- Use exact values from the FIELD REFERENCE tables at the bottom of this document. Do not invent values.
-- Booleans: `true` or `false` (lowercase, no quotes).
-- Required scalar fields that do not apply: use the literal string `n/a`.
-- **Omit conditional sections entirely** (e.g., ATTUNEMENT) when their condition is not met. Do not fill omitted sections with `n/a` values.
-- This Item type supports passive Active Effects only. Never emit `Activities` for Loot or Container items. Use the companion effects workflow below in premium/full mode; otherwise retain the complete rules in the description.
-- Do not include template comments (`# ...`) in the final YAML output.
-- Do not omit individual fields from required sections just because their value is `n/a`.
-- Replace every bracketed placeholder value; never output literal placeholders like `[text]` or `[integer]`.
-- Use HTML tags inside description fields, not Markdown headings or Markdown lists.
+**Create from a description:** include fields needed for the stated mechanics and any explicitly supplied settings. Omit unrelated optional sections. Do not populate every placeholder or copy example bonuses into a different item. Ask for missing information that changes the mechanics or a required reference; use a documented default only when it does not change the source intent. Invent mechanics only when the user explicitly requests homebrew design.
 
-**YAML Syntax Rules (do not violate):**
-- Every key needs a SPACE after the colon: `KEY: value`, never `KEY:value`. js-yaml will reject the file with a confusing "multiline key" error otherwise.
-- Empty arrays are written `KEY: []` and empty mappings `KEY: {}` — both with the space.
-- Indentation is exactly 2 spaces per level. No tabs. No 4-space jumps.
+**Preserve supplied data:** retain every supported supplied value, including stored inactive settings, false, zero, empty collections and documented nulls. Keep the controlling toggle independent. Unsupported values remain a reported limitation; do not silently replace them with a guess.
 
-**Default assumptions when source text is silent:**
-- Quantity: `1`
-- Identified: `true`
-- Equipped: `false`
-- Rarity: `n/a` for mundane or unspecified containers.
-- Price Value: `0`; Price Denomination: `gp`
-- Weight Value: `0` when negligible or not listed; Weight Units: `lb`
-- Magical: `false`; Weightless Contents: `false` unless explicitly extradimensional or weightless.
-- Capacity fields: use `n/a` when unlimited, unknown, or not relevant.
-- Omit CURRENCY_CONTENTS unless the container starts with coins inside it.
-- Unidentified Name: `n/a`; Unidentified Description: `n/a` unless an unidentified version is needed.
-- Chat Description: `n/a` unless special chat flavor is needed.
+**Final output:** one YAML code block, with two-space indentation and a space after each colon. Replace every bracket placeholder and remove template comments. Preserve formulas as quoted strings and descriptions as HTML or plain text. Use native YAML booleans and numbers. Do not add prompt-mode, compatibility-report or licensing keys to YAML. If a required fact is missing, ask before producing final importable YAML.
 
----
+## Reading the reference
+
+| Label | Meaning |
+| --- | --- |
+| Required | Needed for valid input at the indicated location. |
+| Conditionally required | Needed when the stated choice or intended mechanic requires it; distinguish parser rejection from runtime prerequisites. |
+| Optional | May be omitted in newly authored input when no value is supplied. |
+| Context-dependent | Needs a parent Item, actor, accessible document, registry or workflow context. |
+| Compatibility input | An accepted older spelling/representation; use the canonical spelling for new YAML. |
+
+The first YAML block is a **complete field reference**, not a ready-made item to import unchanged. Placeholders describe choices, not default values. Later examples contain concrete values.
+
+Missing, `null`, `false`, `0`, `""`, `[]` and `{}` are distinct. Use `n/a` only for fields that document it as an unset marker. Never use it as a universal substitute for null or empty data. `CHANGES.Value` retains its YAML type, including the literal text `n/a`. Formula syntax acceptance does not establish that referenced variables exist.
+
+For new physical Items, ordinary defaults are quantity 1, identified true, equipped false and zero unspecified price/weight. Omit unsupplied rarity, attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+
+## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 1
+SCHEMA_VERSION: 2
 CONTAINER:
+  SOURCE:
+    Book: "[text|n/a]"
+    Page: "[text|n/a]"
+    Custom: "[text|n/a]"
+    License: "[text|n/a]"
+    Rules: "[2014|2024|text]"
+    Revision: 1 # Finite number, including decimals; native default 1.
+
   ITEM:
+    Icon: "[filepath|n/a]"
+    Identifier: "[text|n/a]"
+    Sort: 0 # Integer ordering value; preserve an authored zero.
     Name: "[text]"
     Rarity: "[common|uncommon|rare|veryRare|legendary|artifact|n/a]"
 
   INVENTORY:
-    Quantity: "[integer]"
+    Quantity: 1 # Compatibility input only: creation fixes quantity at 1; export omits it.
     Identified: "[true|false]"
     Equipped: "[true|false]"
 
@@ -103,19 +64,21 @@ CONTAINER:
     Weight Units: "[lb|tn|kg|Mg]"
 
   PROPERTIES:
+    NPC Equipment: false # Native gear property; shown for NPC inventory.
     Magical: "[true|false]"
     Weightless Contents: "[true|false]"
 
   ATTUNEMENT:
-    # (Required only if Magical is true)
+    Attuned: false # Current state, independent of Attunement requirement.
+    # Store independently of Magical; a bonus does not enable an explicit false property.
     Attunement: "[none|required|optional]"
-    Attunement By: "[text|n/a]"
+    Attunement By: "[text|n/a]" # Importer metadata; ignored when Attunement is none.
 
   CAPACITY:
-    Item Count: "[integer|n/a]"
-    Weight Capacity Value: "[number|n/a]"
+    Item Count: "[integer|null]" # Nonnegative integer or no stored count limit.
+    Weight Capacity Value: "[number|null]" # Nonnegative decimal or no stored limit.
     Weight Capacity Units: "[lb|tn|kg|Mg|n/a]"
-    Volume Capacity Value: "[number|n/a]"
+    Volume Capacity Value: "[number|null]" # Nonnegative decimal or no stored limit.
     Volume Capacity Units: "[cubicFoot|liter|n/a]"
 
   CURRENCY_CONTENTS:
@@ -142,6 +105,59 @@ CONTAINER:
       
 ```
 
+## Configuration rules
+
+Container supports passive companion effects but no Activities. Its builder fixes quantity to 1 and canonical export omits quantity; the reference cannot promise arbitrary quantity round trips. Container placement and stored Item relationships are outside this authoring format. Capacity and weightless storage do not create contents from description text.
+
+
+## Concrete example
+
+A free/core container import. Preserve the complete description; it does not automatically create source-specific activities or effects.
+
+5e Item Importer. Activity Importer is not required for this example.
+
+<!-- AUTHORING-EXAMPLE:START -->
+```yaml
+SCHEMA_VERSION: 2
+CONTAINER:
+  ITEM:
+    Name: Bag of Holding
+    Rarity: uncommon
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+  COST_AND_WEIGHT:
+    Price Value: 400
+    Price Denomination: gp
+    Weight Value: 5
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+    Weightless Contents: true
+  ATTUNEMENT:
+    Attunement: none
+  CAPACITY:
+    Weight Capacity Value: 500
+    Weight Capacity Units: lb
+    Volume Capacity Value: 64
+    Volume Capacity Units: cubicFoot
+  DESCRIPTION:
+    Description: >
+      This bag has an interior space considerably larger than its outside dimensions. The bag can
+      hold up to 500 pounds, not exceeding a volume of 64 cubic feet.
+```
+<!-- AUTHORING-EXAMPLE:END -->
+
+The [standalone YAML file](../../docs/examples/core-container.yaml) matches this block. See [example prerequisites and validation](../../docs/examples/README.md). Examples establish the stated stored data and validation scope; they do not certify every gameplay combination.
+
+## Compatibility and support
+
+Use canonical keys in new YAML. Legacy aliases in the reference tables are compatibility input; never combine conflicting aliases with canonical fields. Native schema choices, sheet choices and importer coverage can differ. Unknown fields are not generic YAML extension points.
+
+Full Item export needs companion serializers for its attachments; unsupported attachments can block full export. Keep source rules in descriptions for manual mechanics.
+
+## Detailed field and text reference
+
 ## OPTIONAL PASSIVE ACTIVE EFFECTS
 
 The core Item fields and description import without `5e-activity-importer`. Description enrichers create clickable text; they do not construct roll activities or passive bonuses. Strict YAML description text does not generate automation.
@@ -150,7 +166,9 @@ Loot and Container items do not expose `system.activities` in dnd5e 5.3.3. Never
 
 If the source grants a passive effect and premium/full mode is selected, append `effects` at the same indentation as `DESCRIPTION` and `CHAT_FLAVOR`, beneath the Item type key. This requires the companion module to be active at import time. Use the complete Effect template from `modules/5e-activity-importer/templates/Base Activity Templates/`, or its MIDI variant when that automation is intended. Preserve source mechanics; never invent bonuses, UUIDs, macros, or module-specific effect keys. Without companion support, omit `effects` and retain the complete rules in the description.
 
-The `effects` section is an array of effect bodies beginning with `DETAILS`, without an `EFFECT:` wrapper. Omit the section or use `effects: []` when there are no entries. On Foundry 14, populate at most one duration unit (Seconds, Rounds, or Turns), using `n/a` for the other units.
+The `effects` section is an array of effect bodies beginning with `DETAILS`, without an `EFFECT:` wrapper. Omit the section or use `effects: []` when there are no entries. On Foundry 14, use `DURATION.Value` (nonnegative integer or null for no finite duration) and one `DURATION.Units` value: years, months, days, hours, minutes, seconds, rounds, or turns.
+
+Use canonical string `Change Type` and a status list. Preserve the YAML type of each `CHANGES[].Value`: a number, boolean, string, list, mapping, or null must match the intended change. Do not quote everything. Legacy numeric `Change Mode` and separate duration labels remain accepted input. Optional Activity ID and Effect ID values must contain exactly 16 alphanumeric characters; omit them when stable references are unnecessary.
 
 This completed example demonstrates array nesting for a passive +1 AC ward. Include it only if the source actually grants that mechanic; it is an illustration, not a default effect.
 
@@ -158,24 +176,20 @@ This completed example demonstrates array nesting for a passive +1 AC ward. Incl
   effects:
     - DETAILS:
         Name: "Armor Ward"
-        Icon Tint Color: n/a
+        Effect Type: base
         Effect Suspended: false
         Apply Effect to Actor: true
-        Status Conditions: n/a
-        Separate Status Conditions: n/a
+        Status Conditions: []
       EFFECT_DESCRIPTION:
         Effect Description: "Grants +1 AC while this item's passive effect is active."
       DURATION:
-        Effect Duration (Seconds): n/a
-        Effect Start Time: n/a
-        Effect Duration (combat) Rounds: n/a
-        Effect Duration (combat) Turns: n/a
-        Effect Start (combat) Rounds: n/a
-        Effect Start (combat) Turns: n/a
+        Value: null
+        Units: seconds
       CHANGES:
         - Attribute Key: system.attributes.ac.bonus
-          Change Mode: 2
-          Value: "1"
+          Change Type: add
+          Change Phase: initial
+          Value: 1
           Priority: 20
 ```
 
@@ -186,7 +200,7 @@ This completed example demonstrates array nesting for a passive +1 AC ward. Incl
 ### **Capacity Rules**
 | Field | Description |
 |-------|-------------|
-| `Item Count` | Maximum number of discrete items (n/a = unlimited) |
+| `Item Count` | Maximum number of discrete items (null or legacy n/a = no stored count limit) |
 | `Weight Capacity` | Maximum weight the container can hold |
 | `Volume Capacity` | Maximum volume the container can hold |
 | `Weightless Contents` | If `true`, contents don't add to carried weight |
@@ -278,3 +292,23 @@ This completed example demonstrates array nesting for a passive +1 AC ward. Incl
 ```
 
 ---
+
+
+## Explicit fields in Item YAML schema 2
+
+Verification target: D&D5e 5.3.3 / Foundry 14.367. Item YAML versions 0 and 1 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+
+| Field | Stored value / default |
+|---|---|
+| ITEM.Icon | Native image path. A supplied path takes priority over automatic icon selection. |
+| ITEM.Identifier / ITEM.Sort | Native identifier / integer ordering value; zero is valid. |
+| SOURCE.Book, Page, Custom, License, Rules, Revision | Native source information. Revision is numeric (default 1); page is text. |
+| ATTUNEMENT.Attuned | Current item state, separate from the attunement requirement. Applies to equippable types, including Container. Default false. |
+| Formula fields | Preserve the complete formula string. Numeric fields reject expressions and fractional values when the native field requires integers. |
+| Inactive controls | Retain supplied values without enabling the controlling property or override. Omit a conditional section only when no stored settings need preservation. |
+
+DAMAGE_DATA is the canonical damage representation for Weapon base/versatile damage and Consumable damage. It preserves Dice Count, Die Denomination, Bonus, the Damage Types list, Custom Enabled, Custom Formula, Scaling Mode, Scaling Dice Count, and Scaling Formula. Dice values are nonnegative integers or null; formulas are strings; Custom Enabled defaults false; Scaling Mode defaults none. An inactive custom formula and inactive structured damage remain stored together. Do not combine populated legacy damage shorthand with DAMAGE_DATA. Legacy formula/type labels remain accepted on input. Consumable DAMAGE.Replace defaults false; old ammunition Damage Replace remains an alias.
+
+Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
+
+Spell PREPARATION.Prepared exports unprepared/prepared/always and accepts native 0/1/2 or legacy booleans. Source Item stores the spellcasting source identifier. RANGE.Special, DURATION.Special, and AREA.Stationary retain their native values. Range, duration, target count, and every area dimension/count accept formulas. Material settings remain stored when Material is false.

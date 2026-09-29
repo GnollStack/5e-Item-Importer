@@ -1,6 +1,8 @@
 // scripts/strictItemParsers/yamlItemParser.js
 
 import jsyaml from '../vendor/js-yaml.mjs';
+import { extendExplicitItemSchema, parseExplicitItemFields, preparedState } from '../itemExplicitFields.js';
+import { formulaValue, exactNumber } from '../explicitYamlFields.js';
 import { ItemData } from '../itemData.js';
 import { ItemUtils } from '../itemUtils.js';
 import { MODULE_NAME } from '../itemConfig.js';
@@ -23,9 +25,8 @@ function asBool(val, fallback = false) {
 }
 
 function asInt(val, fallback = 0) {
-    if (val === null || val === undefined) return fallback;
-    const n = parseInt(val, 10);
-    return isNaN(n) ? fallback : n;
+    if (val === null || val === undefined || val === "" || String(val).toLowerCase() === "n/a") return fallback;
+    return exactNumber(val, "Integer field", {integer:true,nullable:false});
 }
 
 function asExactInteger(val) {
@@ -553,6 +554,8 @@ export class YamlItemParser {
                     break;
             }
 
+            parseExplicitItemFields(itemData, data, message => this.addWarning(message));
+
             // 5b. Extract inline activities and effects
             itemData.pendingActivities = this.extractActivities(data);
 
@@ -801,6 +804,7 @@ export class YamlItemParser {
             ];
         }
 
+        extendExplicitItemSchema(sectionSchemas, type);
         const passthroughSections = new Set([
             'Activities', 'effects', 'Effects', 'EFFECTS', 'CUSTOM_PROPERTIES'
         ]);
@@ -1337,7 +1341,7 @@ export class YamlItemParser {
         }
 
         // Reload (conditional)
-        if (propertyBools['Reload']) {
+        if (propertyBools['Reload'] && asNullable(data?.RELOAD?.['Reload Amount']) !== null) {
             const reloadSection = data?.RELOAD || {};
             const reloadAmount = asNullable(reloadSection['Reload Amount']);
             if (reloadAmount === null) {
@@ -1355,14 +1359,14 @@ export class YamlItemParser {
         // Range
         const range = data?.RANGE || {};
         const reachVal = asNullable(range['Reach']);
-        item.reach = reachVal !== null ? asInt(reachVal, null) : null;
+        item.reach = reachVal !== null ? exactNumber(reachVal, 'RANGE.Reach', {min:0}) : null;
         const rangeNormal = asNullable(range['Range Normal']);
         const rangeLong = asNullable(range['Range Long']);
         const rangeUnits = asString(range['Range Units'], 'ft').toLowerCase();
 
         item.range = {
-            value: rangeNormal !== null ? asInt(rangeNormal) : null,
-            long: rangeLong !== null ? asInt(rangeLong) : null,
+            value: rangeNormal !== null ? exactNumber(rangeNormal, 'RANGE.Range Normal', {min:0}) : null,
+            long: rangeLong !== null ? exactNumber(rangeLong, 'RANGE.Range Long', {min:0}) : null,
             units: VALID_RANGE_UNITS.includes(rangeUnits) ? rangeUnits : 'ft'
         };
 
@@ -1373,10 +1377,10 @@ export class YamlItemParser {
         const dmgType = this.parseDamageType(dmg['Damage Type']);
         const dmgFormulaTypes = this.extractFormulaDamageTypes(dmgFormula);
 
-        if (!dmgFormula) {
+        if (!dmgFormula && !Object.hasOwn(dmg, 'DAMAGE_DATA')) {
             this.addError('Damage Formula is required but was not found');
         }
-        if (!dmgType && dmgFormulaTypes.length === 0 && !dmgTypeProvided) {
+        if (!dmgType && dmgFormulaTypes.length === 0 && !dmgTypeProvided && !Object.hasOwn(dmg, 'DAMAGE_DATA')) {
             this.addError('Damage Type is required unless Damage Formula uses typed terms like 1d8[piercing]');
         }
         if (!dmgTypeProvided && dmgFormulaTypes.length > 0 && this.hasUntypedDamageDice(dmgFormula)) {
@@ -1395,10 +1399,10 @@ export class YamlItemParser {
             const versType = this.parseDamageType(versDmg['Versatile Damage Type']);
             const versFormulaTypes = this.extractFormulaDamageTypes(versFormula);
 
-            if (!versFormula) {
+            if (!versFormula && !Object.hasOwn(versDmg, 'DAMAGE_DATA')) {
                 this.addError('Versatile Formula is required when Versatile property is true');
             }
-            if (!versType && versFormulaTypes.length === 0 && !versTypeProvided) {
+            if (!versType && versFormulaTypes.length === 0 && !versTypeProvided && !Object.hasOwn(versDmg, 'DAMAGE_DATA')) {
                 this.addError('Versatile Damage Type is required unless Versatile Formula uses typed terms like 1d10[slashing]');
             }
             if (!versTypeProvided && versFormulaTypes.length > 0 && this.hasUntypedDamageDice(versFormula)) {
@@ -1437,8 +1441,8 @@ export class YamlItemParser {
             if (siegeAC !== null) item.siegeArmorClass = asInt(siegeAC);
 
             const coverRaw = asString(siege['Cover'], 'none').toLowerCase();
-            item.cover = EQUIPMENT_COVER_MAP[coverRaw] !== undefined ? EQUIPMENT_COVER_MAP[coverRaw] : 0;
-            if (EQUIPMENT_COVER_MAP[coverRaw] === undefined) {
+            item.cover = EQUIPMENT_COVER_MAP[coverRaw] !== undefined ? EQUIPMENT_COVER_MAP[coverRaw] : exactNumber(coverRaw, "Cover", {min:0,max:1});
+            if (EQUIPMENT_COVER_MAP[coverRaw] === undefined && !Number.isFinite(Number(coverRaw))) {
                 this.addWarning(`Invalid Cover value "${coverRaw}". Expected: none, half, threequarters, total`);
             }
 
@@ -1564,8 +1568,8 @@ export class YamlItemParser {
                 if (vAC !== null) item.vehicleArmorClass = asInt(vAC);
 
                 const coverRaw = asString(vehicle['Cover'], 'none').toLowerCase();
-                item.cover = EQUIPMENT_COVER_MAP[coverRaw] !== undefined ? EQUIPMENT_COVER_MAP[coverRaw] : 0;
-                if (EQUIPMENT_COVER_MAP[coverRaw] === undefined) {
+                item.cover = EQUIPMENT_COVER_MAP[coverRaw] !== undefined ? EQUIPMENT_COVER_MAP[coverRaw] : exactNumber(coverRaw, "Cover", {min:0,max:1});
+                if (EQUIPMENT_COVER_MAP[coverRaw] === undefined && !Number.isFinite(Number(coverRaw))) {
                     this.addWarning(`Invalid Cover value "${coverRaw}". Expected: none, half, threequarters, total`);
                 }
 
@@ -1994,9 +1998,9 @@ export class YamlItemParser {
 
         // School (required)
         const schoolRaw = asString(itemSection['School'], '').toLowerCase();
-        if (!schoolRaw) {
+        if (!schoolRaw && !Object.hasOwn(itemSection, 'School')) {
             this.addError('School is required but was not found');
-        } else if (!VALID_SPELL_SCHOOLS.includes(schoolRaw)) {
+        } else if (schoolRaw && !VALID_SPELL_SCHOOLS.includes(schoolRaw)) {
             this.addError(`Invalid School "${itemSection['School']}". Must be one of: ${VALID_SPELL_SCHOOLS.join(', ')}`);
         } else {
             item.spellSchool = schoolRaw;
@@ -2021,7 +2025,7 @@ export class YamlItemParser {
         item.material = asBool(comp['Material'], false);
 
         // Materials (conditional on material component)
-        if (item.material) {
+        if (item.material || data?.MATERIALS) {
             const mat = data?.MATERIALS || {};
             item.materialValue = asString(mat['Value'], '');
 
@@ -2055,7 +2059,7 @@ export class YamlItemParser {
         // Ritual eligibility is independent of the preparation method. Retain
         // the legacy Method: ritual shorthand when no Ritual value is supplied.
         item.ritual = asBool(asNullable(comp['Ritual']), item.preparationMode === 'ritual');
-        item.prepared = asBool(prep['Prepared'], false);
+        item.prepared = preparedState(prep['Prepared']);
 
         // Activation (required)
         const act = data?.ACTIVATION || {};
@@ -2069,7 +2073,7 @@ export class YamlItemParser {
         }
 
         const actValueRaw = asNullable(act['Value']);
-        item.activationValue = actValueRaw !== null ? asInt(actValueRaw, 1) : 1;
+        item.activationValue = actValueRaw !== null ? exactNumber(actValueRaw, 'ACTIVATION.Value', {integer:true,min:0}) : 1;
 
         const actCondition = asNullable(act['Condition']);
         if (actCondition) item.activationCondition = String(actCondition);
@@ -2083,7 +2087,7 @@ export class YamlItemParser {
         }
         const rangeValueRaw = asNullable(rng['Value']);
         item.range = {
-            value: rangeValueRaw !== null ? asInt(rangeValueRaw, 0) : null,
+            value: rangeValueRaw !== null ? formulaValue(rangeValueRaw, 'Spell formula') : null,
             units: validRangeUnits
         };
 
@@ -2096,7 +2100,7 @@ export class YamlItemParser {
         }
         const durValueRaw = asNullable(dur['Value']);
         item.duration = {
-            value: durValueRaw !== null ? asInt(durValueRaw, 0) : null,
+            value: durValueRaw !== null ? formulaValue(durValueRaw, 'Spell formula') : null,
             units: validDurUnits
         };
         item.concentration = asBool(dur['Concentration'], false);
@@ -2114,7 +2118,7 @@ export class YamlItemParser {
             const tgtSpecialRaw = asNullable(tgt['Special']);
             item.target = {
                 type: matchedType || tgtTypeStr,
-                count: tgtCountRaw !== null ? asInt(tgtCountRaw, 0) : null,
+                count: tgtCountRaw !== null ? formulaValue(tgtCountRaw, 'Spell formula') : null,
                 choice: asBool(tgt['Choice'], false),
                 special: tgtSpecialRaw ? String(tgtSpecialRaw) : null
             };
@@ -2137,11 +2141,11 @@ export class YamlItemParser {
 
                 item.area = {
                     type: shapeRaw,
-                    size: sizeRaw !== null ? asInt(sizeRaw, 0) : null,
+                    size: sizeRaw !== null ? formulaValue(sizeRaw, 'Spell formula') : null,
                     units: VALID_AREA_UNITS.includes(areaUnitsRaw) ? areaUnitsRaw : 'ft',
-                    count: countRaw !== null ? asInt(countRaw, 0) : null,
-                    width: widthRaw !== null ? asInt(widthRaw, 0) : null,
-                    height: heightRaw !== null ? asInt(heightRaw, 0) : null,
+                    count: countRaw !== null ? formulaValue(countRaw, 'Spell formula') : null,
+                    width: widthRaw !== null ? formulaValue(widthRaw, 'Spell formula') : null,
+                    height: heightRaw !== null ? formulaValue(heightRaw, 'Spell formula') : null,
                     contiguous: contiguousRaw !== null ? asBool(contiguousRaw, false) : undefined
                 };
             }

@@ -1,4 +1,5 @@
 import jsyaml from "./vendor/js-yaml.mjs";
+import { exportExplicitItemFields } from "./itemExplicitFields.js";
 import {
   ITEM_YAML_SCHEMA_KEY,
   ITEM_YAML_SCHEMA_VERSION
@@ -288,7 +289,7 @@ function buildWeapon(item) {
     data.AMMUNITION = { "Ammunition Type": read(item, "ammunitionType", "system.ammunition.type") ?? "arrow" };
   }
   if (data.PROPERTIES.Reload) {
-    data.RELOAD = { "Reload Amount": integer(read(item, "reloadAmount", "system.reload"), 1) };
+    data.RELOAD = { "Reload Amount": integer(read(item, "reloadAmount", "flags.5e-item-importer.reloadAmount"), 1) };
   }
   const range = firstDefined(item?.range, getPath(item, "system.range"), {});
   data.RANGE = {
@@ -576,6 +577,7 @@ function strictActivityPayload(value) {
     }
   }
   if (!isObject(source)) return null;
+  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2].includes(source.schemaVersion)) return null;
   const candidates = [
     source,
     source.strictYaml,
@@ -706,6 +708,7 @@ function strictEffectPayload(value) {
     }
   }
   if (!isObject(source)) return null;
+  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2].includes(source.schemaVersion)) return null;
   const candidates = [
     source,
     source.strictYaml,
@@ -992,7 +995,9 @@ export function itemToStrictYamlDocument(item, options = {}) {
     weapon: buildWeapon, equipment: buildEquipment, consumable: buildConsumable,
     tool: buildTool, loot: buildLoot, container: buildContainer, spell: buildSpell
   };
-  const data = builders[type](item);
+  // Prepared sheet values may replace stored formulas or disabled controls.
+  const data = builders[type](item._source ?? item);
+  exportExplicitItemFields(data, item);
   addCustomProperties(data, item, options);
   addAttachments(data, item, options);
   return {

@@ -1,4 +1,4 @@
-# Natural_Language_Template.md
+# Natural-language Item authoring
 
 **Note:** This parser is flexible, but following the **Standard D&D 5e Statblock Format** yields the highest accuracy.
 
@@ -21,7 +21,7 @@ AC: [Number] (max Dex [Number])
 ### **1. Naming & Header**
 The parser uses 3 strategies. The safest is Title Case on the first line.
 *   **Good:** `Flame Tongue`
-*   **Better:** `Name: Flame Tongue` (Guarantees 100% confidence)
+*   **Better:** `Name: Flame Tongue` (explicit name hint; a parser confidence score is not a correctness guarantee)
 
 ### **2. Type Detection**
 Include specific keywords in the first 3 lines to trigger type detection:
@@ -107,3 +107,8 @@ This set of tools includes a small file, a set of lock picks, a small mirror mou
 2.  **Stripping:** It removes lines that look like Stats to isolate the **Description**.
 3.  **Conversion:** It builds a YAML document matching the strict template format.
 4.  **Final Pass:** It runs the generated YAML through the `YamlItemParser` for validation and item creation.
+
+
+## Scope and validation
+
+This heuristic text format is separate from strict YAML and is not a lossless representation of stored Item data. For explicit fields, activity/effect attachments or preservation, use [the strict authoring guide](../docs/template-authoring.md). Source-specific abilities in prose remain descriptions unless explicitly modelled through the companion workflow. Do not infer that a high confidence score means every rule, capacity, formula or integration was imported. Validate the parsed Item and inspect warnings and preserved mechanics.

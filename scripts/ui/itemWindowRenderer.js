@@ -1,3 +1,4 @@
+import { itemExplicitRows } from "../itemExplicitFields.js";
 /**
  * 5e Item Importer - Window Renderer
  * Handles all HTML generation for the item window
@@ -446,7 +447,7 @@ function renderWorkflowInsights(result) {
  */
 export function renderItemCard(item, result) {
     const typeIcon = TYPE_ICONS[item.type] || "fa-question";
-    const itemIcon = getPreviewIcon(item);
+    const itemIcon = item.explicitSource?.img || getPreviewIcon(item);
 
     let html = `<div class="ii-item-card">`;
 
@@ -506,6 +507,9 @@ export function renderItemCard(item, result) {
     if (specialProps.length > 0) {
         html += renderSection("star", "Special Properties", specialProps);
     }
+
+    const explicit = itemExplicitRows(item);
+    if (explicit.length) html += renderSection("sliders", "Stored Fields", explicit.map(row => ({...row, label: row.section + " / " + row.label})));
 
     // Description Section
     if (item.description && item.description.length > 0) {

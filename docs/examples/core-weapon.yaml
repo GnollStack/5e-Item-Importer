@@ -1,0 +1,52 @@
+SCHEMA_VERSION: 2
+WEAPON:
+  ITEM:
+    Name: Longsword +1
+    Rarity: uncommon
+    Weapon Type: martialM
+    Base Weapon: longsword
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+  COST_AND_WEIGHT:
+    Price Value: 500
+    Price Denomination: gp
+    Weight Value: 3
+    Weight Units: lb
+  PROPERTIES:
+    Magical: true
+    Versatile: true
+  ATTUNEMENT:
+    Attunement: required
+    Magic Bonus: 1
+  RANGE:
+    Reach: 5
+  DAMAGE:
+    DAMAGE_DATA:
+      Dice Count: 1
+      Die Denomination: 8
+      Bonus: ""
+      Damage Types:
+        - slashing
+      Custom Enabled: false
+      Custom Formula: ""
+      Scaling Mode: none
+      Scaling Dice Count: 0
+      Scaling Formula: ""
+  VERSATILE_DAMAGE:
+    DAMAGE_DATA:
+      Dice Count: 1
+      Die Denomination: 10
+      Bonus: ""
+      Damage Types:
+        - slashing
+      Custom Enabled: false
+      Custom Formula: ""
+      Scaling Mode: none
+      Scaling Dice Count: 0
+      Scaling Formula: ""
+  MASTERY:
+    Mastery: sap
+  DESCRIPTION:
+    Description: |
+      You have a +1 bonus to attack and damage rolls made with this magic weapon.

@@ -1,0 +1,46 @@
+SCHEMA_VERSION: 2
+SPELL:
+  ITEM:
+    Name: Magic Missile
+    Level: 1
+    School: evo
+    Ability: n/a
+  COMPONENTS:
+    Vocal: true
+    Somatic: true
+    Material: false
+    Ritual: false
+  PREPARATION:
+    Method: spell
+    Prepared: true
+  ACTIVATION:
+    Type: action
+    Value: 1
+    Condition: n/a
+  RANGE:
+    Units: ft
+    Value: 120
+  DURATION:
+    Units: inst
+    Value: n/a
+    Concentration: false
+  TARGETS:
+    Type: creature
+    Count: 3
+    Choice: true
+    Special: Up to three creatures; each dart can target the same or a different creature.
+  USAGE:
+    Uses Spent: 0
+    Uses Max: n/a
+  RECOVERY: []
+  DESCRIPTION:
+    Description: >
+      <p>You create three glowing darts of magical force. Each dart hits a creature of your choice
+      that you can see within range and deals [[/damage 1d4 + 1 force]] damage. The darts strike
+      simultaneously, and you can direct them at one creature or several.</p>
+
+      <p><strong>At Higher Levels.</strong> One additional dart is created for each spell slot level
+      above 1.</p>
+  CHAT_FLAVOR:
+    Chat Description: |
+      n/a
