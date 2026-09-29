@@ -5,8 +5,8 @@
 **Stop manually typing items.**
 
 [![Latest Release](https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer?label=Latest%20Release&style=flat-square)](https://github.com/GnollStack/5e-Item-Importer/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/total?style=flat-square&color=green)](https://github.com/GnollStack/5e-Item-Importer/releases)
-[![Downloads@latest](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/total?style=flat-square)](https://github.com/GnollStack/5e-Item-Importer/releases/latest)
+[![Package Downloads](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/5e-item-importer.zip?label=Package%20Downloads&style=flat-square&color=green)](https://github.com/GnollStack/5e-Item-Importer/releases)
+[![Latest Package Downloads](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/5e-item-importer.zip?label=Latest%20Package%20Downloads&style=flat-square)](https://github.com/GnollStack/5e-Item-Importer/releases/latest)
 [![Foundry VTT](https://img.shields.io/badge/Foundry-v14-orange?style=flat-square)](https://foundryvtt.com)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20a%20Steak-FF5E5B?style=flat-square&logo=ko-fi&logoColor=white)](https://ko-fi.com/gnollstack)
 
