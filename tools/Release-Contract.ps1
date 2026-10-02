@@ -146,3 +146,24 @@ function Assert-ImporterReleasePair {
         })
     }
 }
+
+# Fixed versions written into the README (badges and **Version:** lines) must match the manifest.
+# Dynamic GitHub release badges carry no version text and always pass.
+function Assert-ImporterReadmeVersion {
+    param(
+        [Parameter(Mandatory = $true)][string]$ReadmePath,
+        [Parameter(Mandatory = $true)][string]$Version
+    )
+    $readme = Get-Content -LiteralPath $ReadmePath -Raw -Encoding UTF8
+    $patterns = @(
+        'img\.shields\.io/badge/[^)\s"]*?-(\d+\.\d+\.\d+)-',
+        '\bversion (\d+\.\d+\.\d+)\]\(https://img\.shields\.io',
+        '\*\*(?:Module )?[Vv]ersion:\*\* `?(\d+\.\d+\.\d+)`?'
+    )
+    $stale = @(@(foreach ($pattern in $patterns) {
+        [regex]::Matches($readme, $pattern) | ForEach-Object { $_.Groups[1].Value }
+    }) | Where-Object { $_ -cne $Version } | Select-Object -Unique)
+    if ($stale.Count -gt 0) {
+        throw "README states version $($stale -join ', ') but module.json is $Version."
+    }
+}

@@ -143,6 +143,20 @@ try {
     $itemRoot = Join-Path $testRoot "5e-item-importer"
     $activityRoot = Join-Path $testRoot "5e-activity-importer"
     New-Item -ItemType Directory -Path $itemRoot, $activityRoot -Force | Out-Null
+
+    $readmePath = Join-Path $testRoot "README.md"
+    Set-Content -LiteralPath $readmePath -Encoding UTF8 -Value @(
+        '[![5e Activity Importer version 14.1.3](https://img.shields.io/badge/5e_Activity_Importer-14.1.3-blue?style=flat-square)](#)',
+        '**Version:** 14.1.3'
+    )
+    Assert-ImporterReadmeVersion $readmePath "14.1.3"
+    $checks++
+    Assert-Rejected { Assert-ImporterReadmeVersion $readmePath "14.1.4" } "README states version 14.1.3"
+    $checks++
+    Set-Content -LiteralPath $readmePath -Encoding UTF8 -Value '[![Latest Release](https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer?label=Latest%20Release)](#)'
+    Assert-ImporterReadmeVersion $readmePath "14.1.4"
+    $checks++
+
     $item = New-TestManifest "5e-item-importer"
     $activity = New-TestManifest "5e-activity-importer"
     $item | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $itemRoot "module.json")

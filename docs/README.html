@@ -1,0 +1,571 @@
+<div style="text-align: center;">
+<h1 id="5e-item-importer">5e Item Importer</h1>
+<p><strong>Stop manually typing items.</strong></p>
+<p><a href="https://github.com/GnollStack/5e-Item-Importer/releases/latest"><img src="https://img.shields.io/github/v/release/GnollStack/5e-Item-Importer?label=Latest%20Release&amp;style=flat-square" alt="Latest Release" /></a>
+<a href="https://github.com/GnollStack/5e-Item-Importer/releases"><img src="https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/5e-item-importer.zip?label=Downloads&amp;style=flat-square&amp;color=green" alt="Downloads" /></a>
+<a href="https://github.com/GnollStack/5e-Item-Importer/releases/latest"><img src="https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/5e-item-importer.zip?label=Latest%20Downloads&amp;style=flat-square" alt="Latest Downloads" /></a>
+<a href="https://foundryvtt.com"><img src="https://img.shields.io/badge/Foundry-v14-orange?style=flat-square" alt="Foundry VTT v14" /></a>
+<a href="https://ko-fi.com/gnollstack"><img src="https://img.shields.io/badge/Ko--fi-Buy%20a%20Steak-FF5E5B?style=flat-square&amp;logo=ko-fi&amp;logoColor=white" alt="Ko-fi" /></a>
+<a href="https://www.patreon.com/cw/GnollStack"><img src="https://img.shields.io/badge/Patreon-Bazaar%20Patron-F96854?style=flat-square&amp;logo=patreon&amp;logoColor=white" alt="Patreon: Bazaar Patron" /></a>
+<a href="https://discord.gg/bGQDnyqYJ"><img src="https://img.shields.io/badge/Discord-Bakshi%27s%20Bazaar-5865F2?style=flat-square&amp;logo=discord&amp;logoColor=white" alt="Discord: Bakshi's Bazaar" /></a></p>
+<p><em>For GMs who want D&amp;D 5e items imported from text instead of typed by hand.</em></p>
+<p><a href="#preview">Preview</a> · <a href="#quick-start">Quick Start</a> · <a href="#features">Features</a> · <a href="#template-reference">Templates</a> · <a href="#installation">Installation</a> · <a href="#compatibility">Compatibility</a> · <a href="#developer-api">API</a> · <a href="#bakshis-bazaar">Bakshi's Bazaar</a> · <a href="#community">Community</a> · <a href="#contributing">Contributing</a> · <a href="#ai-use">AI Use</a> · <a href="#support-development">Support</a> · <a href="#license-permissions">License</a></p>
+</div>
+<hr />
+<div style="text-align: center;">
+<h2 id="feature-index">Feature Index</h2>
+<table style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left">Feature</th>
+<th style="text-align:left">What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left"><strong><a href="#natural-language-parser">Natural Language Parser</a></strong></td>
+<td style="text-align:left">Paste a familiar stat block from a PDF, website, or your notes and import it.</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong><a href="#strict-format-parser">Strict Format Parser</a></strong></td>
+<td style="text-align:left">Use documented YAML templates for exact control over complex homebrew.</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong><a href="#batch-imports">Batch Imports</a></strong></td>
+<td style="text-align:left">Import a mixed collection of Items from one block.</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong><a href="#lightweight-key-value-drafts">Lightweight Drafts</a></strong></td>
+<td style="text-align:left">Write a quick key/value list and let the importer fill in sensible defaults.</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong><a href="#import-workflow">Import Workflow</a></strong></td>
+<td style="text-align:left">Choose a destination, handle existing matches, and undo imports from the current session.</td>
+</tr>
+<tr>
+<td style="text-align:left"><strong><a href="#activity-importer-companion">Activity Importer Companion</a></strong></td>
+<td style="text-align:left">Premium: import an Item together with its activities and Active Effects.</td>
+</tr>
+</tbody>
+</table>
+<p><em>5e Item Importer is free and works on its own. Paste a normal stat block for a quick import, or use one of the strict YAML templates when you want exact control. The premium <a href="#activity-importer-companion">5e Activity Importer companion</a> adds activities and effects to imported Items.</em></p>
+</div>
+<hr />
+<div style="text-align: center;">
+<h2 id="preview">Preview</h2>
+</div>
+<div style="text-align: center;">
+<a href="https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/5e-item-importer/images/5e-item-importer-preview.png"><img width="640" height="865" alt="5e Item Importer preview" src="https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/5e-item-importer/images/5e-item-importer-preview.png" style="max-width: 100%; height: auto;" decoding="async" /></a>
+</div>
+<h3 id="see-it-in-action-on-youtube">See it in Action on YouTube</h3>
+<ul>
+<li><a href="https://youtu.be/THrikJq0EY4">5e Importer V13.2.0</a></li>
+<li><a href="https://youtu.be/dyhUoiNYxmA?si=DozAjOLjFGEmcAk-">5e Importer V13.7.2</a></li>
+</ul>
+<hr />
+<div style="text-align: center;">
+<h2 id="quick-start">Quick Start</h2>
+</div>
+<ol>
+<li>Install and enable <strong>5e Item Importer</strong> in your world.</li>
+<li>Open the <strong>Items Directory</strong> in Foundry.</li>
+<li>Click <strong>Import Item</strong>.</li>
+<li>Paste the item text and click <strong>Parse</strong>.</li>
+<li>Review the result, choose a destination, and click <strong>Import</strong>.</li>
+</ol>
+<hr />
+<div style="text-align: center;">
+<h2 id="features">Features</h2>
+</div>
+<h3 id="natural-language-parser">Natural Language Parser</h3>
+<p><em>Best for: quick imports from books, PDFs, or websites. This parser is still under active development.</em></p>
+<p>Paste a familiar D&amp;D 5e item stat block from a PDF, website, or your own notes. The importer looks for the Item type, price, weight, damage, properties, and description, then shows you the result before anything is created.</p>
+<ol>
+<li>Copy the item text from your source.</li>
+<li>Open the <strong>Items Directory</strong> in Foundry and click <strong>Import Item</strong>.</li>
+<li>Paste the text and click <strong>Parse</strong>.</li>
+<li>Review the result, choose a destination, and click <strong>Import</strong>.</li>
+</ol>
+<details>
+<summary><strong>📄 View Natural Language Template & Examples</strong></summary>
+<h6 id="best-practice-patterns">Best Practice Patterns</h6>
+<p>For best results, try to match the standard D&amp;D 5e Statblock format:</p>
+<pre><code class="language-text">[Item Name]
+[Type], [Rarity] (requires attunement [by Class/Race])
+Cost: [Value] [gp/sp/cp], Weight: [Value] [lb]
+Damage: [Formula] [Type]
+Properties: [Prop1], [Prop2], [Versatile (1d10)]
+AC: [Number] (max Dex [Number])
+
+[Description Paragraphs...]
+</code></pre>
+<hr />
+<h6 id="1-naming--header">1. Naming &amp; Header</h6>
+<p>The parser uses 3 strategies. The safest is Title Case on the first line.</p>
+<ul>
+<li><strong>Good:</strong> <code>Flame Tongue</code></li>
+<li><strong>Better:</strong> <code>Name: Flame Tongue</code> (Guarantees 100% confidence)</li>
+</ul>
+<h6 id="2-type-detection">2. Type Detection</h6>
+<p>Include specific keywords in the first 3 lines to trigger type detection:</p>
+<ul>
+<li><strong>Weapon:</strong> &quot;Weapon&quot;, &quot;Melee Weapon&quot;, &quot;Ranged Weapon&quot;, &quot;Attack Roll&quot;</li>
+<li><strong>Armor:</strong> &quot;Armor&quot;, &quot;Shield&quot;, &quot;Plate&quot;, &quot;Leather&quot;, &quot;AC&quot;</li>
+<li><strong>Consumable:</strong> &quot;Potion&quot;, &quot;Scroll&quot;, &quot;Wand&quot;, &quot;Rod&quot;, &quot;Food&quot;, &quot;Drink&quot;, &quot;Poison&quot;, &quot;Ammunition&quot;, &quot;Trinket&quot;</li>
+<li><strong>Tool:</strong> &quot;Tool&quot;, &quot;Kit&quot;, &quot;Instrument&quot;, &quot;Gaming Set&quot;</li>
+<li><strong>Container:</strong> &quot;Bag&quot;, &quot;Backpack&quot;, &quot;Box&quot;, &quot;Holds&quot;, &quot;Capacity&quot;</li>
+<li><strong>Loot:</strong> &quot;Gem&quot;, &quot;Art Object&quot;, &quot;Treasure&quot;, &quot;Material&quot;</li>
+</ul>
+<h6 id="3-weapons">3. Weapons</h6>
+<p>To ensure correct parsing of damage and properties:</p>
+<ul>
+<li><strong>Type:</strong> Use full terms like &quot;Martial Melee Weapon&quot; or &quot;Simple Ranged Weapon&quot;.</li>
+<li><strong>Damage:</strong> Format as <code>1d8 slashing</code> or <code>Damage: 2d6 fire</code>.</li>
+<li><strong>Properties:</strong> Use an explicit label, such as <code>Properties: Finesse, Light, Thrown</code>.</li>
+<li><strong>Versatile:</strong> Use the specific format <code>Versatile (1d10)</code>.</li>
+<li><strong>Magic weapon damage:</strong> Known base weapons retain their normal base damage unless an explicit <code>Damage:</code> field overrides it. Additional damage in description prose remains additional damage and does not replace the base roll.</li>
+</ul>
+<h6 id="4-armor--equipment">4. Armor &amp; Equipment</h6>
+<ul>
+<li><strong>AC:</strong> Use <code>AC 18</code> or <code>Armor Class: 14</code>.</li>
+<li><strong>Stealth:</strong> Use the phrase <code>Disadvantage on Stealth checks</code>.</li>
+<li><strong>Strength:</strong> Use <code>Requires Strength 13</code> or <code>Str 15</code>.</li>
+<li><strong>Wondrous items:</strong> A declared <code>Wondrous Item</code> type imports as dnd5e <code>wondrous</code> equipment rather than loot.</li>
+</ul>
+<h6 id="5-consumables">5. Consumables</h6>
+<ul>
+<li>The header/name determines potion, scroll, wand, rod, ammunition, poison, food, or trinket subtype before description keywords are considered.</li>
+<li>Phrases such as <code>has 7 charges</code> populate the maximum uses and start with zero uses spent. Prefer <code>Uses Spent</code> in strict YAML; legacy <code>Uses Current</code> means remaining uses and is converted with a warning.</li>
+<li>Quantity suffixes preserve exact non-negative integers, including zero (<code>Arrows (0)</code>). Fractional or unsafe quantities and charge counts are ignored with a warning rather than truncated.</li>
+</ul>
+<h6 id="6-containers">6. Containers</h6>
+<p>The parser looks for specific capacity phrases:</p>
+<ul>
+<li><strong>Weight:</strong> &quot;Holds 500 pounds&quot; or &quot;Capacity: 500 lbs&quot;.</li>
+<li><strong>Volume:</strong> &quot;64 cubic feet&quot;.</li>
+<li><strong>Currency:</strong> &quot;Contains 50 gp&quot; or &quot;Holds 10 platinum&quot;.</li>
+</ul>
+<hr />
+<h5 id="example-weapon">Example: Weapon</h5>
+<pre><code class="language-text">Stormglass Rapier
+Weapon (rapier), rare (requires attunement)
+Cost: 2500 gp, Weight: 2 lb.
+Damage: 1d8 piercing
+Properties: Finesse
+
+This slender blade is forged from blue crystal that hums before a storm. The wielder has a +1 bonus to attack and damage rolls made with this magic weapon. When the wielder hits a creature with it, the target takes an extra 1d6 lightning damage. Once per turn, the wielder can force the target to make a DC 14 Constitution saving throw or be deafened until the end of its next turn.
+</code></pre>
+<h5 id="example-armor">Example: Armor</h5>
+<pre><code class="language-text">Emberguard Half Plate
+Armor (half plate), rare (requires attunement)
+Cost: 3500 gp, Weight: 40 lb.
+Armor Class: 15 (max Dex 2)
+
+This blackened half plate is warm to the touch and etched with lines like cooling lava. While wearing this armor, the wearer has a +1 bonus to AC and resistance to fire damage. When a creature within 5 feet hits the wearer with a melee attack, sparks leap from the plates and scorch the attacker.
+</code></pre>
+<h5 id="example-container">Example: Container</h5>
+<pre><code class="language-text">Moonwell Bag
+Container, uncommon
+Weight: 2 lb.
+
+This silver-threaded bag feels cool even in direct sunlight. The bag can hold up to 120 pounds, not exceeding a volume of 12 cubic feet, and its contents do not add to the carrier's encumbrance. The carrier can whisper the name of a stored item to retrieve it without searching. The bag currently contains 3 moonstones, 20 gp, and 12 sp.
+</code></pre>
+<h5 id="example-tool">Example: Tool</h5>
+<pre><code class="language-text">Cartographer's Quillcase
+Tool, uncommon
+Cost: 75 gp, Weight: 1 lb.
+
+This lacquered case contains enchanted inks, folding rulers, waxed vellum, and a silver nib that points toward true north. Proficiency with these tools lets the user add their proficiency bonus to ability checks they make to draw maps, mark safe routes, or decode old survey notes. Once per day, the user can mark one safe route they can see; checks to follow that route have advantage for 24 hours.
+</code></pre>
+</details>
+<hr />
+
+<h3 id="strict-format-parser">Strict Format Parser</h3>
+<p><em>Best for: complex homebrew and bulk generation.</em></p>
+<p>Strict Format uses a documented YAML shape instead of guessing from prose. Start with the template for the Item type you need, fill in the relevant fields, and parse it in the same importer window. Validation messages call out fields that need attention before import. It works well with large language models like ChatGPT, Gemini, or Claude.</p>
+<h4 id="validated-custom-yaml-examples">Validated Custom YAML Examples</h4>
+<p>These examples have been checked against the current parser and dnd5e Item schema. They use optional sections such as uses, recovery, chat flavor, unidentified descriptions, enrichers, and dynamic name lookups while remaining usable with 5e Item Importer alone.</p>
+<p>The complete examples, including mixed-type and same-type batches, are in the <a href="https://github.com/GnollStack/5e-Item-Importer#validated-custom-yaml-examples">README on GitHub</a>.</p>
+<details>
+<summary><strong>Advanced: dnd5e description enrichers and name lookups</strong></summary>
+<p><code>Description</code> and <code>Chat Description</code> fields preserve Foundry/dnd5e text features for Foundry to resolve when displayed. You can use dnd5e enrichers like <code>[[/damage 1d6 fire average]]</code>, roll-data formulas like <code>@prof</code>, dynamic lookups like <code>[[lookup @name]]{the creature}</code>, System HTML classes, and pass-through document links like <code>@UUID[...]</code> or <code>@Embed[...]</code>.</p>
+<p>Use dynamic name lookups for active narration and chat flavor, such as <code>[[lookup @name]]{The creature} drinks the potion.</code> or <code>When [[lookup @name]]{the creature} hits with this weapon...</code>. Keep passive rules text natural.</p>
+<p>Optional companion: <strong>Token Name Lookup</strong> can make the same stock dnd5e <code>[[lookup @name]]</code> text prefer concrete token names for aliases, disguises, and token inventory views. Items remain fully compatible without that module; dnd5e simply resolves the lookup to the actor name.</p>
+</details>
+<h4 id="template-reference">Template Downloads</h4>
+<p>The full strict templates live as real module files under <code>templates/YAML Templates/</code>. Use those files as the source of truth; the README keeps only validated examples so the docs do not drift.</p>
+<p>After installing the module, the same files are available locally in your Foundry data folder:</p>
+<pre><code class="language-text">modules/5e-item-importer/templates/YAML Templates/
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Template</th>
+<th>View in Repo</th>
+<th>Raw Download</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Weapon</td>
+<td><a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/YAML%20Templates/Strict%20Weapon%20Template.md">Strict Weapon Template</a></td>
+<td><a href="https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Weapon%20Template.md">Raw</a></td>
+</tr>
+<tr>
+<td>Consumable</td>
+<td><a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/YAML%20Templates/Strict%20Consumable%20Template.md">Strict Consumable Template</a></td>
+<td><a href="https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Consumable%20Template.md">Raw</a></td>
+</tr>
+<tr>
+<td>Container</td>
+<td><a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/YAML%20Templates/Strict%20Container%20Template.md">Strict Container Template</a></td>
+<td><a href="https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Container%20Template.md">Raw</a></td>
+</tr>
+<tr>
+<td>Equipment</td>
+<td><a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/YAML%20Templates/Strict%20Equipment%20Template.md">Strict Equipment Template</a></td>
+<td><a href="https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Equipment%20Template.md">Raw</a></td>
+</tr>
+<tr>
+<td>Loot</td>
+<td><a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/YAML%20Templates/Strict%20Loot%20Template.md">Strict Loot Template</a></td>
+<td><a href="https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Loot%20Template.md">Raw</a></td>
+</tr>
+<tr>
+<td>Spell</td>
+<td><a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/YAML%20Templates/Strict%20Spell%20Template.md">Strict Spell Template</a></td>
+<td><a href="https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Spell%20Template.md">Raw</a></td>
+</tr>
+<tr>
+<td>Tool</td>
+<td><a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/YAML%20Templates/Strict%20Tool%20Template.md">Strict Tool Template</a></td>
+<td><a href="https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Tool%20Template.md">Raw</a></td>
+</tr>
+</tbody>
+</table>
+<p>For import-ready examples, use the <a href="#validated-custom-yaml-examples">validated custom YAML examples</a>, the <a href="https://github.com/GnollStack/5e-Item-Importer#validated-mixed-batch-example">mixed-type batch example</a>, and the <a href="https://github.com/GnollStack/5e-Item-Importer#validated-same-type-batch-example">same-type batch example</a> above.</p>
+<details>
+<summary><strong>Strict YAML rules worth knowing</strong></summary>
+<p>For mixed weapon damage, use a dnd5e typed custom formula such as <code>1d8[piercing] + 1d6[lightning]</code> and set <code>Damage Type</code> to the weapon's primary damage type, such as <code>piercing</code>. Do the same for <code>Versatile Damage Type</code>. The primary type gives dnd5e a default for system-added ability and magic bonuses, while bracketed formula terms keep extra damage such as lightning separate for resistance and immunity. Use <code>n/a</code> only for fully self-contained typed formulas that will not receive system-added ability, magic, or ammunition bonuses. Description enrichers provide clickable text; they do not generate activity mechanics. For functional source-defined saves, damage, healing, conditions, and passive bonuses, include the appropriate <code>Activities</code>/<code>effects</code> arrays when Activity Importer is available for the workflow or its support is requested. Use the companion strict templates and preserve the source rules. Core Item imports work independently: omit attachment sections and keep the complete rules in the description when companion support is unavailable or unspecified.</p>
+<p>Spell ritual capability is independent of preparation. Use <code>COMPONENTS.Ritual: true</code> with <code>PREPARATION.Method: spell</code> for a normal ritual-capable spell. Explicit ritual booleans take precedence; older YAML without the field retains the <code>Method: ritual</code> fallback. Material cost and supply must be nonnegative.</p>
+<p>Strict YAML reports unknown sections and field names as warnings so typos are not silently ignored. A parse with validation errors returns no importable item; correct the reported fields before importing.</p>
+<p>Strict numeric scalars are parsed exactly: quantities and uses must be integers, while price, weight, and weight/volume capacities may be finite decimals; these values cannot be negative. Values with trailing text such as <code>12abc</code> are errors rather than numeric prefixes. <code>Attunement By</code> is retained only when <code>Attunement</code> is <code>required</code> or <code>optional</code>; it is cleared with a warning for <code>none</code> or invalid attunement values.</p>
+</details>
+<hr />
+
+<h3 id="batch-imports">Batch Imports</h3>
+<p>Strict Format can import a mixed collection in one block. For several Items of the same type, separate YAML documents with <code>---</code>. Supported top-level keys are <code>SPELL</code>, <code>WEAPON</code>, <code>EQUIPMENT</code>, <code>CONSUMABLE</code>, <code>TOOL</code>, <code>LOOT</code>, and <code>CONTAINER</code>.</p>
+<hr />
+
+<h3 id="lightweight-key-value-drafts">Lightweight Key/Value Drafts</h3>
+<details>
+<summary><strong>View a lightweight draft example and supported fields</strong></summary>
+<p>For a quick single-Item draft, the same seven Item types can also be written as a flat key/value list. At minimum, provide <code>name</code> and <code>type</code>; the router supplies conservative valid defaults and then validates the generated document through the strict parser.</p>
+<pre><code class="language-yaml">name: Quick Spark
+type: spell
+level: 2
+school: evocation
+activation: bonus action
+components: V, S
+range: 60 feet
+duration: 1 minute
+description: A brief arc of blue-white light.
+</code></pre>
+<p>Type-specific lightweight fields include <code>weaponType</code>/<code>baseWeapon</code>, <code>equipmentType</code>/<code>baseEquipment</code>/<code>armorClass</code>, <code>consumableType</code>/<code>ammunitionType</code>/<code>poisonType</code>, <code>toolType</code>/<code>baseTool</code>, <code>lootType</code>, container capacity fields, and spell level/school/activation/component/range/duration fields.</p>
+<p>Readable aliases such as <code>armor</code>/<code>armour</code>, <code>potion</code>, <code>scroll</code>, <code>martial melee</code>, <code>thieves tools</code>, <code>trade goods</code>, and full spell-school names are accepted. Mismatched fields, conflicting representations, malformed values, and unknown properties are reported instead of being silently replaced. Use the full strict templates when you need advanced configuration.</p>
+</details>
+<hr />
+
+<h3 id="import-workflow">Import Workflow</h3>
+<p>Paste text, choose a template, or drop an Item, Actor, Journal passage, or local text/YAML file into the importer. After parsing, review the preview and choose a World Items folder, an owned Actor, or a writable Item compendium as the destination.</p>
+<p>When a matching Item already exists, choose whether to create another copy, update it, merge conservatively, or skip it. Update and merge show the exact target and any field conflicts before writing. Ambiguous matches are stopped for review.</p>
+<p>Saved presets, import options, normalized YAML, and session history stay collapsed until you need them. Batch imports can be filtered, cancelled before the next write, and retried without recreating successful entries. Session history can download a report or undo an unchanged import from the current session.</p>
+<hr />
+
+<h3 id="activity-importer-companion">Activity Importer Companion</h3>
+<p>5e Item Importer creates Items on its own. Add the premium <strong>5e Activity Importer</strong> and the same import can include the Item's attacks, saves, damage, healing, and Active Effects, so it arrives ready to use at the table.</p>
+<p>With both modules enabled:</p>
+<ul>
+<li><strong>One menu:</strong> <strong>Import Item</strong> joins Activity Importer's <strong>Add Activity / Effect</strong> dropdown in the Items Directory. Turn off <strong>Merge with Activity Importer Dropdown</strong> in the settings to keep a separate button.</li>
+<li><strong>Mechanics in strict YAML:</strong> add <code>Activities</code> and <code>effects</code> arrays to a strict template. Each template has an optional activities and effects section showing the format, and <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/examples/full-native-weapon.yaml"><code>docs/examples/full-native-weapon.yaml</code></a> is a complete example.</li>
+<li><strong>Build them in the window:</strong> <strong>Add activities or effects</strong> opens Activity Importer's builder for the parsed Item. <strong>Resolve document references</strong> links the spells and Actors that Cast, Summon, and Transform need.</li>
+<li><strong>Checked first:</strong> Activity Importer validates and dry-runs the activities and effects before they are added.</li>
+<li><strong>Full Item YAML:</strong> right-click an Item and choose <strong>Copy Full Item YAML</strong> or <strong>Download Full Item YAML</strong> to export it with its activities and effects, ready to re-import or share.</li>
+</ul>
+<p>When asking an LLM for YAML, ask for a premium/full Item and give it both modules' templates.</p>
+<p>Without the companion, the Item itself still imports: the preview warns that any <code>Activities</code> or <code>effects</code> will be skipped, and export uses <strong>Copy Core Item YAML</strong>.</p>
+<div style="text-align: center;">
+<p><a href="https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/activity-Importer-5e/gifs/Import-Full-Item.gif"><img src="https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/activity-Importer-5e/gifs/Import-Full-Item.gif" alt="Importing Rimeheart as a complete spear with activities and effects" style="max-width: 100%; height: auto;" width="1280" height="536" loading="lazy" decoding="async" /></a></p>
+</div>
+<p>Activity Importer is available to <a href="https://www.patreon.com/cw/GnollStack">Bazaar Patrons</a> through Foundry Premium Content and works with 5e Item Importer 14.1.2 or later.</p>
+<hr />
+
+<h3 id="more-details">More Details</h3>
+<details>
+<summary><strong>Settings</strong></summary>
+<p>Relevant registered settings:</p>
+<table>
+<thead>
+<tr>
+<th>Setting key</th>
+<th>Scope</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>savedPresets</code></td>
+<td>client</td>
+<td>Bounded reusable input presets</td>
+</tr>
+<tr>
+<td><code>lastDestination</code></td>
+<td>client</td>
+<td>Last permission-validated destination</td>
+</tr>
+<tr>
+<td><code>compendiumImageMode</code></td>
+<td>client</td>
+<td>Deterministic or random top image selection</td>
+</tr>
+</tbody>
+</table>
+<p>Enable <strong>Match Icons from Compendiums</strong> in Module Settings to pick Item icons from your compendiums, and use <strong>Compendium image choice</strong> to select the best deterministic match or a random top match.</p>
+</details>
+<details>
+<summary><strong>Troubleshooting</strong></summary>
+<p><strong>The natural parser missed or misread a field.</strong></p>
+<blockquote>
+<p>Check the preview before importing. Clear labels such as <code>Damage:</code>, <code>Properties:</code>, and <code>Weight:</code> help. For complicated Items, use the strict template for that Item type.</p>
+</blockquote>
+<p><strong>Icons aren't matching automatically.</strong></p>
+<blockquote>
+<p>Go to Module Settings and enable <strong>&quot;Match Icons from Compendiums&quot;</strong>. This works best when the item name includes a recognizable D&amp;D 5e base item or item type (for example, &quot;Stormglass Rapier&quot;, &quot;Emberguard Half Plate&quot;, or &quot;Potion of Sunlit Breath&quot;). Use <strong>Compendium image choice</strong> to select the best deterministic match or a random top match. Random selection can still be made reproducible with a seed when using the core service programmatically.</p>
+</blockquote>
+<p><strong>Description is empty.</strong></p>
+<blockquote>
+<p>If using Natural Language: Ensure there is a blank line between the stat block and the description.
+If using Strict Format: Use the YAML block form <code>Description: |</code> and indent the HTML description beneath it, as shown in the validated examples and template files.</p>
+</blockquote>
+</details>
+<hr />
+<div style="text-align: center;">
+<h2 id="installation">Installation</h2>
+</div>
+<ol>
+<li>Foundry -&gt; <strong>Add-on Modules</strong> -&gt; <strong>Install Module</strong>.</li>
+<li>Search &quot;5e Item Importer&quot;, or paste this manifest URL:</li>
+</ol>
+<pre><code class="language-text">https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.json
+</code></pre>
+<ol start="3">
+<li>Enable the module in your world.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Foundry VTT</td>
+<td>v14 required; verified on 14.367</td>
+</tr>
+<tr>
+<td>dnd5e</td>
+<td>5.3.0 minimum; verified on 5.3.3</td>
+</tr>
+<tr>
+<td><a href="https://foundryvtt.com/packages/5e-activity-importer">5e Activity Importer</a></td>
+<td>Optional premium companion; see <a href="#activity-importer-companion">Activity Importer Companion</a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<div style="text-align: center;">
+<h2 id="compatibility">Compatibility</h2>
+</div>
+<p><strong>Foundry VTT:</strong> v14 required; verified on <strong>14.367</strong>. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.</p>
+<p><strong>Game system:</strong> <strong>dnd5e</strong> 5.3.0 minimum; verified on <strong>5.3.3</strong>.</p>
+<p><strong>Optional modules:</strong> <strong>5e Activity Importer</strong> adds activities and effects to imported Items; Item Importer works fully without it. <strong>Token Name Lookup</strong> can make <code>[[lookup @name]]</code> text prefer token names.</p>
+<hr />
+<div style="text-align: center;">
+<h2 id="developer-api">Developer API</h2>
+</div>
+<pre><code class="language-js">const api = game.modules.get(&quot;5e-item-importer&quot;).api;
+api.schemaVersion; // Public API schema 3
+api.capabilities.exportModes; // [&quot;core&quot;, &quot;full&quot;]
+const preview = api.parseWithInsights(sourceText);
+await api.import(sourceText, {
+  destination: { kind: &quot;actor&quot;, actorUuid: actor.uuid },
+  duplicateMode: &quot;merge&quot;,
+  confirmExisting: true
+});
+const coreYaml = await api.export(item);       // Standalone default: Item fields only
+const fullYaml = await api.exportFull(item);   // Explicit companion export
+const sameFullYaml = await api.export(item, { mode: &quot;full&quot; });
+await api.copyExport(item);
+await api.downloadExport(item);
+</code></pre>
+<p>API undo is intentionally explicit: <code>api.history.undo(sessionId, { confirmed: true })</code>. The legacy <code>api.import(text, folderId)</code> signature remains supported.</p>
+<details>
+<summary><strong>Advanced: Schema versions, exports, and integration contracts</strong></summary>
+<p>New strict YAML documents begin with visible schema metadata:</p>
+<pre><code class="language-yaml">SCHEMA_VERSION: 1
+WEAPON:
+  ITEM:
+    Name: &quot;Example Weapon&quot;
+</code></pre>
+<p>The parser reports migration provenance and carries it through mixed and multi-document batches. Documents declaring a schema version newer than the installed importer supports are rejected instead of being partially imported. <code>Uses Max</code>, magic bonuses, tool bonuses, and recharge thresholds preserve compatible dnd5e formula strings; legacy <code>Uses Current</code> cannot be converted against a formula maximum and fails with an instruction to provide <code>Uses Spent</code>.</p>
+<p>The strict exporter supports Weapon, Equipment, Consumable, Tool, Loot, Container, and Spell Items. <strong>Core Item export</strong> is always available, excludes Activities and Active Effects, and is the default for <code>api.export()</code>, <code>api.exportBatch()</code>, copy, download, and Item drops when the companion serializers are unavailable. <strong>Full Item export</strong> is an explicit companion workflow exposed by <code>api.exportFull()</code>, <code>api.exportFullBatch()</code>, <code>{ mode: &quot;full&quot; }</code>, and the Full Item YAML context actions shown when Activity Importer exposes both synchronous serializers. Batch export uses <code>---</code> document separators so repeated Item types remain lossless.</p>
+<p>For full export, every live dnd5e Activity and Active Effect is serialized from its current document state through Activity Importer's <code>api.serializeActivity()</code> and <code>api.serializeEffect()</code> services, so later edits supersede stored provenance. If the companion is unavailable, the current state cannot be represented, a third-party field is present, or the serializer cannot prove a lossless mapping, full export stops with an explicit error. Activity-specific effect application metadata is matched separately from the effect body. A shared Active Effect referenced by multiple Activities is rejected because the current strict format cannot preserve that topology without duplication; duplicate requested effect IDs are also rejected during import. A linked effect is omitted from the standalone <code>effects</code> section only when its exact serialized body is embedded in its owning Activity. Low-level export options continue to accept <code>includeActivities</code> and <code>includeEffects</code>; each alias takes precedence over the older aggregate attachment options when both are supplied.</p>
+<p>Custom properties use this strict shape:</p>
+<pre><code class="language-yaml">CUSTOM_PROPERTIES:
+  Registered:
+    - &quot;registeredPropertyId&quot;
+  Metadata:
+    my-module.note: &quot;Namespaced metadata only&quot;
+</code></pre>
+<p><code>Registered</code> accepts only property IDs registered for that Item type by dnd5e. <code>Metadata</code> requires namespaced keys and is stored under the Item Importer's flags. Metadata keys are never treated as <code>system.*</code> update paths. The core adapter returns registered property IDs separately from the nested flag object so callers cannot accidentally flatten metadata into Item system data.</p>
+<p>Parser confidence, provenance, and review suggestions are produced locally. Natural-text suggestions can recognize explicit extra damage, healing, saving throws, conditions, and recharge wording. They remain previews unless automation synthesis is explicitly requested. If Activity Importer is available, attachment payloads can also be checked through its public parser API.</p>
+<p>Compendium image candidates are collected locally and can be selected randomly, with a seed for reproducible random choice, or deterministically. Cache enablement, lifetime, size, statistics, and clearing are explicit controls. AutoAnimations candidates now cover weapons, spells, consumables, tools, and equipment, can use inline activity hints, and are persisted only when a sufficiently confident candidate is available; installed animation database availability is checked at runtime.</p>
+<p>The supported module API remains feature-detected:</p>
+<pre><code class="language-js">const importer = game.modules.get(&quot;5e-item-importer&quot;)?.api;
+const result = importer?.parse(text, {
+  trace: true,
+  synthesizeAutomation: false
+});
+</code></pre>
+<p>Internal UI integrations load <code>scripts/itemCoreFeatures.js</code> defensively and verify each capability before use. That facade exposes the strict exporters, schema migration helpers, parse insights, safe custom-property adapters, compendium image candidate/cache services, natural automation synthesis/validation, and AutoAnimations preview/flag builders. Callers should likewise feature-detect functions and must not interpret returned metadata keys as Foundry property paths.</p>
+</details>
+<details>
+<summary><strong>How the natural-language parser works</strong></summary>
+<ol>
+<li><strong>Extraction:</strong> The parser scans the text using Regex to find Stats (Name, Type, Cost, Weight, Damage, Properties, AC, etc.).</li>
+<li><strong>Stripping:</strong> It removes lines that look like Stats to isolate the <strong>Description</strong>.</li>
+<li><strong>Conversion:</strong> It builds a YAML document matching the strict template format.</li>
+<li><strong>Final Pass:</strong> It runs the generated YAML through the <code>YamlItemParser</code> for validation and item creation.</li>
+</ol>
+</details>
+<hr />
+<div style="text-align: center;">
+<h2 id="bakshis-bazaar">Bakshi's Bazaar</h2>
+<p><em>5e Item Importer is free. My premium modules are released as <strong>Bakshi's Bazaar</strong> for <a href="https://www.patreon.com/cw/GnollStack">Bazaar Patrons</a> and install through Foundry's Premium Content.</em></p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>What it adds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><a href="https://foundryvtt.com/packages/5e-activity-importer">5e Activity Importer</a></strong></td>
+<td>Import Items together with their activities and Active Effects. See <a href="#activity-importer-companion">Activity Importer Companion</a>.</td>
+</tr>
+<tr>
+<td><strong><a href="https://foundryvtt.com/packages/custom-currency-5e">Custom Currency 5e</a></strong></td>
+<td>Custom coins, exchange rates, regional markets, and physical coin items on native dnd5e sheets.</td>
+</tr>
+<tr>
+<td><strong><a href="https://foundryvtt.com/packages/filesmith">FileSmith</a></strong></td>
+<td>Folder colors, multi-select, clipboard actions, and move undo for Foundry's sidebar.</td>
+</tr>
+<tr>
+<td><strong><a href="https://foundryvtt.com/packages/immersive-vision-fx">Immersive Vision FX</a></strong></td>
+<td>Soft vision and light edges, creature vision profiles, cave light, and eyeshine.</td>
+</tr>
+<tr>
+<td><strong><a href="https://foundryvtt.com/packages/traffick">Traffick</a></strong></td>
+<td>Party trading, merchant catalogs, perceived prices, and appraisal checks for dnd5e.</td>
+</tr>
+</tbody>
+</table>
+<p>A Bazaar Patron membership includes:</p>
+<ul>
+<li>Every Bakshi's Bazaar premium module while your membership is active, including ongoing updates and new modules as they're added.</li>
+<li>Patron-only channels in the <a href="https://discord.gg/bGQDnyqYJ">Bakshi's Bazaar Discord</a>.</li>
+<li>Priority module support.</li>
+<li>A direct place to share feedback and feature suggestions. Suggestions are welcome and taken seriously, but development priorities remain at my discretion.</li>
+</ul>
+<p>Everyone is welcome in the <a href="https://discord.gg/bGQDnyqYJ">Bakshi's Bazaar Discord</a>: the public channels cover release announcements, questions, and feature ideas, and patrons also get the patron-only channels and priority support. Bug reports for 5e Item Importer still go to <a href="https://github.com/GnollStack/5e-Item-Importer/issues">GitHub issues</a>, as described under Community.</p>
+<hr />
+<div style="text-align: center;">
+<h2 id="community">Community</h2>
+</div>
+<ul>
+<li><strong>Report bugs</strong> — <a href="https://github.com/GnollStack/5e-Item-Importer/issues">open an issue</a> with your Foundry version, module version, steps to reproduce, console logs, and screenshots or short clips when useful.</li>
+<li><strong>Ask on Discord</strong> — anyone can ask questions in the public channels of the <a href="https://discord.gg/bGQDnyqYJ">Bakshi's Bazaar Discord</a>. Bazaar Patrons get priority support in the patron-only channels.</li>
+<li><strong>Request features</strong> — tell me what happened at your table and what you wish the module could do.</li>
+<li><strong>Star the repo</strong> — if the module is useful at your table, a star helps other GMs find it.</li>
+<li><strong>Watch releases</strong> — follow the repo for updates, compatibility notes, and new feature releases.</li>
+</ul>
+<hr />
+<div style="text-align: center;">
+<h2 id="contributing">Contributing</h2>
+</div>
+<p>Bug reports, feature ideas, reproduction notes, documentation fixes, and localization ideas are welcome.</p>
+<details>
+<summary><strong>Contribution policy</strong></summary>
+<p>I am not generally accepting unsolicited code PRs for features, refactors, architecture, or behavior changes. This is still my module and my codebase; I will decide how features are designed and implemented unless I explicitly say otherwise.</p>
+<ul>
+<li><strong>Bug reports</strong> — include Foundry version, module version, a console log, and the steps to reproduce. Screenshots or short clips help a lot.</li>
+<li><strong>Feature requests</strong> — tell me what happened at your table and what you wish the module could do.</li>
+<li><strong>Pull requests</strong> — please do not open code PRs unless I ask for one. Open an issue with the idea instead.</li>
+<li><strong>Code ownership</strong> — core implementation, architecture, and release decisions remain with me unless stated otherwise.</li>
+<li><strong>Translations and docs</strong> - UI strings use Foundry's public localization setup in <code>lang/en.json</code>, primarily under <code>II.*</code> keys. Typo fixes, wording suggestions, and translation files are welcome by issue first; the code-contribution policy above still applies.</li>
+</ul>
+<p>I may adapt, decline, or implement submitted ideas. Any accepted contribution or submitted project material may be released under the same EULA as the rest of the module.</p>
+</details>
+<hr />
+<div style="text-align: center;">
+<h2 id="ai-use">AI-Assisted Development</h2>
+</div>
+<p>This module is developed and maintained with the help of AI-assisted tools for coding, debugging, and testing.</p>
+<p>I care about the quality, behavior, performance, security, and long-term maintainability of this module, and I take full responsibility for what ships. AI assistance does not replace review, testing, debugging, or security and design judgment.</p>
+<p>AI is used here as a tool under my direction to make Foundry better and allow for long term mod support while still having a life outside of building and maintaining my free and premium modules.</p>
+<p>If you are uncomfortable using software developed with AI-assisted tools, this module is not for you.</p>
+<hr />
+<div style="text-align: center;">
+<h2 id="support-development">🥩 Support Development</h2>
+<p>This module represents <strong>many hours</strong> of development.</p>
+<p><strong>If this module enhanced your immersion, consider treating me to a steak, much better than coffee!</strong></p>
+<a href='https://ko-fi.com/gnollstack' target='_blank'>
+<img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=3' border='0' alt='Buy Me a Steak at ko-fi.com' />
+</a>
+<blockquote>
+<p><em>&quot;Thanks for the support! It helps me maintain support for the module and puts a nice steak on the table.&quot;</em></p>
+</blockquote>
+</div>
+<hr />
+<div style="text-align: center;">
+<h2 id="license-permissions">⚖️ License &amp; Permissions</h2>
+</div>
+<h3 id="proprietary-eula">Proprietary EULA</h3>
+<p>This module is licensed under the <strong>GnollStack Proprietary EULA</strong>.
+It is <strong>Free for Personal Use</strong>, meaning you can use it in your home games, stream it, or modify it for your own table without restriction.</p>
+<p>The bundled js-yaml 4.3.2 dependency remains under its MIT license; its copyright and permission notice are included in <code>THIRD_PARTY_NOTICES.txt</code>.</p>
+<p>However, <strong>Commercial Redistribution is Strictly Prohibited.</strong>
+You may <strong>NOT</strong> sell this module, bundle it within paid content (such as Patreon maps or adventures), or host it as a commercial service without prior written consent.</p>
+<h3 id="commercial-licensing">Commercial Licensing</h3>
+<p>I am open to partnerships! If you are a map maker, adventure writer, or developer who wishes to use this module commercially, please contact me. I offer commercial licenses for:</p>
+<ul>
+<li>Bundling this module with paid VTT content.</li>
+<li>Official integration into commercial systems.</li>
+<li>Custom feature development for your specific product.</li>
+</ul>
+<h3 id="contact">Contact</h3>
+<p>For licensing inquiries or permission slips:</p>
+<ul>
+<li><strong>Discord:</strong> <code>GnollStack</code> (Preferred)</li>
+<li><strong>Email:</strong> <code>Somedudeed@gmail.com</code></li>
+<li><em>Please do not open GitHub Issues for commercial licensing discussions. But feel free to contact me via Discord or Email</em></li>
+</ul>
+<hr />
+<div style="text-align: center;">
+<p><strong>Author:</strong> <a href="https://github.com/GnollStack">GnollStack</a> · <strong>Compatibility:</strong> Foundry VTT v14+ (verified v14.367)</p>
+<p><a href="#5e-item-importer">⬆ Back to Top</a></p>
+</div>

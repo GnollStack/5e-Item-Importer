@@ -56,5 +56,23 @@
   "download": "https://github.com/GnollStack/5e-Item-Importer/releases/download/V14.1.3/5e-item-importer.zip",
   "readme": "https://github.com/GnollStack/5e-Item-Importer/blob/main/README.md",
   "bugs": "https://github.com/GnollStack/5e-Item-Importer/issues",
-  "license": "LICENSE.txt"
+  "license": "LICENSE.txt",
+  "changelog": "https://github.com/GnollStack/5e-Item-Importer/releases",
+  "media": [
+    {
+      "type": "cover",
+      "url": "https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/5e-item-importer/images/5e-item-importer-preview.png",
+      "caption": "5e Item Importer preview"
+    },
+    {
+      "type": "screenshot",
+      "url": "https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/activity-Importer-5e/gifs/Import-Full-Item.gif",
+      "caption": "Importing a complete Item with activities and effects using the premium 5e Activity Importer"
+    },
+    {
+      "type": "video",
+      "url": "https://youtu.be/dyhUoiNYxmA",
+      "caption": "5e Item Importer walkthrough"
+    }
+  ]
 }

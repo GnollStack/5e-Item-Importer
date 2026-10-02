@@ -12,6 +12,7 @@ $manifestPath = Join-Path $moduleRoot "module.json"
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 . (Join-Path $PSScriptRoot "Release-Contract.ps1")
 Assert-ImporterReleaseManifest $manifest | Out-Null
+Assert-ImporterReadmeVersion (Join-Path $moduleRoot "README.md") ([string]$manifest.version)
 
 if ([string]::IsNullOrWhiteSpace($ArchiveName)) {
     $ArchiveName = "$($manifest.id).zip"
