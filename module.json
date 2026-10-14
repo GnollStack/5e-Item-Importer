@@ -1,12 +1,9 @@
 {
   "id": "5e-item-importer",
   "title": "5e Item Importer",
-  "description": "Free standalone D&D 5e Item import from text or strict YAML into Foundry VTT. Integration with the forthcoming premium Activity Importer is available when that companion is installed.",
-  "version": "14.1.3",
-  "compatibility": {
-    "minimum": "14",
-    "verified": "14.367"
-  },
+  "type": "module",
+  "description": "Import D&D 5e Items from text or strict YAML, with previews and comparison tools. Works on its own; the optional premium 5e Activity Importer adds activities and Active Effects.",
+  "version": "14.1.4",
   "authors": [
     {
       "name": "GnollStack",
@@ -14,6 +11,11 @@
       "discord": "GnollStack"
     }
   ],
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.367",
+    "maximum": "14"
+  },
   "relationships": {
     "systems": [
       {
@@ -26,17 +28,9 @@
       }
     ]
   },
-  "languages": [
-    {
-      "lang": "en",
-      "name": "English",
-      "path": "lang/en.json"
-    }
-  ],
   "esmodules": [
     "./scripts/itemImporter.js"
   ],
-  "socket": true,
   "styles": [
     {
       "src": "./styles/item-importer-card.css"
@@ -51,13 +45,19 @@
       "src": "./styles/item-comparison.css"
     }
   ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "socket": true,
+  "license": "LICENSE.txt",
   "url": "https://github.com/GnollStack/5e-Item-Importer",
-  "manifest": "https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.json",
-  "download": "https://github.com/GnollStack/5e-Item-Importer/releases/download/V14.1.3/5e-item-importer.zip",
   "readme": "https://github.com/GnollStack/5e-Item-Importer/blob/main/README.md",
   "bugs": "https://github.com/GnollStack/5e-Item-Importer/issues",
-  "license": "LICENSE.txt",
-  "changelog": "https://github.com/GnollStack/5e-Item-Importer/releases",
+  "changelog": "https://github.com/GnollStack/Bakshi-s-Bazaar-Media/blob/main/5e-item-importer/CHANGELOG.md",
   "media": [
     {
       "type": "cover",
@@ -74,5 +74,7 @@
       "url": "https://youtu.be/dyhUoiNYxmA",
       "caption": "5e Item Importer walkthrough"
     }
-  ]
+  ],
+  "manifest": "https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.json",
+  "download": "https://github.com/GnollStack/5e-Item-Importer/releases/download/V14.1.4/5e-item-importer.zip"
 }

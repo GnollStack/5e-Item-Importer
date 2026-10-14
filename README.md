@@ -14,7 +14,7 @@
 
 *For GMs who want D&D 5e items imported from text instead of typed by hand.*
 
-[Preview](#preview) · [Quick Start](#quick-start) · [Features](#features) · [Templates](#template-reference) · [Installation](#installation) · [Compatibility](#compatibility) · [API](#developer-api) · [Bakshi's Bazaar](#bakshis-bazaar) · [Community](#community) · [Contributing](#contributing) · [AI Use](#ai-use) · [Support](#support-development) · [License](#license-permissions)
+[Preview](#preview) · [Quick Start](#quick-start) · [Features](#features) · [Templates](#template-reference) · [Installation](#installation) · [Changelog](https://github.com/GnollStack/Bakshi-s-Bazaar-Media/blob/main/5e-item-importer/CHANGELOG.md) · [Compatibility](#compatibility) · [API](#developer-api) · [Bakshi's Bazaar](#bakshis-bazaar) · [Community](#community) · [Contributing](#contributing) · [AI Use](#ai-use) · [Support](#support-development) · [License](#license-permissions)
 
 </div>
 
@@ -1067,7 +1067,7 @@ https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.j
 
 | Requirement | Version |
 | --- | --- |
-| Foundry VTT | v14 required; verified on 14.367 |
+| Foundry VTT | v14 only; verified on 14.367 |
 | dnd5e | 5.3.0 minimum; verified on 5.3.3 |
 | [5e Activity Importer](https://foundryvtt.com/packages/5e-activity-importer) | Optional premium companion; see [Activity Importer Companion](#activity-importer-companion) |
 
@@ -1081,7 +1081,7 @@ https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.j
 
 </div>
 
-**Foundry VTT:** v14 required; verified on **14.367**. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.
+**Foundry VTT:** v14 only; verified on **14.367**. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.
 
 **Game system:** **dnd5e** 5.3.0 minimum; verified on **5.3.3**.
 
@@ -1319,7 +1319,7 @@ For licensing inquiries or permission slips:
 
 <div align="center">
 
-**Author:** [GnollStack](https://github.com/GnollStack) · **Compatibility:** Foundry VTT v14+ (verified v14.367)
+**Author:** [GnollStack](https://github.com/GnollStack) · **Compatibility:** Foundry VTT v14 only (verified v14.367)
 
 [⬆ Back to Top](#5e-item-importer)
 
