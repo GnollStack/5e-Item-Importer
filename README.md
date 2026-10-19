@@ -8,29 +8,18 @@
 [![Downloads](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/5e-item-importer.zip?label=Downloads&style=flat-square&color=green)](https://github.com/GnollStack/5e-Item-Importer/releases)
 [![Latest Downloads](https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/5e-item-importer.zip?label=Latest%20Downloads&style=flat-square)](https://github.com/GnollStack/5e-Item-Importer/releases/latest)
 [![Foundry VTT v14](https://img.shields.io/badge/Foundry-v14-orange?style=flat-square)](https://foundryvtt.com)
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Buy%20a%20Steak-FF5E5B?style=flat-square&logo=ko-fi&logoColor=white)](https://ko-fi.com/gnollstack)
 [![Patreon: Bazaar Patron](https://img.shields.io/badge/Patreon-Bazaar%20Patron-F96854?style=flat-square&logo=patreon&logoColor=white)](https://www.patreon.com/cw/GnollStack)
 [![Discord: Bakshi's Bazaar](https://img.shields.io/badge/Discord-Bakshi%27s%20Bazaar-5865F2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/tcdYk54fxC)
 
 *For GMs who want D&D 5e items imported from text instead of typed by hand.*
 
-[Preview](#preview) · [Quick Start](#quick-start) · [Features](#features) · [Templates](#template-reference) · [Installation](#installation) · [Changelog](https://github.com/GnollStack/bakshis-bazaar-archives/blob/main/5e-item-importer/CHANGELOG.md) · [Compatibility](#compatibility) · [API](#developer-api) · [Bakshi's Bazaar](#bakshis-bazaar) · [Community](#community) · [Contributing](#contributing) · [AI Use](#ai-use) · [Support](#support-development) · [License](#license-permissions)
+[Preview](#preview) · [Quick Start](#quick-start) · [Features](#features) · [Templates](#template-reference) · [Installation](#installation) · [Changelog](https://github.com/GnollStack/bakshis-bazaar-archives/blob/main/5e-item-importer/CHANGELOG.md) · [Compatibility](#compatibility) · [API](#developer-api) · [Bakshi's Bazaar](#bakshis-bazaar) · [Community](#community) · [Contributing](#contributing) · [AI Use](#ai-use) · [License](#license-permissions)
 
 </div>
 
 ---
 
 <div align="center">
-
-## New in 14.2.0: import window layout
-
-Full mechanical previews remain the default. **View options** adds Compact previews and optional **Import History**; **Import options > Restore defaults** resets window preferences while preserving your work. Templates and presets share one picker. The optional **generated YAML editor** lets you inspect and edit parsed values and defaults while starting from natural-language source.
-
-See the [import-window guide](docs/import-window.md) for the workflow, optional panels, and the difference between **Reset layout** and **Restore defaults**.
-
-## New in 14.2.0
-
-The existing template selector now includes editable native recipes. Free Item recipes cover multiple rarities and dawn/dusk charge recovery. A compatible Activity Importer adds its complete-Item recipes through the optional companion. Schema 4 preserves reviewed automation settings, checks activity references before import, and keeps commands and conditions inert in previews. See the [recipe instructions](templates/README.md#schema-4-automation-and-recipes) and [Automation storage in schema 4](docs/automation-schema-4.md). The supported content types are unchanged.
 
 ## Feature Index
 
@@ -221,6 +210,8 @@ This lacquered case contains enchanted inks, folding rulers, waxed vellum, and a
 *Best for: complex homebrew and bulk generation.*
 
 Strict Format uses a documented YAML shape instead of guessing from prose. Start with the template for the Item type you need, fill in the relevant fields, and parse it in the same importer window. Validation messages call out fields that need attention before import. It works well with large language models like ChatGPT, Gemini, or Claude.
+
+The template picker includes [editable recipes](templates/README.md#schema-4-automation-and-recipes) for multiple rarities and dawn/dusk charge recovery. With the compatible Activity Importer companion enabled, it also offers complete-Item recipes.
 
 <a id="validated-custom-yaml-examples"></a>
 
@@ -992,7 +983,11 @@ Paste text, choose a template, or drop an Item, Actor, Journal passage, or local
 
 When a matching Item already exists, choose whether to create another copy, update it, merge conservatively, or skip it. Update and merge show the exact target and any field conflicts before writing. Ambiguous matches are stopped for review.
 
-Templates and presets share one picker; **Manage** opens preset controls. **Import options** starts collapsed, while the generated YAML editor and Import History are hidden until enabled in **View options**. Batch imports can be filtered, cancelled before the next write, and retried without recreating successful entries. History offers report download and Undo for eligible imports in the current session. See the [import-window guide](docs/import-window.md) for the options and reset behavior.
+Templates and presets share one picker; **Manage** opens preset controls. Full mechanical previews are the default. **View options** offers Compact previews and shows the optional generated YAML editor and Import History. The editor lets you inspect and edit parsed values and defaults from natural-language input.
+
+**Import options** starts collapsed. **Import options > Restore defaults** resets window preferences while preserving your work; **View options > Reset layout** changes display preferences only. See the [import-window guide](docs/import-window.md) for these controls.
+
+Batch imports can be filtered, cancelled before the next write, and retried without recreating successful entries. History offers report download and Undo for eligible imports in the current session.
 
 ---
 
@@ -1007,10 +1002,10 @@ With both modules enabled:
 - **One menu:** **Import Item** joins Activity Importer's **Add Activity / Effect** dropdown in the Items Directory. Turn off **Merge with Activity Importer Dropdown** in the settings to keep a separate button.
 - **Mechanics in strict YAML:** add `Activities` and `effects` arrays to a strict template. Each template has an optional activities and effects section showing the format, and [`docs/examples/full-native-weapon.yaml`](docs/examples/full-native-weapon.yaml) is a complete example.
 - **Build them in the window:** **Add activities or effects** opens Activity Importer's builder for the parsed Item. **Resolve document references** links the spells and Actors that Cast, Summon, and Transform need.
-- **Checked first:** Activity Importer validates and dry-runs the activities and effects before they are added.
+- **Checked first:** Activity Importer checks activities, effects, and their references before import. Previews do not run commands or evaluate conditions.
 - **Full Item YAML:** right-click an Item and choose **Copy Full Item YAML** or **Download Full Item YAML** to export it with its activities and effects, ready to re-import or share.
 
-When asking an LLM for YAML, ask for a premium/full Item and give it both modules' templates.
+When asking an LLM for YAML, ask for a premium/full Item and give it both modules' templates. See [Automation storage in schema 4](docs/automation-schema-4.md) for the automation settings preserved during import and export.
 
 Without the companion, the Item itself still imports: the preview warns that any `Activities` or `effects` will be skipped, and export uses **Copy Core Item YAML**.
 
@@ -1077,7 +1072,7 @@ https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.j
 
 | Requirement | Version |
 | --- | --- |
-| Foundry VTT | v14 only, build 14.369 or later; verified on 14.369 |
+| Foundry VTT | v14 only, build 14.367 or later; verified on 14.369 |
 | dnd5e | 6.0.6 minimum; verified on 6.0.6 |
 | [5e Activity Importer](https://foundryvtt.com/packages/5e-activity-importer) | Optional premium companion; see [Activity Importer Companion](#activity-importer-companion) |
 
@@ -1091,7 +1086,7 @@ https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.j
 
 </div>
 
-**Foundry VTT:** v14 only, build 14.369 or later; verified on **14.369**. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.
+**Foundry VTT:** v14 only, build 14.367 or later; verified on **14.369**. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.
 
 **Game system:** **dnd5e** 6.0.6 minimum; verified on **6.0.6**.
 
@@ -1275,26 +1270,6 @@ I care about the quality, behavior, performance, security, and long-term maintai
 AI is used here as a tool under my direction to make Foundry better and allow for long term mod support while still having a life outside of building and maintaining my free and premium modules.
 
 If you are uncomfortable using software developed with AI-assisted tools, this module is not for you.
-
----
-
-<div align="center">
-
-<a id="support-development"></a>
-
-## 🥩 Support Development
-
-This module represents **many hours** of development.
-
-**If this module enhanced your immersion, consider treating me to a steak, much better than coffee!**
-
-<a href='https://ko-fi.com/gnollstack' target='_blank'>
-<img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=3' border='0' alt='Buy Me a Steak at ko-fi.com' />
-</a>
-
-> *"Thanks for the support! It helps me maintain support for the module and puts a nice steak on the table."*
-
-</div>
 
 ---
 

@@ -16,7 +16,7 @@ The companion defaults to its sibling directory. For a different checkout layout
 Before writing artifacts, the command checks:
 
 - Both package versions match and use `major.minor.patch`.
-- Both manifests declare matching Foundry and dnd5e minimum/verified versions and matching optional maximums. The current minimum and verified baseline is Foundry 14.369 / dnd5e 6.0.6, with Foundry maximum 14.
+- Both manifests declare matching Foundry and dnd5e minimum/verified versions and matching optional maximums. The current Foundry minimum is 14.367, verified is 14.369, and maximum is 14; dnd5e minimum and verified remain 6.0.6.
 - Activity Importer recommends the available free Item Importer. Item Importer may omit its premium recommendation while that companion is unreleased. Every recommendation that is present must verify the shared version, have a compatible minimum, and point to the other manifest's actual URL.
 - Neither module makes the companion a hard requirement or pins a maximum version.
 - The shared release contract, paired entry point, and contract tests match across repositories.

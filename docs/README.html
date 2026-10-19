@@ -5,19 +5,13 @@
 <a href="https://github.com/GnollStack/5e-Item-Importer/releases"><img src="https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/5e-item-importer.zip?label=Downloads&amp;style=flat-square&amp;color=green" alt="Downloads" /></a>
 <a href="https://github.com/GnollStack/5e-Item-Importer/releases/latest"><img src="https://img.shields.io/github/downloads/GnollStack/5e-Item-Importer/latest/5e-item-importer.zip?label=Latest%20Downloads&amp;style=flat-square" alt="Latest Downloads" /></a>
 <a href="https://foundryvtt.com"><img src="https://img.shields.io/badge/Foundry-v14-orange?style=flat-square" alt="Foundry VTT v14" /></a>
-<a href="https://ko-fi.com/gnollstack"><img src="https://img.shields.io/badge/Ko--fi-Buy%20a%20Steak-FF5E5B?style=flat-square&amp;logo=ko-fi&amp;logoColor=white" alt="Ko-fi" /></a>
 <a href="https://www.patreon.com/cw/GnollStack"><img src="https://img.shields.io/badge/Patreon-Bazaar%20Patron-F96854?style=flat-square&amp;logo=patreon&amp;logoColor=white" alt="Patreon: Bazaar Patron" /></a>
 <a href="https://discord.gg/tcdYk54fxC"><img src="https://img.shields.io/badge/Discord-Bakshi%27s%20Bazaar-5865F2?style=flat-square&amp;logo=discord&amp;logoColor=white" alt="Discord: Bakshi's Bazaar" /></a></p>
 <p><em>For GMs who want D&amp;D 5e items imported from text instead of typed by hand.</em></p>
-<p><a href="#preview">Preview</a> · <a href="#quick-start">Quick Start</a> · <a href="#features">Features</a> · <a href="#template-reference">Templates</a> · <a href="#installation">Installation</a> · <a href="https://github.com/GnollStack/bakshis-bazaar-archives/blob/main/5e-item-importer/CHANGELOG.md">Changelog</a> · <a href="#compatibility">Compatibility</a> · <a href="#developer-api">API</a> · <a href="#bakshis-bazaar">Bakshi's Bazaar</a> · <a href="#community">Community</a> · <a href="#contributing">Contributing</a> · <a href="#ai-use">AI Use</a> · <a href="#support-development">Support</a> · <a href="#license-permissions">License</a></p>
+<p><a href="#preview">Preview</a> · <a href="#quick-start">Quick Start</a> · <a href="#features">Features</a> · <a href="#template-reference">Templates</a> · <a href="#installation">Installation</a> · <a href="https://github.com/GnollStack/bakshis-bazaar-archives/blob/main/5e-item-importer/CHANGELOG.md">Changelog</a> · <a href="#compatibility">Compatibility</a> · <a href="#developer-api">API</a> · <a href="#bakshis-bazaar">Bakshi's Bazaar</a> · <a href="#community">Community</a> · <a href="#contributing">Contributing</a> · <a href="#ai-use">AI Use</a> · <a href="#license-permissions">License</a></p>
 </div>
 <hr />
 <div style="text-align: center;">
-<h2 id="new-in-1420-import-window-layout">New in 14.2.0: import window layout</h2>
-<p>Full mechanical previews remain the default. <strong>View options</strong> adds Compact previews and optional <strong>Import History</strong>; <strong>Import options &gt; Restore defaults</strong> resets window preferences while preserving your work. Templates and presets share one picker. The optional <strong>generated YAML editor</strong> lets you inspect and edit parsed values and defaults while starting from natural-language source.</p>
-<p>See the <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/import-window.md">import-window guide</a> for the workflow, optional panels, and the difference between <strong>Reset layout</strong> and <strong>Restore defaults</strong>.</p>
-<h2 id="new-in-1420">New in 14.2.0</h2>
-<p>The existing template selector now includes editable native recipes. Free Item recipes cover multiple rarities and dawn/dusk charge recovery. A compatible Activity Importer adds its complete-Item recipes through the optional companion. Schema 4 preserves reviewed automation settings, checks activity references before import, and keeps commands and conditions inert in previews. See the <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/README.md#schema-4-automation-and-recipes">recipe instructions</a> and <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/automation-schema-4.md">Automation storage in schema 4</a>. The supported content types are unchanged.</p>
 <h2 id="feature-index">Feature Index</h2>
 <table style="margin-left: auto; margin-right: auto;">
 <thead>
@@ -188,6 +182,7 @@ This lacquered case contains enchanted inks, folding rulers, waxed vellum, and a
 <h3 id="strict-format-parser">Strict Format Parser</h3>
 <p><em>Best for: complex homebrew and bulk generation.</em></p>
 <p>Strict Format uses a documented YAML shape instead of guessing from prose. Start with the template for the Item type you need, fill in the relevant fields, and parse it in the same importer window. Validation messages call out fields that need attention before import. It works well with large language models like ChatGPT, Gemini, or Claude.</p>
+<p>The template picker includes <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/README.md#schema-4-automation-and-recipes">editable recipes</a> for multiple rarities and dawn/dusk charge recovery. With the compatible Activity Importer companion enabled, it also offers complete-Item recipes.</p>
 <h4 id="validated-custom-yaml-examples">Validated Custom YAML Examples</h4>
 <p>These examples have been checked against the current parser and dnd5e Item schema. They use optional sections such as uses, recovery, chat flavor, unidentified descriptions, enrichers, and dynamic name lookups while remaining usable with 5e Item Importer alone.</p>
 <p>The complete examples, including mixed-type and same-type batches, are in the <a href="https://github.com/GnollStack/5e-Item-Importer#validated-custom-yaml-examples">README on GitHub</a>.</p>
@@ -284,7 +279,9 @@ description: A brief arc of blue-white light.
 <h3 id="import-workflow">Import Workflow</h3>
 <p>Paste text, choose a template, or drop an Item, Actor, Journal passage, or local text/YAML file into the importer. After parsing, review the preview and choose a World Items folder, an owned Actor, or a writable Item compendium as the destination.</p>
 <p>When a matching Item already exists, choose whether to create another copy, update it, merge conservatively, or skip it. Update and merge show the exact target and any field conflicts before writing. Ambiguous matches are stopped for review.</p>
-<p>Templates and presets share one picker; <strong>Manage</strong> opens preset controls. <strong>Import options</strong> starts collapsed, while the generated YAML editor and Import History are hidden until enabled in <strong>View options</strong>. Batch imports can be filtered, cancelled before the next write, and retried without recreating successful entries. History offers report download and Undo for eligible imports in the current session. See the <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/import-window.md">import-window guide</a> for the options and reset behavior.</p>
+<p>Templates and presets share one picker; <strong>Manage</strong> opens preset controls. Full mechanical previews are the default. <strong>View options</strong> offers Compact previews and shows the optional generated YAML editor and Import History. The editor lets you inspect and edit parsed values and defaults from natural-language input.</p>
+<p><strong>Import options</strong> starts collapsed. <strong>Import options &gt; Restore defaults</strong> resets window preferences while preserving your work; <strong>View options &gt; Reset layout</strong> changes display preferences only. See the <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/import-window.md">import-window guide</a> for these controls.</p>
+<p>Batch imports can be filtered, cancelled before the next write, and retried without recreating successful entries. History offers report download and Undo for eligible imports in the current session.</p>
 <hr />
 
 <h3 id="activity-importer-companion">Activity Importer Companion</h3>
@@ -294,10 +291,10 @@ description: A brief arc of blue-white light.
 <li><strong>One menu:</strong> <strong>Import Item</strong> joins Activity Importer's <strong>Add Activity / Effect</strong> dropdown in the Items Directory. Turn off <strong>Merge with Activity Importer Dropdown</strong> in the settings to keep a separate button.</li>
 <li><strong>Mechanics in strict YAML:</strong> add <code>Activities</code> and <code>effects</code> arrays to a strict template. Each template has an optional activities and effects section showing the format, and <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/examples/full-native-weapon.yaml"><code>docs/examples/full-native-weapon.yaml</code></a> is a complete example.</li>
 <li><strong>Build them in the window:</strong> <strong>Add activities or effects</strong> opens Activity Importer's builder for the parsed Item. <strong>Resolve document references</strong> links the spells and Actors that Cast, Summon, and Transform need.</li>
-<li><strong>Checked first:</strong> Activity Importer validates and dry-runs the activities and effects before they are added.</li>
+<li><strong>Checked first:</strong> Activity Importer checks activities, effects, and their references before import. Previews do not run commands or evaluate conditions.</li>
 <li><strong>Full Item YAML:</strong> right-click an Item and choose <strong>Copy Full Item YAML</strong> or <strong>Download Full Item YAML</strong> to export it with its activities and effects, ready to re-import or share.</li>
 </ul>
-<p>When asking an LLM for YAML, ask for a premium/full Item and give it both modules' templates.</p>
+<p>When asking an LLM for YAML, ask for a premium/full Item and give it both modules' templates. See <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/automation-schema-4.md">Automation storage in schema 4</a> for the automation settings preserved during import and export.</p>
 <p>Without the companion, the Item itself still imports: the preview warns that any <code>Activities</code> or <code>effects</code> will be skipped, and export uses <strong>Copy Core Item YAML</strong>.</p>
 <div style="text-align: center;">
 <p><a href="https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/activity-Importer-5e/gifs/Import-Full-Item.gif"><img src="https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/activity-Importer-5e/gifs/Import-Full-Item.gif" alt="Importing Rimeheart as a complete spear with activities and effects" style="max-width: 100%; height: auto;" width="1280" height="536" loading="lazy" decoding="async" /></a></p>
@@ -376,7 +373,7 @@ If using Strict Format: Use the YAML block form <code>Description: |</code> and 
 <tbody>
 <tr>
 <td>Foundry VTT</td>
-<td>v14 only, build 14.369 or later; verified on 14.369</td>
+<td>v14 only, build 14.367 or later; verified on 14.369</td>
 </tr>
 <tr>
 <td>dnd5e</td>
@@ -392,7 +389,7 @@ If using Strict Format: Use the YAML block form <code>Description: |</code> and 
 <div style="text-align: center;">
 <h2 id="compatibility">Compatibility</h2>
 </div>
-<p><strong>Foundry VTT:</strong> v14 only, build 14.369 or later; verified on <strong>14.369</strong>. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.</p>
+<p><strong>Foundry VTT:</strong> v14 only, build 14.367 or later; verified on <strong>14.369</strong>. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.</p>
 <p><strong>Game system:</strong> <strong>dnd5e</strong> 6.0.6 minimum; verified on <strong>6.0.6</strong>.</p>
 <p><strong>Optional modules:</strong> <strong>5e Activity Importer</strong> adds activities and effects to imported Items; Item Importer works fully without it. <strong>Token Name Lookup</strong> can make <code>[[lookup @name]]</code> text prefer token names.</p>
 <hr />
@@ -534,18 +531,6 @@ const result = importer?.parse(text, {
 <p>I care about the quality, behavior, performance, security, and long-term maintainability of this module, and I take full responsibility for what ships. AI assistance does not replace review, testing, debugging, or security and design judgment.</p>
 <p>AI is used here as a tool under my direction to make Foundry better and allow for long term mod support while still having a life outside of building and maintaining my free and premium modules.</p>
 <p>If you are uncomfortable using software developed with AI-assisted tools, this module is not for you.</p>
-<hr />
-<div style="text-align: center;">
-<h2 id="support-development">🥩 Support Development</h2>
-<p>This module represents <strong>many hours</strong> of development.</p>
-<p><strong>If this module enhanced your immersion, consider treating me to a steak, much better than coffee!</strong></p>
-<a href='https://ko-fi.com/gnollstack' target='_blank'>
-<img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi3.png?v=3' border='0' alt='Buy Me a Steak at ko-fi.com' />
-</a>
-<blockquote>
-<p><em>&quot;Thanks for the support! It helps me maintain support for the module and puts a nice steak on the table.&quot;</em></p>
-</blockquote>
-</div>
 <hr />
 <div style="text-align: center;">
 <h2 id="license-permissions">⚖️ License &amp; Permissions</h2>
