@@ -7,12 +7,17 @@
 <a href="https://foundryvtt.com"><img src="https://img.shields.io/badge/Foundry-v14-orange?style=flat-square" alt="Foundry VTT v14" /></a>
 <a href="https://ko-fi.com/gnollstack"><img src="https://img.shields.io/badge/Ko--fi-Buy%20a%20Steak-FF5E5B?style=flat-square&amp;logo=ko-fi&amp;logoColor=white" alt="Ko-fi" /></a>
 <a href="https://www.patreon.com/cw/GnollStack"><img src="https://img.shields.io/badge/Patreon-Bazaar%20Patron-F96854?style=flat-square&amp;logo=patreon&amp;logoColor=white" alt="Patreon: Bazaar Patron" /></a>
-<a href="https://discord.gg/bGQDnyqYJ"><img src="https://img.shields.io/badge/Discord-Bakshi%27s%20Bazaar-5865F2?style=flat-square&amp;logo=discord&amp;logoColor=white" alt="Discord: Bakshi's Bazaar" /></a></p>
+<a href="https://discord.gg/tcdYk54fxC"><img src="https://img.shields.io/badge/Discord-Bakshi%27s%20Bazaar-5865F2?style=flat-square&amp;logo=discord&amp;logoColor=white" alt="Discord: Bakshi's Bazaar" /></a></p>
 <p><em>For GMs who want D&amp;D 5e items imported from text instead of typed by hand.</em></p>
-<p><a href="#preview">Preview</a> · <a href="#quick-start">Quick Start</a> · <a href="#features">Features</a> · <a href="#template-reference">Templates</a> · <a href="#installation">Installation</a> · <a href="https://github.com/GnollStack/Bakshi-s-Bazaar-Media/blob/main/5e-item-importer/CHANGELOG.md">Changelog</a> · <a href="#compatibility">Compatibility</a> · <a href="#developer-api">API</a> · <a href="#bakshis-bazaar">Bakshi's Bazaar</a> · <a href="#community">Community</a> · <a href="#contributing">Contributing</a> · <a href="#ai-use">AI Use</a> · <a href="#support-development">Support</a> · <a href="#license-permissions">License</a></p>
+<p><a href="#preview">Preview</a> · <a href="#quick-start">Quick Start</a> · <a href="#features">Features</a> · <a href="#template-reference">Templates</a> · <a href="#installation">Installation</a> · <a href="https://github.com/GnollStack/bakshis-bazaar-archives/blob/main/5e-item-importer/CHANGELOG.md">Changelog</a> · <a href="#compatibility">Compatibility</a> · <a href="#developer-api">API</a> · <a href="#bakshis-bazaar">Bakshi's Bazaar</a> · <a href="#community">Community</a> · <a href="#contributing">Contributing</a> · <a href="#ai-use">AI Use</a> · <a href="#support-development">Support</a> · <a href="#license-permissions">License</a></p>
 </div>
 <hr />
 <div style="text-align: center;">
+<h2 id="new-in-1420-import-window-layout">New in 14.2.0: import window layout</h2>
+<p>Full mechanical previews remain the default. <strong>View options</strong> adds Compact previews and optional <strong>Import History</strong>; <strong>Import options &gt; Restore defaults</strong> resets window preferences while preserving your work. Templates and presets share one picker. The optional <strong>generated YAML editor</strong> lets you inspect and edit parsed values and defaults while starting from natural-language source.</p>
+<p>See the <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/import-window.md">import-window guide</a> for the workflow, optional panels, and the difference between <strong>Reset layout</strong> and <strong>Restore defaults</strong>.</p>
+<h2 id="new-in-1420">New in 14.2.0</h2>
+<p>The existing template selector now includes editable native recipes. Free Item recipes cover multiple rarities and dawn/dusk charge recovery. A compatible Activity Importer adds its complete-Item recipes through the optional companion. Schema 4 preserves reviewed automation settings, checks activity references before import, and keeps commands and conditions inert in previews. See the <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/README.md#schema-4-automation-and-recipes">recipe instructions</a> and <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/automation-schema-4.md">Automation storage in schema 4</a>. The supported content types are unchanged.</p>
 <h2 id="feature-index">Feature Index</h2>
 <table style="margin-left: auto; margin-right: auto;">
 <thead>
@@ -55,7 +60,7 @@
 <h2 id="preview">Preview</h2>
 </div>
 <div style="text-align: center;">
-<a href="https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/5e-item-importer/images/5e-item-importer-preview.png"><img width="640" height="865" alt="5e Item Importer preview" src="https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/5e-item-importer/images/5e-item-importer-preview.png" style="max-width: 100%; height: auto;" decoding="async" /></a>
+<a href="https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/5e-item-importer/images/5e-item-importer-preview.png"><img width="640" height="865" alt="5e Item Importer preview" src="https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/5e-item-importer/images/5e-item-importer-preview.png" style="max-width: 100%; height: auto;" decoding="async" /></a>
 </div>
 <h3 id="see-it-in-action-on-youtube">See it in Action on YouTube</h3>
 <ul>
@@ -70,7 +75,7 @@
 <li>Install and enable <strong>5e Item Importer</strong> in your world.</li>
 <li>Open the <strong>Items Directory</strong> in Foundry.</li>
 <li>Click <strong>Import Item</strong>.</li>
-<li>Paste the item text and click <strong>Parse</strong>.</li>
+<li>Paste the item text and click <strong>Preview</strong>.</li>
 <li>Review the result, choose a destination, and click <strong>Import</strong>.</li>
 </ol>
 <hr />
@@ -83,7 +88,7 @@
 <ol>
 <li>Copy the item text from your source.</li>
 <li>Open the <strong>Items Directory</strong> in Foundry and click <strong>Import Item</strong>.</li>
-<li>Paste the text and click <strong>Parse</strong>.</li>
+<li>Paste the text and click <strong>Preview</strong>.</li>
 <li>Review the result, choose a destination, and click <strong>Import</strong>.</li>
 </ol>
 <details>
@@ -279,7 +284,7 @@ description: A brief arc of blue-white light.
 <h3 id="import-workflow">Import Workflow</h3>
 <p>Paste text, choose a template, or drop an Item, Actor, Journal passage, or local text/YAML file into the importer. After parsing, review the preview and choose a World Items folder, an owned Actor, or a writable Item compendium as the destination.</p>
 <p>When a matching Item already exists, choose whether to create another copy, update it, merge conservatively, or skip it. Update and merge show the exact target and any field conflicts before writing. Ambiguous matches are stopped for review.</p>
-<p>Saved presets, import options, normalized YAML, and session history stay collapsed until you need them. Batch imports can be filtered, cancelled before the next write, and retried without recreating successful entries. Session history can download a report or undo an unchanged import from the current session.</p>
+<p>Templates and presets share one picker; <strong>Manage</strong> opens preset controls. <strong>Import options</strong> starts collapsed, while the generated YAML editor and Import History are hidden until enabled in <strong>View options</strong>. Batch imports can be filtered, cancelled before the next write, and retried without recreating successful entries. History offers report download and Undo for eligible imports in the current session. See the <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/import-window.md">import-window guide</a> for the options and reset behavior.</p>
 <hr />
 
 <h3 id="activity-importer-companion">Activity Importer Companion</h3>
@@ -295,9 +300,9 @@ description: A brief arc of blue-white light.
 <p>When asking an LLM for YAML, ask for a premium/full Item and give it both modules' templates.</p>
 <p>Without the companion, the Item itself still imports: the preview warns that any <code>Activities</code> or <code>effects</code> will be skipped, and export uses <strong>Copy Core Item YAML</strong>.</p>
 <div style="text-align: center;">
-<p><a href="https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/activity-Importer-5e/gifs/Import-Full-Item.gif"><img src="https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/activity-Importer-5e/gifs/Import-Full-Item.gif" alt="Importing Rimeheart as a complete spear with activities and effects" style="max-width: 100%; height: auto;" width="1280" height="536" loading="lazy" decoding="async" /></a></p>
+<p><a href="https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/activity-Importer-5e/gifs/Import-Full-Item.gif"><img src="https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/activity-Importer-5e/gifs/Import-Full-Item.gif" alt="Importing Rimeheart as a complete spear with activities and effects" style="max-width: 100%; height: auto;" width="1280" height="536" loading="lazy" decoding="async" /></a></p>
 </div>
-<p>Activity Importer is available to <a href="https://www.patreon.com/cw/GnollStack">Bazaar Patrons</a> through Foundry Premium Content and works with 5e Item Importer 14.1.2 or later.</p>
+<p>Activity Importer is available to <a href="https://www.patreon.com/cw/GnollStack">Bazaar Patrons</a> through Foundry Premium Content and works with 5e Item Importer 14.2.0 or later.</p>
 <hr />
 
 <h3 id="more-details">More Details</h3>
@@ -371,11 +376,11 @@ If using Strict Format: Use the YAML block form <code>Description: |</code> and 
 <tbody>
 <tr>
 <td>Foundry VTT</td>
-<td>v14 only; verified on 14.367</td>
+<td>v14 only, build 14.369 or later; verified on 14.369</td>
 </tr>
 <tr>
 <td>dnd5e</td>
-<td>5.3.0 minimum; verified on 5.3.3</td>
+<td>6.0.6 minimum; verified on 6.0.6</td>
 </tr>
 <tr>
 <td><a href="https://foundryvtt.com/packages/5e-activity-importer">5e Activity Importer</a></td>
@@ -387,8 +392,8 @@ If using Strict Format: Use the YAML block form <code>Description: |</code> and 
 <div style="text-align: center;">
 <h2 id="compatibility">Compatibility</h2>
 </div>
-<p><strong>Foundry VTT:</strong> v14 only; verified on <strong>14.367</strong>. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.</p>
-<p><strong>Game system:</strong> <strong>dnd5e</strong> 5.3.0 minimum; verified on <strong>5.3.3</strong>.</p>
+<p><strong>Foundry VTT:</strong> v14 only, build 14.369 or later; verified on <strong>14.369</strong>. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.</p>
+<p><strong>Game system:</strong> <strong>dnd5e</strong> 6.0.6 minimum; verified on <strong>6.0.6</strong>.</p>
 <p><strong>Optional modules:</strong> <strong>5e Activity Importer</strong> adds activities and effects to imported Items; Item Importer works fully without it. <strong>Token Name Lookup</strong> can make <code>[[lookup @name]]</code> text prefer token names.</p>
 <hr />
 <div style="text-align: center;">
@@ -412,15 +417,16 @@ await api.downloadExport(item);
 <p>API undo is intentionally explicit: <code>api.history.undo(sessionId, { confirmed: true })</code>. The legacy <code>api.import(text, folderId)</code> signature remains supported.</p>
 <details>
 <summary><strong>Advanced: Schema versions, exports, and integration contracts</strong></summary>
+<p>Schema 4 adds reviewed typed automation storage and retains <code>ITEM.Rarities</code> as a list, <code>DAMAGE_DATA.Modifiers</code> as dice modifier strings, and spell <code>DURATION.Expiry</code>. Legacy <code>ITEM.Rarity</code> and supported YAML versions 0, 1, 2 and 3 remain accepted; an explicit empty Rarities list means mundane.</p>
 <p>New strict YAML documents begin with visible schema metadata:</p>
-<pre><code class="language-yaml">SCHEMA_VERSION: 1
+<pre><code class="language-yaml">SCHEMA_VERSION: 4
 WEAPON:
   ITEM:
     Name: &quot;Example Weapon&quot;
 </code></pre>
 <p>The parser reports migration provenance and carries it through mixed and multi-document batches. Documents declaring a schema version newer than the installed importer supports are rejected instead of being partially imported. <code>Uses Max</code>, magic bonuses, tool bonuses, and recharge thresholds preserve compatible dnd5e formula strings; legacy <code>Uses Current</code> cannot be converted against a formula maximum and fails with an instruction to provide <code>Uses Spent</code>.</p>
 <p>The strict exporter supports Weapon, Equipment, Consumable, Tool, Loot, Container, and Spell Items. <strong>Core Item export</strong> is always available, excludes Activities and Active Effects, and is the default for <code>api.export()</code>, <code>api.exportBatch()</code>, copy, download, and Item drops when the companion serializers are unavailable. <strong>Full Item export</strong> is an explicit companion workflow exposed by <code>api.exportFull()</code>, <code>api.exportFullBatch()</code>, <code>{ mode: &quot;full&quot; }</code>, and the Full Item YAML context actions shown when Activity Importer exposes both synchronous serializers. Batch export uses <code>---</code> document separators so repeated Item types remain lossless.</p>
-<p>For full export, every live dnd5e Activity and Active Effect is serialized from its current document state through Activity Importer's <code>api.serializeActivity()</code> and <code>api.serializeEffect()</code> services, so later edits supersede stored provenance. If the companion is unavailable, the current state cannot be represented, a third-party field is present, or the serializer cannot prove a lossless mapping, full export stops with an explicit error. Activity-specific effect application metadata is matched separately from the effect body. A shared Active Effect referenced by multiple Activities is rejected because the current strict format cannot preserve that topology without duplication; duplicate requested effect IDs are also rejected during import. A linked effect is omitted from the standalone <code>effects</code> section only when its exact serialized body is embedded in its owning Activity. Low-level export options continue to accept <code>includeActivities</code> and <code>includeEffects</code>; each alias takes precedence over the older aggregate attachment options when both are supplied.</p>
+<p>For full export, every live dnd5e Activity and Active Effect is serialized from its current document state through Activity Importer's <code>api.serializeActivity()</code> and <code>api.serializeEffect()</code> services, so later edits supersede stored provenance. If the companion is unavailable, the current state cannot be represented, an unreviewed third-party field is present, or the serializer cannot prove a lossless mapping, full export stops with an explicit error. Activity-specific effect application metadata is matched separately from the effect body. With the paired schema 4 serializers, multiple Activities can reference one local Active Effect: export writes one Item-level effect definition and keeps each Activity's <code>Effect ID</code> reference and application settings. Standalone <code>Effect UUID</code> references remain external links. Older or custom serializers that inline the same shared effect without reference support fail clearly; duplicate authored effect definitions are rejected during import. A linked effect is omitted from the standalone <code>effects</code> section only when its exact serialized body is embedded in its owning Activity. Low-level export options continue to accept <code>includeActivities</code> and <code>includeEffects</code>; each alias takes precedence over the older aggregate attachment options when both are supplied.</p>
 <p>Custom properties use this strict shape:</p>
 <pre><code class="language-yaml">CUSTOM_PROPERTIES:
   Registered:
@@ -487,18 +493,18 @@ const result = importer?.parse(text, {
 <p>A Bazaar Patron membership includes:</p>
 <ul>
 <li>Every Bakshi's Bazaar premium module while your membership is active, including ongoing updates and new modules as they're added.</li>
-<li>Patron-only channels in the <a href="https://discord.gg/bGQDnyqYJ">Bakshi's Bazaar Discord</a>.</li>
+<li>Patron-only channels in the <a href="https://discord.gg/tcdYk54fxC">Bakshi's Bazaar Discord</a>.</li>
 <li>Priority module support.</li>
 <li>A direct place to share feedback and feature suggestions. Suggestions are welcome and taken seriously, but development priorities remain at my discretion.</li>
 </ul>
-<p>Everyone is welcome in the <a href="https://discord.gg/bGQDnyqYJ">Bakshi's Bazaar Discord</a>: the public channels cover release announcements, questions, and feature ideas, and patrons also get the patron-only channels and priority support. Bug reports for 5e Item Importer still go to <a href="https://github.com/GnollStack/5e-Item-Importer/issues">GitHub issues</a>, as described under Community.</p>
+<p>Everyone is welcome in the <a href="https://discord.gg/tcdYk54fxC">Bakshi's Bazaar Discord</a>: the public channels cover release announcements, questions, and feature ideas, and patrons also get the patron-only channels and priority support. Bug reports for 5e Item Importer still go to <a href="https://github.com/GnollStack/5e-Item-Importer/issues">GitHub issues</a>, as described under Community.</p>
 <hr />
 <div style="text-align: center;">
 <h2 id="community">Community</h2>
 </div>
 <ul>
 <li><strong>Report bugs</strong> — <a href="https://github.com/GnollStack/5e-Item-Importer/issues">open an issue</a> with your Foundry version, module version, steps to reproduce, console logs, and screenshots or short clips when useful.</li>
-<li><strong>Ask on Discord</strong> — anyone can ask questions in the public channels of the <a href="https://discord.gg/bGQDnyqYJ">Bakshi's Bazaar Discord</a>. Bazaar Patrons get priority support in the patron-only channels.</li>
+<li><strong>Ask on Discord</strong> — anyone can ask questions in the public channels of the <a href="https://discord.gg/tcdYk54fxC">Bakshi's Bazaar Discord</a>. Bazaar Patrons get priority support in the patron-only channels.</li>
 <li><strong>Request features</strong> — tell me what happened at your table and what you wish the module could do.</li>
 <li><strong>Star the repo</strong> — if the module is useful at your table, a star helps other GMs find it.</li>
 <li><strong>Watch releases</strong> — follow the repo for updates, compatibility notes, and new feature releases.</li>
@@ -566,6 +572,6 @@ You may <strong>NOT</strong> sell this module, bundle it within paid content (su
 </ul>
 <hr />
 <div style="text-align: center;">
-<p><strong>Author:</strong> <a href="https://github.com/GnollStack">GnollStack</a> · <strong>Compatibility:</strong> Foundry VTT v14 only (verified v14.367)</p>
+<p><strong>Author:</strong> <a href="https://github.com/GnollStack">GnollStack</a> · <strong>Compatibility:</strong> Foundry VTT v14 only (verified v14.369)</p>
 <p><a href="#5e-item-importer">⬆ Back to Top</a></p>
 </div>

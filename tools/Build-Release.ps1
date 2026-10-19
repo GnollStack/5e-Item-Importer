@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$OutputDirectory = "dist",
-    [string]$ArchiveName = ""
+    [string]$ArchiveName = "",
+    [switch]$CheckOnly
 )
 
 Set-StrictMode -Version Latest
@@ -41,6 +42,11 @@ $releaseEntries = @(
     "styles",
     "templates"
 )
+$documentation = @("docs/import-window.md", "docs/automation-schema-4.md", "docs/template-authoring.md", "docs/explicit-yaml-v2.md", "docs/native-field-catalog.md", "docs/midi-field-catalog.md")
+$documentation += @(Get-ChildItem -LiteralPath (Join-Path $moduleRoot "docs/examples") -Recurse -File | Where-Object {
+    $_.Extension -in @(".md", ".yaml")
+} | ForEach-Object { $_.FullName.Substring($moduleRoot.Length + 1).Replace("\", "/") })
+$releaseEntries += $documentation
 $requiredRuntimeFiles = @(
     "scripts/itemImporter.js",
     "scripts/debugApi.js",
@@ -54,13 +60,28 @@ foreach ($entry in $releaseEntries + $requiredRuntimeFiles) {
     }
 }
 
+# Listing HTML, historical verification captures and maintainer files are never selected.
+if ($CheckOnly) {
+    $files = @($releaseEntries | ForEach-Object {
+        $source = Join-Path $moduleRoot $_
+        if (Test-Path -LiteralPath $source -PathType Leaf) { $_ }
+        else { Get-ChildItem -LiteralPath $source -Recurse -File | ForEach-Object {
+            $_.FullName.Substring($moduleRoot.Length + 1).Replace("\", "/")
+        } }
+    } | Sort-Object -Unique)
+    [pscustomobject]@{ Version = $manifest.version; Valid = $true; Built = $false; Files = $files; DocumentationFiles = $documentation.Count }
+    return
+}
+
 $stagingRoot = Join-Path ([System.IO.Path]::GetTempPath()) "$($manifest.id)-release-$([guid]::NewGuid().ToString('N'))"
 $stagingModule = Join-Path $stagingRoot $manifest.id
 
 try {
     New-Item -ItemType Directory -Path $stagingModule -Force | Out-Null
     foreach ($entry in $releaseEntries) {
-        Copy-Item -LiteralPath (Join-Path $moduleRoot $entry) -Destination $stagingModule -Recurse -Force
+        $destination = Join-Path $stagingModule $entry
+        New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
+        Copy-Item -LiteralPath (Join-Path $moduleRoot $entry) -Destination $destination -Recurse -Force
     }
 
     New-Item -ItemType Directory -Path $outputPath -Force | Out-Null

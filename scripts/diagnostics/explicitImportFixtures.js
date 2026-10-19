@@ -2,8 +2,9 @@
 import yaml from "../vendor/js-yaml.mjs";
 import { YamlItemParser } from "../strictItemParsers/yamlItemParser.js";
 import { itemToStrictYamlDocument } from "../itemYamlExporter.js";
+import { ItemData } from "../itemData.js";
 import { cloneExplicit, readPath } from "../explicitYamlFields.js";
-const DAMAGE = {number:2,denomination:6,bonus:"@mod",types:["fire","cold"],custom:{enabled:false,formula:"3 + @mod"},scaling:{mode:"whole",number:0,formula:"@prof"}};
+const DAMAGE = {number:2,denomination:6,bonus:"@mod",types:["fire","cold"],custom:{enabled:false,formula:"3 + @mod"},modifiers:["min3","r1"],scaling:{mode:"whole",number:0,formula:"@prof"}};
 function stable(value) {
   value=cloneExplicit(value);
   if(Array.isArray(value))return value.map(stable);
@@ -16,10 +17,11 @@ export async function createExplicitItemFixtures(makeMarker) {
   for (const type of ["weapon","equipment","consumable","tool","loot","container","spell"]) {
     const marker=makeMarker("Explicit " + type);
     const source={name:marker.fixtureName,type,img:"icons/svg/book.svg",sort:0,system:{
-      identifier:"explicit-" + type,source:{book:"Private fixture",page:"12a",custom:"Schema 2",license:"Private",rules:"2024",revision:1.5},
-      properties:[],quantity:1,identified:false,weight:{value:0.5,units:"lb"},price:{value:0.25,denomination:"gp"}
+      identifier:"explicit-" + type,source:{book:"Private fixture",page:"12a",custom:"Schema 3",license:"Private",rules:"2024",revision:1.5},
+      properties:[],rarities:type==="loot"?[]:["rare","veryRare"],description:{value:"<p>Stored complete description</p>",chat:"<p>Stored chat description</p>"},unidentified:{name:"Unknown fixture",description:"<p>Stored unidentified description</p>"},quantity:1,identified:false,weight:{value:0.5,units:"lb"},price:{value:0.25,denomination:"gp"}
     }};
     const paths=["img","sort","system.identifier","system.source.book","system.source.page","system.source.custom","system.source.license","system.source.rules","system.source.revision"];
+    if(type!=="spell") paths.push("system.rarities","system.description","system.unidentified");
     if(!["loot","spell"].includes(type)) {
       Object.assign(source.system,{equipped:true,attuned:true,attunement:""});
       paths.push("system.equipped","system.attuned");
@@ -44,17 +46,17 @@ export async function createExplicitItemFixtures(makeMarker) {
     if(type==="spell") {
       source.system={
         identifier:source.system.identifier,source:source.system.source,properties:[],level:2,school:"evo",method:"spell",prepared:2,sourceItem:"spellcasting",
-        activation:{type:"action",value:0},range:{value:"30 + @mod",units:"ft",special:"Stored range"},duration:{value:"1 + @mod",units:"minute",special:"Stored duration"},
+        activation:{type:"action",value:0},range:{value:"30 + @mod",units:"ft",special:"Stored range"},duration:{value:"1 + @mod",units:"minute",expiry:"turnEnd",special:"Stored duration"},
         materials:{value:"Inactive material",consumed:false,cost:0.5,supply:1.25},
         target:{affects:{type:"creature",count:"1 + @mod",choice:false},template:{type:"cone",size:"10 + @mod",count:"1 + @mod",width:"2 + @mod",height:"3 + @mod",units:"ft",contiguous:false,stationary:true}}
       };
-      paths.push("system.prepared","system.sourceItem","system.activation.value","system.range.value","system.duration.value","system.materials","system.target.template","system.target.affects.count");
+      paths.push("system.prepared","system.sourceItem","system.activation.value","system.range.value","system.duration.value","system.duration.expiry","system.materials","system.target.template","system.target.affects.count");
     }
     const options={includeActivities:false,includeEffects:false};
     const parsed=new YamlItemParser().parse(yaml.dump(itemToStrictYamlDocument(source,options)));
     if(!parsed.success) throw new Error(type+" fixture failed parsing: "+parsed.errors.join("; "));
     await parsed.item.buildFoundryData({deterministicIcons:true});
-    const data=cloneExplicit(parsed.item.itemData);
+    const data=cloneExplicit(parsed.item.itemData);data.name=marker.fixtureName;
     data.flags ??= {};data.flags["5e-item-importer"] ??= {};data.flags["5e-item-importer"].mcpAutomationFixture=marker;
     const created=await CONFIG.Item.documentClass.create(data,{renderSheet:false});
     const stored=created.toObject();
@@ -63,6 +65,18 @@ export async function createExplicitItemFixtures(makeMarker) {
     await reparsed.item.buildFoundryData({deterministicIcons:true});
     const checks=paths.map(path=>({path,persisted:equal(readPath(source,path),readPath(stored,path)),roundTrip:equal(readPath(source,path),readPath(reparsed.item.itemData,path))}));
     steps.push({step:"explicit-"+type,success:checks.every(c=>c.persisted&&c.roundTrip),itemId:created.id,checks});
+    if(type!=="spell") {
+      for(const rarities of [[],["legendary"],["uncommon","rare"]]) {
+        const updateSource=cloneExplicit(source);updateSource.system.rarities=rarities;
+        const updateParsed=new YamlItemParser().parse(yaml.dump(itemToStrictYamlDocument(updateSource,options)));
+        if(!updateParsed.success)throw new Error("Rarity update failed parsing.");
+        await updateParsed.item.buildFoundryData({deterministicIcons:true});
+        const update=ItemData.prepareExistingItemUpdate(updateParsed.item.itemData);update.name=marker.fixtureName;
+        await created.update(update);
+        const storedRarities=created.toObject().system.rarities;
+        steps.push({step:"explicit-rarity-update-"+type,success:equal(storedRarities,rarities),itemId:created.id,rarities,storedRarities});
+      }
+    }
     if(type==="weapon")steps.push(await createExplicitInlineFixtures(parsed.item,created));
   }
   return steps;
@@ -75,11 +89,17 @@ async function createExplicitInlineFixtures(parsedItem,created) {
   const effect=(name,type="base")=>({_id:id(name),name,type,img:"icons/svg/aura.svg",origin:created.uuid,sort:0,showIcon:0,disabled:false,transfer:false,tint:"#123456",statuses:["poisoned","prone","blinded"],
     duration:{value:2,units:"hours",expiry:"turnEnd",expired:false},start:{combat:null,combatant:null,initiative:0.5,round:0,turn:0,time:0},
     system:{changes:[0,false,"",null,[],{},["one",0,false],{bonus:0,enabled:false}].map(value=>({key:"system.attributes.ac.bonus",type:"override",value,phase:"final",priority:0.5}))}});
-  const standalone=effect("InlineTyped");
-  const saved=effect("InlineSaved");
-  const enchanted=effect("InlineEnchanted","enchantment");
-  const save={_id:id("InlineSave"),type:"save",name:"Inline Save",sort:0,consumption:{spellSlot:false},effects:[{_id:saved._id,level:{min:0,max:5},onSave:false}]};
-  const enchant={_id:id("InlineEnchant"),type:"enchant",name:"Inline Enchant",sort:0,effects:[{_id:enchanted._id,level:{min:0,max:5},riders:{activity:[save._id],effect:[standalone._id],item:[created.uuid]}}]};
+  const standaloneSeed=effect("InlineTyped");
+  const savedSeed=effect("InlineSaved");
+  const enchantedSeed=effect("InlineEnchanted","enchantment");
+  const saveSeed={_id:id("InlineSave"),type:"save",name:"Inline Save",sort:0,consumption:{spellSlot:false},effects:[{_id:savedSeed._id,level:{min:0,max:5},onSave:false}]};
+  const enchantSeed={_id:id("InlineEnchant"),type:"enchant",name:"Inline Enchant",sort:0,effects:[{_id:enchantedSeed._id,level:{min:0,max:5},riders:{activity:[saveSeed._id],effect:[standaloneSeed._id],item:[created.uuid]}}]};
+  // Establish current native defaults and generated change IDs before export.
+  // This model is ephemeral; the only persisted fixture remains `created`.
+  const native=new CONFIG.Item.documentClass({_id:created.id,name:"Native inline fixture source",type:"weapon",
+    system:{activities:{[saveSeed._id]:saveSeed,[enchantSeed._id]:enchantSeed}},effects:[standaloneSeed,savedSeed,enchantedSeed]},{strict:true});
+  const [standalone,saved,enchanted]=[standaloneSeed,savedSeed,enchantedSeed].map(seed=>cloneExplicit(native.effects.get(seed._id)._source));
+  const [save,enchant]=[saveSeed,enchantSeed].map(seed=>cloneExplicit(native.system.activities.get(seed._id)._source));
   const descriptors=[api.serializeEffect(standalone),api.serializeActivity(save,{linkedEffects:[saved]}),api.serializeActivity(enchant,{linkedEffects:[enchanted]})];
   parsedItem.pendingActivities=descriptors.map(descriptor=>({key:Object.keys(descriptor.rawData)[0],rawData:descriptor.rawData}));
   const result=await parsedItem.applyActivities(created);
@@ -98,7 +118,8 @@ async function createExplicitInlineFixtures(parsedItem,created) {
   const reparsed=new YamlItemParser().parse(yaml.dump(exported));
   const raw=reparsed.item?.pendingActivities?.find(entry=>entry.key==="EFFECT"&&entry.rawData?.EFFECT?.DETAILS?.Name===standalone.name)?.rawData;
   const roundTrip=raw ? api.parseAll(yaml.dump(raw))[0] : null;
-  checks.push({path:"inline effect Item export -> companion reparse",persisted:roundTrip?.success===true&&equal(roundTrip.effectData.system.changes,standalone.system.changes)&&equal(roundTrip.effectData.duration,standalone.duration)});
+  const roundTripSource=roundTrip?.success ? new CONFIG.ActiveEffect.documentClass(cloneExplicit(roundTrip.effectData),{parent:created,strict:true})._source : null;
+  checks.push({path:"inline effect Item export -> companion reparse",persisted:roundTrip?.success===true&&equal(roundTripSource?.system.changes,standalone.system.changes)&&equal(roundTripSource?.duration,standalone.duration)});
   return {step:"explicit-inline-attachments",success:result.addedActivities===2&&result.addedEffects===3&&checks.every(check=>check.persisted),result,checks};
 }
 

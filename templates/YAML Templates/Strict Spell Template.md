@@ -2,11 +2,11 @@
 
 ## Destination and prerequisites
 
-Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 2` and the `SPELL` root.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 4` and the `SPELL` root.
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 5.3.3 / Foundry 14.367; MIDI annotations, when used, target MIDI-QOL 14.0.9. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 / Foundry 14.369; MIDI/DAE annotations, when used, target the reviewed 14.6.0 integrations. Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -26,7 +26,7 @@ Read the [generation guide](../README.md) and [authoring rules and validation](.
 | Context-dependent | Needs a parent Item, actor, accessible document, registry or workflow context. |
 | Compatibility input | An accepted older spelling/representation; use the canonical spelling for new YAML. |
 
-The first YAML block is a **complete field reference**, not a ready-made item to import unchanged. Placeholders describe choices, not default values. Later examples contain concrete values.
+The first YAML block is the **native and legacy field reference**, not a ready-made item to import unchanged. Placeholders describe choices, not default values. Later examples contain concrete values. The separate [schema 4 automation reference](../../docs/automation-schema-4.md) defines reviewed typed integration fields. Do not combine canonical AUTOMATION with legacy MIDI/DAE sections in one Activity or Effect.
 
 Missing, `null`, `false`, `0`, `""`, `[]` and `{}` are distinct. Use `n/a` only for fields that document it as an unset marker. Never use it as a universal substitute for null or empty data. `CHANGES.Value` retains its YAML type, including the literal text `n/a`. Formula syntax acceptance does not establish that referenced variables exist.
 
@@ -35,7 +35,7 @@ For new physical Items, ordinary defaults are quantity 1, identified true, equip
 ## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 SPELL:
   SOURCE:
     Book: "[text|n/a]"
@@ -85,6 +85,7 @@ SPELL:
 
   DURATION:
     # Preserve Value and Special even when the selected unit hides those controls.
+    Expiry: null # Native expiry key (e.g. turnEnd), or null for default expiry.
     Special: "[text|n/a]"
     Units: "[inst|spec|turn|round|minute|hour|day|month|year|disp|dstr|perm]"
     Value: "[formula|n/a]"
@@ -144,7 +145,7 @@ A free/core spell import. Preserve the complete description; it does not automat
 
 <!-- AUTHORING-EXAMPLE:START -->
 ```yaml
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 SPELL:
   ITEM:
     Name: Magic Missile
@@ -265,6 +266,7 @@ The completed examples below demonstrate array nesting for a passive +1 AC ward 
                 Die Denomination: 6
                 Bonus: ""
                 Damage Types: [fire]
+                Modifiers: []
                 Custom Enabled: false
                 Custom Formula: ""
                 Scaling Mode: none
@@ -544,9 +546,9 @@ These fields are optional and only needed for spells with unusual area geometry.
 ---
 
 
-## Explicit fields in Item YAML schema 2
+## Explicit fields in Item YAML schema 4
 
-Verification target: D&D5e 5.3.3 / Foundry 14.367. Item YAML versions 0 and 1 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 and 3 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|

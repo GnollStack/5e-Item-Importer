@@ -1,8 +1,8 @@
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 EQUIPMENT:
   ITEM:
     Name: Cloak of Protection
-    Rarity: uncommon
+    Rarities: [uncommon]
     Equipment Type: wondrous
     Base Equipment: n/a
   INVENTORY:

@@ -1,12 +1,20 @@
-# Explicit Item YAML v2 and field coverage
+# Explicit Item YAML schema 4 and field coverage
 
-Item exports now use `SCHEMA_VERSION: 2`. Versions 0 (including a missing version) and 1 are accepted and handled in memory; saved worlds are not migrated. Activity/Effect strict serialization descriptors 1 and 2 are accepted by the optional companion integration. The separate feature-envelope version is unchanged.
+Schema 4 adds reviewed typed automation storage and recipe authoring. See [Automation storage in schema 4](automation-schema-4.md). Earlier supported YAML remains readable.
+
+Item exports now use `SCHEMA_VERSION: 4`. Versions 0 (including a missing version), 1, 2 and 3 are accepted and handled in memory; saved worlds are not migrated. Legacy Activity/Effect descriptor payloads 1, 2 and 3 remain readable alongside version 4. The active companion must advertise schema 4 for both strict Activity and Effect support before attachment import, builder, or full-export UI integration is enabled. Older or unknown companion contracts block the complete attachment batch with an update message; core Item operations remain available. The separate feature-envelope version remains 2.
 
 The seven supported roots remain WEAPON, EQUIPMENT, CONSUMABLE, TOOL, LOOT, CONTAINER and SPELL. Core import/export works without Activity Importer. Existing attachment, MIDI-QOL and DAE integration behavior is retained.
 
+### Native fields retained from schema 3
+
+Physical Items use `ITEM.Rarities: [rare]` for `system.rarities`. Omitted rarity defaults to common; `Rarities: []` is explicitly mundane. Legacy `ITEM.Rarity` remains accepted, but populated canonical and legacy values must agree. Spell Items do not have physical rarities.
+
+`DAMAGE.DAMAGE_DATA.Modifiers` and `VERSATILE_DAMAGE.DAMAGE_DATA.Modifiers` preserve dice modifier lists. Spells add nullable `DURATION.Expiry`. All seven Item roots remain unchanged; new native Item/advancement types are catalog-only. Companion activity/effect fields use descriptor schema 4; the generic feature envelope remains version 2. Paired full export preserves a shared local effect as one Item-level `effects` definition and per-Activity `Effect ID` references, including distinct APPLICATION settings. External `Effect UUID` references remain external. Older/custom serializers without reference support fail instead of duplicating shared effects.
+
 ## Value rules
 
-The verification target is D&D5e **5.3.3** on Foundry **14.367**. Installed `dnd5e.mjs`, its shared field classes, and `templates/items/details/`, `templates/activity/`, and effect forms are the reference. This is a fixed field contract, not a general document-path import API.
+The verification target is D&D5e **6.0.6** on Foundry **14.369**. Installed `dnd5e-compiled.mjs` and its source map, its shared field classes, and `templates/items/details/`, `templates/activity/`, and effect forms are the reference. This is a fixed field contract, not a general document-path import API.
 
 Missing keys use the existing parser/native defaults. Within the mapped fields, preserve explicit false, zero, empty collections and native nullable values according to each field's parser contract. Use YAML `null` only where nullable storage is supported; `n/a` is an empty/default compatibility marker, not a universal replacement for false, zero, null, or an empty list. An inactive native setting does not enable its controlling checkbox. Formula fields remain strings and are validated through the existing Foundry model validation path. Numeric fields accept exact finite numbers; integer fields reject fractions and expressions. Native units use their stored keys, not translated display labels.
 
@@ -37,6 +45,7 @@ Use `DAMAGE_DATA` at each damage/healing location listed below. The mapping stor
 | Die Denomination | `denomination` | Nullable non-negative integer; null |
 | Bonus | `bonus` | Formula string; empty |
 | Damage Types | `types` | List of registered damage/healing IDs; empty list |
+| Modifiers | `modifiers` | List of dice modifier strings; empty list |
 | Custom Enabled | `custom.enabled` | Boolean; false |
 | Custom Formula | `custom.formula` | Formula string; empty, preserved when disabled |
 | Scaling Mode | `scaling.mode` | `none` (native empty string), `whole`, `half`; none |
@@ -49,6 +58,7 @@ DAMAGE_DATA:
   Die Denomination: 6
   Bonus: "@mod"
   Damage Types: [fire, cold]
+  Modifiers: []
   Custom Enabled: false
   Custom Formula: "3 + @mod"
   Scaling Mode: half
@@ -56,7 +66,7 @@ DAMAGE_DATA:
   Scaling Formula: "@prof"
 ```
 
-Legacy formula shorthand remains valid when `DAMAGE_DATA` is absent. Populated shorthand and explicit damage in the same damage value are an error; the importer never guesses which representation wins. Canonical exports use all nine explicit fields.
+Legacy formula shorthand remains valid when `DAMAGE_DATA` is absent. Populated shorthand and explicit damage in the same damage value are an error; the importer never guesses which representation wins. Canonical exports use all ten explicit fields.
 
 
 ## Coverage checklist
@@ -83,7 +93,7 @@ Tests:
 | All seven | `img`, `sort`, `system.identifier` | ITEM.Icon, Sort, Identifier | E | Supplied icon wins over automatic selection; sort integer 0 | Explicit/Create |
 | All seven | `system.source.{book,page,custom,license,rules,revision}` | SOURCE.Book, Page, Custom, License, Rules, Revision | E | Strings; revision is numeric, native default 1 | Explicit/Create |
 | All seven | `system.description.{value,chat}` | DESCRIPTION.Description; CHAT_FLAVOR.Chat Description | I+E | HTML/text; native null retained | Core/Explicit |
-| Physical six | `system.{quantity,rarity}` | INVENTORY.Quantity; ITEM.Rarity | I | Quantity non-negative integer, default 1; Container builder fixes 1 and export omits Quantity | Core |
+| Physical six | `system.quantity`, `system.rarities[]` | INVENTORY.Quantity; ITEM.Rarities | I | Rarities list, omitted [common], [] mundane; legacy Rarity accepted. Quantity non-negative integer, default 1; Container fixes 1 and export omits Quantity | Core |
 | Physical six | `system.weight.{value,units}`, `system.price.{value,denomination}` | COST_AND_WEIGHT.Weight Value, Weight Units, Price Value, Price Denomination | I | Non-negative decimal values; unit/currency IDs | Core/Create |
 | Physical six | `system.identified`, `system.unidentified.{name,description}` | INVENTORY.Identified; UNIDENTIFIED_DESCRIPTION.Unidentified Name, Unidentified Description | I | Identified defaults true | Core/Create |
 | Equippable five | `system.{attunement,attuned,equipped}` | ATTUNEMENT.Attunement, Attuned; INVENTORY.Equipped | I+E | Weapon, Equipment, Consumable, Tool, Container. Requirement none/required/optional is separate from current attuned state | Explicit/Create |
@@ -92,7 +102,7 @@ Tests:
 | Weapon | `system.properties[ada,amm,fin,fir,foc,hvy,lgt,lod,rch,rel,ret,sil,spc,thr,two,ver]` | PROPERTIES named weapon checkboxes | I | Existing full template lists every property; false defaults | Core |
 | Weapon | `system.range.{value,long,reach,units}` | RANGE.Range Normal, Range Long, Reach, Range Units | I+E | Non-negative decimals; retain hidden reach/ranged values | Explicit/Create |
 | Weapon | `system.ammunition.type`, `system.mastery`, `system.proficient` | AMMUNITION.Ammunition Type; MASTERY.Mastery; PROFICIENCY.Proficient | I+E | Ammo selection survives property off; proficiency automatic/null or 0/1 | Core/Explicit |
-| Weapon | `system.damage.{base,versatile}` and their nine leaves | DAMAGE.DAMAGE_DATA; VERSATILE_DAMAGE.DAMAGE_DATA | D+E | Retain versatile data when Versatile is false | Explicit/Create |
+| Weapon | `system.damage.{base,versatile}` and their ten leaves | DAMAGE.DAMAGE_DATA; VERSATILE_DAMAGE.DAMAGE_DATA | D+E | Retain versatile data when Versatile is false | Explicit/Create |
 | Weapon, Consumable | `system.magicalBonus` | ATTUNEMENT.Magic Bonus | I+E | Deterministic formula; does not enable explicitly false Magical | Core/Explicit |
 | Weapon, Equipment | `system.armor.value`, `system.cover`, `system.crew.max` | SIEGE_PROPERTIES.Siege Armor Class / VEHICLE_PROPERTIES.Vehicle Armor Class; Cover; Crew Capacity | I+E | Native siege/vehicle controls, retained on other subtypes; crew non-negative integer, cover labels or decimal 0..1 | Core/Explicit/Create |
 | Weapon, Equipment | `system.hp.{value,max,dt,conditions}` | SIEGE_PROPERTIES / VEHICLE_PROPERTIES: Hit Points Current, Hit Points Max, Hit Points Threshold, Health Conditions | I+E | Nullable non-negative integers and text; retain inactive controls | Core/Explicit |
@@ -104,9 +114,9 @@ Tests:
 | Consumable | `system.type.{value,subtype}` | ITEM.Consumable Type, Consumable Subtype | I+E | Ammo/poison aliases remain required for their active subtype and must agree with canonical Consumable Subtype; stored native subtype remains across type changes | Core/Explicit/Create |
 | Consumable | `system.properties[ada,sil,ret]` | AMMUNITION_PROPERTIES.Adamantine, Silvered, Returning | I+E | Retained when consumable type is not ammo | Explicit |
 | Consumable | `system.properties[concentration,somatic,vocal,ritual]` | SCROLL_PROPERTIES.Concentration, Somatic, Vocal, Ritual | I+E | Retained when type is not scroll; Verbal remains legacy Vocal alias | Core/Explicit |
-| Consumable | `system.damage.base` nine leaves, `system.damage.replace` | DAMAGE.DAMAGE_DATA, Replace | D+E | Available to all consumable subtypes; ammunition damage labels remain input aliases | Explicit/Create |
+| Consumable | `system.damage.base` ten leaves, `system.damage.replace` | DAMAGE.DAMAGE_DATA, Replace | D+E | Available to all consumable subtypes; ammunition damage labels remain input aliases | Explicit/Create |
 | Tool | `system.type.{value,baseItem}` | ITEM.Tool Type, Base Tool | I | Existing tool IDs | Core |
-| Tool | `system.{ability,proficient,bonus}` | ABILITY_CHECK.Ability, Proficient; PROPERTIES.Tool Bonus | I | YAML proficiency Automatic/null or 0, 0.5, 1, 2; native 1.5 is not accepted by the parser; bonus formula | Core/Explicit/Create |
+| Tool | `system.{ability,proficient,bonus}` | ABILITY_CHECK.Ability, Proficient; PROPERTIES.Tool Bonus | I | YAML proficiency Automatic/null or 0, 0.5, 1, 1.5, 2; bonus formula | Core/Explicit/Create |
 | Tool | `system.properties[foc]` | PROPERTIES.Focus | E | Boolean, false default | Explicit/Create |
 | Loot | `system.type.{value,subtype}` | ITEM.Loot Type, Loot Subtype | I+E | Native subtype may be empty | Explicit/Create |
 | Container | `system.properties[weightlessContents]` | PROPERTIES.Weightless Contents | I | Boolean | Core |
@@ -118,11 +128,12 @@ Tests:
 | Spell | `system.{method,prepared,sourceItem}` | PREPARATION.Method, Prepared, Source Item | I+E | Prepared unprepared/prepared/always maps 0/1/2; accepts legacy booleans. Source Item is the native identifier | Explicit/Create |
 | Spell | `system.activation.{type,value,condition}` | ACTIVATION.Type, Value, Condition | I | Cost non-negative integer; source value survives disabled/uncounted timing | Core/Explicit/Create |
 | Spell | `system.range.{value,units,special}`, `system.duration.{value,units,special}` | RANGE / DURATION: Value, Units, Special | I+E | Values are formulas, including when a non-scalar unit hides the control | Explicit/Create |
+| Spell | `system.duration.expiry` | DURATION.Expiry | E | Nullable native expiry ID | Explicit/Create |
 | Spell | `system.target.affects.{type,count,choice,special}` | TARGETS.Type, Count, Choice, Special | I+E | Count formula; preserve other values when Type is empty | Explicit/Create |
 | Spell | `system.target.template.{type,count,size,width,height,units,contiguous,stationary}` | AREA.Shape, Count, Size, Width, Height, Units, Contiguous, Stationary | I+E | Count/dimensions formulas; preserve inactive dimensions and empty-shape settings | Explicit/Create |
 | Activity-capable five | `system.uses.{spent,max,recovery[].period,recovery[].type,recovery[].formula}` | USAGE.Uses Spent, Uses Max; RECOVERY[].Period, Type, Formula | I | Weapon, Equipment, Consumable, Tool, Spell. Spent integer, deterministic max/recovery formulas with limits above; Uses Current requires a literal maximum | Core |
 | Consumable | `system.uses.autoDestroy` | USAGE.Destroy on Empty | I | Boolean | Core |
-| Activity-capable five | `system.activities` | Activities[] with one ACTIVITY_* root per entry | A | Optional companion; canonical descriptors 1/2 accepted | Attachments |
+| Activity-capable five | `system.activities` | Activities[] with one ACTIVITY_* or EFFECT root per entry | A | Active companion requires both strict schema 4 capabilities; legacy descriptor payloads 1/2/3 remain readable | Attachments |
 | All seven | `effects` | effects[]; activity APPLIED_EFFECTS[] | A | Loot/Container accept passive effects only; see Activity/Effect reference | Attachments |
 
 ## Explicit exclusions and metadata
@@ -133,16 +144,15 @@ Tests:
 | `folder`, `ownership`, `_stats`, document pack/sheet configuration | Internal/document-management metadata, outside item mechanics/forms in this import contract |
 | `system.container`, Container contents | Deferred container placement/relationships |
 | `system.crew.value[]` | Deferred actor crew assignments; capacity `crew.max` is covered |
-| Additional Item types / advancement models / facility Order activities | Deferred YAML import support; the read-only native catalog may describe these without adding new item or activity roots |
+| Additional Item types / advancement models / Order or Teleport activities / Condition effects | Deferred YAML import support; the read-only native catalog may describe these without adding new item or activity roots |
 | Container `system.quantity` editing | Current builder fixes quantity at 1; canonical export omits Quantity. Other native quantities are not preserved |
-| Tool proficiency `1.5` | Native schema can hold it, but the current strict parser warns and falls back to Automatic. Accepted YAML values are Automatic/null, 0, 0.5, 1 and 2 |
 | Loot equipped/attunement state | Not native Loot fields; omitted from the Loot reference |
 | Recovery with empty/zero maximum | Existing parser imports recovery only with a positive literal maximum or a formula maximum |
-| Computed `labels`, `range.scalar`, target dimensions/scalars, prepared totals, `uses.value`, proficiency multipliers | Derived, not source data; export reads stored source |
+| Computed `system.damage.bonus`, `labels`, `range.scalar`, target dimensions/scalars, prepared totals, `uses.value`, proficiency multipliers | Derived, not source data; export reads stored source |
 | Tool `system.chatFlavor` | Legacy storage without a current native tool-sheet control; current chat description uses `system.description.chat` |
-| `flags.5e-item-importer.reloadAmount` | Compatibility metadata for RELOAD.Reload Amount. Warning required: D&D5e 5.3.3 has no `system.reload` or native reload-amount automation |
+| `flags.5e-item-importer.reloadAmount` | Compatibility metadata for RELOAD.Reload Amount. Warning required: D&D5e 6.0.6 has no `system.reload` or native reload-amount automation |
 | `flags.5e-item-importer.attunementRequirement` | Existing ATTUNEMENT.Attunement By text metadata; no matching core restriction field |
-| CUSTOM_PROPERTIES / existing importer provenance and supported integration flags | Existing extension contract retained; no new arbitrary native paths or expanded MIDI-QOL/DAE support |
+| CUSTOM_PROPERTIES / importer provenance / integration flags | Existing custom-property and provenance contracts remain. Reviewed integration flags use schema 4 AUTOMATION; arbitrary native paths and unreviewed flags are not supported |
 | Additional third-party fields/relationships | Deferred; existing export behavior must not silently claim unsupported native coverage |
 
 ## Verification commands
@@ -151,17 +161,23 @@ Tests:
 node --experimental-vm-modules tools/Test-ExplicitYaml.mjs
 ```
 
-In a source checkout, the existing MCP `runSmokeTests({suite:"full"})` runs read-only tests against live schemas and checks world counts. Controlled `runAutomation({suite:"explicit",runId:"yaml-v2",confirmMutation:true,cleanupBefore:true,cleanupAfter:true})` imports marked fixtures and cleans them in its existing finally block. Activity Importer must be active for paired attachment tests. No world upgrade/migration is part of these checks.
+In a source checkout, the existing MCP `runSmokeTests({suite:"full"})` runs read-only tests against live schemas and checks world counts. Controlled `runAutomation({suite:"explicit",runId:"yaml-v4",confirmMutation:true,cleanupBefore:true,cleanupAfter:true})` imports marked fixtures and cleans them in its existing finally block. Activity Importer must be active for paired attachment tests. No world upgrade/migration is part of these checks.
+
+### Pre-release verification (candidate 14.3.0, renumbered to 14.2.0)
+
+Verified on 2026-10-15 against Foundry 14.369 / D&D5e 6.0.6 with MIDI-QOL 14.6.0 and DAE 14.6.0. Paired read-only full smoke checks passed Activity 324/324 and Item 205/205; offline parser/serialization/template checks passed Activity 307/307 and Item 212/212. Native source round trips, standalone module profiles, disposable persistence/undo fixtures and selected native/MIDI/DAE behaviors were checked with cleanup. These results do not establish every possible macro, combat, region or calendar workflow. See [the automation reference](automation-schema-4.md) for supported fields and context requirements.
+
+The dated sections below retain the earlier 5.3.3 baseline as historical evidence. Their old extension exclusions and counts do not describe the current schema 4 contract.
 
 ## Template completeness follow-up (2026-09-14)
 
-The full references now use canonical labels and documented parser value types, including deterministic Uses Max formulas, current Consumable Magic Bonus, typed inline effects and explicit damage. Template guidance records the existing Container quantity and Tool proficiency limits instead of promising unsupported round trips.
+At that date, the full references were updated to use canonical labels and documented parser value types, including deterministic Uses Max formulas, current Consumable Magic Bonus, typed inline effects and explicit damage. That guidance recorded the then-existing Container quantity and Tool proficiency limits. Schema 4 now accepts Tool proficiency 1.5; the Container quantity limit remains.
 
 The source-only completeness check covers all seven Item references; the companion check covers 24 Base/MIDI activity and effect references. These checks run inside the ordinary explicit YAML suite and fail missing canonical fields or ambiguous examples. Coverage is against declared importer mappings, with named structural alternatives, rather than a claim that every native field or combination is supported.
 
-Current checks: Item offline 146/146 and live 187/187; Activity offline 108/108 and live 256/256. Live checks created no world documents. See [verification-template-completeness.json](verification-template-completeness.json) and [test commands](../tests/README.md).
+Checks at that date: Item offline 146/146 and live 187/187; Activity offline 108/108 and live 256/256. Live checks created no world documents. Source-only records: `docs/verification-template-completeness.json` and `tests/README.md`; these are excluded from the customer package.
 
-## Completed verification
+## Historical YAML v2 verification (2026-09-13)
 
 Verified on 2026-09-13 against Foundry 14.367 / D&D5e 5.3.3, with both importers, MIDI-QOL 14.0.9 and DAE 14.0.12 active.
 
@@ -171,12 +187,12 @@ Verified on 2026-09-13 against Foundry 14.367 / D&D5e 5.3.3, with both importers
 - Cleanup removed all ten marked parent/linked fixture Items across the two runs, including their embedded documents. Both modules reported zero remaining fixtures. Original actor/item/scene/token counts were retained.
 - Existing quick starts, MIDI/DAE templates, optional-companion paths, descriptor compatibility, and comparison extraction passed their regression checks.
 
-The Activity persistence diagnostic explicitly removes a fixed list of MIDI-added fields from its **test-only native snapshot**, records those exclusions, and separately verifies that the production serializer rejects the extended document. It does not claim support for round-tripping MIDI extensions. Existing MIDI/DAE import support remains in scope; expanded third-party export remains deferred.
+In that historical run, the Activity persistence diagnostic removed a fixed list of MIDI-added fields from its **test-only native snapshot**, recorded those exclusions, and verified the then-current serializer rejected the extended document. That run did not establish MIDI extension round trips. The schema 4 fixtures retain reviewed MIDI fields without that projection and test schema 4 storage separately.
 
-Machine-readable evidence: [verification-yaml-v2.json](verification-yaml-v2.json).
+Machine-readable evidence remains in source-only `docs/verification-yaml-v2.json`; it is excluded from the customer package.
 
-## Stormglass follow-up verification
-The [corrected complex weapon YAML](../tests/fixtures/stormglass-requiem.yaml) contains two activities and two linked effects. Its four supplied IDs each contain 16 alphanumeric characters. The earlier conversational copy accidentally added a character to each ID and correctly failed native preflight.
+## Historical Stormglass follow-up verification (2026-09-13)
+The source-only corrected complex weapon YAML (`tests/fixtures/stormglass-requiem.yaml`) contains two activities and two linked effects. Its four supplied IDs each contain 16 alphanumeric characters. The earlier conversational copy accidentally added a character to each ID and correctly failed native preflight.
 Damage comparison now derives expected and actual summaries consistently. An omitted versatile structure is hidden only when its entire stored value equals native defaults; unexpected inactive settings remain visible. Fresh weapon/tool imports remove an unchanged, captured native baseline only after all authored attachments and a matching primary replacement succeed.
 Verified on 2026-09-13 with the same platform/integrations: Item live 187/187 and offline 139/139. The exact YAML through `createItem5e()` produced 2 activities, 2 correctly linked effects, 50 comparison matches, zero discrepancies and zero issues. Both marked test Items were cleaned up; zero fixtures remained. Counts stayed 20 actors / 30 Items / 2 scenes / 7 active-scene tokens. The user's earlier partial import was not modified.
 

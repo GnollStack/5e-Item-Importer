@@ -52,8 +52,8 @@ function syntheticEnvironment(provider) {
     class LaterExtension extends RegisteredMidiActivity {
         static defineSchema() { return { ...super.defineSchema(), laterModule: new StringField(), twiceExtended: new NumberField({ min: 4 }) }; }
     }
-    globalThis.game = { version: "14.367", release: { generation: 14 }, system: { id: "dnd5e", version: "5.3.3" },
-        modules: new Map([["midi-qol", { id: "midi-qol", active: true, version: "14.0.9" }]]),
+    globalThis.game = { version: "14.369", release: { generation: 14 }, system: { id: "dnd5e", version: "6.0.6" },
+        modules: new Map([["midi-qol", { id: "midi-qol", active: true, version: "14.6.0" }]]),
         items: { create() { calls++; throw new Error("World write"); } }, i18n: { lang: "en" } };
     globalThis.dnd5e = { documents: { activity: { NativeActivity } } };
     globalThis.foundry = { data: { fields: { StringField, NumberField, SchemaField } } };
@@ -152,6 +152,21 @@ export function runMidiFieldCatalogTests({ provider, decorate }) {
             assert(probe.results[0].raw.valid);
             assert(find("midiProperties.triggeredActivityTargets").sheet.options.some(option => option.kind === "running-midi-registry" && option.ids.includes("customTargetPool")));
         });
+        check("Unreviewed MIDI versions expose schemas without executing extension validators", () => {
+            const module = globalThis.game.modules.get("midi-qol");
+            const originalVersion = module.version;
+            try {
+                module.version = "14.6.1";
+                const page = service.getFieldCatalog({ layer: "midi", limit: 200 });
+                assert(page.success && page.environment.midi.reviewCurrent === false);
+                for (const path of ["midiProperties.autoTargetType", "useConditionText", "macroData.command"]) {
+                    const report = service.probeFieldValues({ fieldId: find(path).id, values: ["text", false, 0] });
+                    assert(report.success && report.results.every(row => row.raw.status === "incomplete"
+                        && row.cleaning.status === "incomplete" && row.contextual.status === "incomplete"));
+                }
+                assert(fixture.calls() === 0);
+            } finally { module.version = originalVersion; }
+        });
         check("MIDI flags explicitly lack native validation guarantees", () => {
             const field = fields().find(field => field.validation.formalDataField === false);
             const report = service.probeFieldValues({ fieldId: field.id, values: [false, 0, {}, [], null] });
@@ -184,8 +199,8 @@ export function runMidiFieldCatalogTests({ provider, decorate }) {
 
 export function installMidiParserTestEnvironment() {
     if (globalThis.__fieldCatalogTestSandbox !== true) throw new Error("Parser fixtures require an isolated test VM.");
-    globalThis.game = { version: "14.367", release: { generation: 14 }, system: { id: "dnd5e", version: "5.3.3" },
-        modules: new Map([["midi-qol", { active: true, version: "14.0.9" }]]), settings: { get: () => false },
+    globalThis.game = { version: "14.369", release: { generation: 14 }, system: { id: "dnd5e", version: "6.0.6" },
+        modules: new Map([["midi-qol", { active: true, version: "14.6.0" }]]), settings: { get: () => false },
         i18n: { localize: value => value, format: value => value }, packs: [] };
     globalThis.foundry = { utils: { deepClone: structuredClone, getProperty: (value, path) => path.split(".").reduce((value, key) => value?.[key], value),
         setProperty: (object, path, value) => { const keys = path.split("."); let cursor = object; for (const key of keys.slice(0, -1)) cursor = cursor[key] ??= {}; cursor[keys.at(-1)] = value; },
@@ -200,23 +215,23 @@ export function runMidiYamlCoverageTests({ parser, serializer, decorate }) {
     };
     const yaml = (type, body) => "ACTIVITY_" + type.toUpperCase() + ":\n  ACTIVITY:\n    Name: Catalog Fixture\n" + body;
     const field = (path, type = "attack", extra = {}) => decorate([{ layer: "midi", kind: "activity", type, path, ...extra }],
-        { systemVersion: "5.3.3", foundryVersion: "14.367", midi: { active: true } })[0];
+        { systemVersion: "6.0.6", foundryVersion: "14.369", midi: { active: true } })[0];
     check("MIDI targeting and trigger mappings retain stored inactive values", () => {
         const data = parse(yaml("attack", "  MIDI CONDITIONS:\n    AoE Target Type: enemy\n    Target on Template Draw: alwaysIgnoreDefeated\n    Trigger Activity: none\n    Trigger Targets: failedSaves\n    Roll As: firstTarget\n    Trigger Consume Resources: false\n    Trigger Configure Dialog: false\n    Skip Concentration Save: true")).activityData;
         assert(data.midiProperties.autoTargetType === "enemy" && data.midiProperties.triggeredActivityId === "none");
         assert(data.midiProperties.triggeredActivityTargets === "failedSaves" && data.midiProperties.triggeredActivityConsume === false && data.midiProperties.skipConcentrationCheck === true);
-        assert(field("midiProperties.autoTargetType").coverage.acceptedValues.includes("enemy"));
+        assert(field("midiProperties.autoTargetType").coverage.yamlLocations[0].endsWith("AUTOMATION.midi-qol.fields.midiProperties.autoTargetType"));
     });
     check("MIDI consumption and dialog declarations match exact parser conversions", () => {
         const data = parse(yaml("utility", "  MIDI CONDITIONS:\n    Auto Consume: true\n    Force Consume Dialog: always\n    Force Roll Config: never\n    Force Damage Config: default\n    Choose Effects: yes\n    Toggle Effect: 'TRUE'")).activityData.midiProperties;
         assert(data.autoConsume === true && data.forceConsumeDialog === "always" && data.forceRollDialog === "never" && data.chooseEffects === false && data.toggleEffect === true);
-        const rules = midiRulesFor({ kind: "activity", type: "utility", path: "midiProperties.forceConsumeDialog" }, { version: "14.0.9", active: true });
+        const rules = midiRulesFor({ kind: "activity", type: "utility", path: "midiProperties.forceConsumeDialog" }, { version: "14.6.0", active: true });
         assert(rules.behavior.conditions.some(condition => condition.includes("forceConsumeDialog=always returns false")));
     });
-    check("MIDI overtime inactive values are reported as a coverage limitation", () => {
+    check("MIDI overtime preserves inactive authored values", () => {
         const data = parse(yaml("utility", "  MIDI OVERTIME:\n    Is Over Time: false\n    Turn Choice: end\n    Save Removes: false\n    Roll As: source\n    Activity Macro: 'throw new Error(\"never run\")'")).activityData;
-        assert(data.isOverTimeFlag === false && !data.overTimeProperties && data.macroData.command.includes("never run"));
-        assert(field("overTimeProperties.turnChoice").coverage.conversions.some(text => text.includes("drops overtime")));
+        assert(data.isOverTimeFlag === false && data.overTimeProperties.turnChoice === "end" && data.macroData.command.includes("never run"));
+        assert(field("overTimeProperties.turnChoice").coverage.stages.export === "declared");
         const active = parse(yaml("utility", "  MIDI OVERTIME:\n    Is Over Time: true\n    Turn Choice: end\n    Save Removes: false\n    Roll As: source")).activityData;
         assert(active.overTimeProperties.turnChoice === "end" && active.overTimeProperties.saveRemoves === false);
     });
@@ -226,10 +241,10 @@ export function runMidiYamlCoverageTests({ parser, serializer, decorate }) {
             assert(data.otherActivityId === "" && data.otherActivityAsParentType === false);
         }
         const result = parse(yaml("heal", "  HEALING:\n    Formula: '1d4'\n  MIDI CONDITIONS:\n    Use Other Activity: damage\n    Override action type: true"));
-        assert(result.activityData.otherActivityId === undefined && result.warnings.some(warning => warning.includes("Other Activity")));
+        assert(result.activityData.otherActivityId === "damage" && result.warnings.some(warning => warning.includes("Other Activity")));
         const autoTrigger = parse(yaml("utility", "  MIDI CONDITIONS:\n    Trigger Activity: auto")).activityData;
         assert(autoTrigger.midiProperties.triggeredActivityId === "");
-        assert(field("midiProperties.triggeredActivityId").coverage.conversions.some(text => text.includes("nonblank")));
+        assert(field("midiProperties.triggeredActivityId").coverage.stages.export === "declared");
     });
     check("MIDI effect change keys round trip without executing values", () => {
         const parsed = parse("EFFECT:\n  DETAILS:\n    Name: Flag fixture\n  CHANGES:\n    - Attribute Key: flags.midi-qol.advantage.all\n      Change Type: custom\n      Change Phase: final\n      Value: '(() => { throw new Error(\"never\"); })()'\n    - Attribute Key: flags.midi-qol.optional.example.count\n      Change Type: override\n      Value: 0");
@@ -243,23 +258,23 @@ export function runMidiYamlCoverageTests({ parser, serializer, decorate }) {
         for (const alias of ["Midi-QOL", "MIDI-QOL", "MIDI_QOL"]) {
             const data = parse("EFFECT:\n  DETAILS:\n    Name: Incapacitation\n  " + alias + ":\n    Effect disabled if actor incapacitated: true").effectData;
             assert(data.flags.dae.disableIncapacitated === true && !data.flags["midi-qol"]);
-            let rejected = false; try { serializer.serializeEffectToStrictYaml(data); } catch { rejected = true; }
-            assert(rejected);
+            const output = serializer.serializeEffectToStrictYaml(data);
+            assert(output.rawData.EFFECT.AUTOMATION.dae.disableIncapacitated === true);
         }
     });
     check("MIDI Check damage mapping preserves explicit typed parts", () => {
         const data = parse(yaml("check", "  MIDI DAMAGE:\n    Damage on Save: half\n    Allow Critical: true\n    Extra Critical Damage Formula: '1d6'\n  MIDI DAMAGE_PARTS:\n    - DAMAGE_DATA:\n        Dice Count: 2\n        Die Denomination: 6\n        Bonus: '@mod'\n        Damage Types: [fire]\n        Custom Enabled: false\n        Custom Formula: '3d8'\n        Scaling Mode: ''\n        Scaling Dice Count: 0\n        Scaling Formula: ''")).activityData;
         assert(data.damage.parts[0].number === 2 && data.damage.parts[0].custom.formula === "3d8" && data.damage.critical.allow === true);
-        assert(field("damage.parts[*].number", "check").coverage.yamlLocations[0].endsWith("DAMAGE_DATA.Dice Count"));
+        assert(field("damage.parts[*].number", "check").coverage.yamlLocations[0].endsWith("AUTOMATION.midi-qol.fields.damage.parts[*].number"));
     });
-    check("MIDI export gaps and newly discovered fields do not expand parser support", () => {
+    check("MIDI canonical export supports reviewed fields only", () => {
         const data = parse(yaml("attack", "  MIDI CONDITIONS:\n    AoE Target Type: enemy\n  regionBehavior:\n    enabled: true")).activityData;
         assert(!data.regionBehavior);
-        let rejected = false; try { serializer.serializeActivityToStrictYaml(data); } catch { rejected = true; }
-        assert(rejected && field("midiProperties.autoTargetType").coverage.stages.export === "unsupported");
-        assert(field("regionBehavior.enabled").coverage.status === "unsupported");
+        const output = serializer.serializeActivityToStrictYaml({type: "attack", ...data});
+        assert(output.rawData.ACTIVITY_ATTACK.AUTOMATION["midi-qol"].fields.midiProperties.autoTargetType === "enemy");
+        assert(field("regionBehavior.enabled").coverage.status === "declared");
         const invalid = parser.parseAllBlocksYaml(yaml("attack", "  MIDI ATTACK:\n    Fumble Threshold: 1.5"))[0];
-        assert(!invalid.success);
+        assert(invalid.success && invalid.activityData.fumbleThreshold === 1.5);
     });
     check("MIDI parser unavailable warns while preserving supported data", () => {
         globalThis.game.modules.get("midi-qol").active = false;

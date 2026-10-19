@@ -29,18 +29,20 @@ export async function runFieldCatalogChecks(moduleId) {
   const first = pages[0];
   if (!first) return { success: false, tests, warnings };
   const item = moduleId === "5e-item-importer";
-  await check("native type registry includes the complete verified 5.3.3 scope", () => {
-    if (game.system.version !== "5.3.3") {
-      warnings.push("Exact native type counts are verified for 5.3.3; current version requires review."); return;
+  await check("native type registry includes the complete verified 6.0.6 scope", () => {
+    if (game.system.version !== "6.0.6") {
+      warnings.push("Exact native type counts are verified for 6.0.6; current version requires review."); return;
     }
     if (item) {
       assert(first.types.filter(type => type.kind === "item").length === 13);
-      assert(first.types.filter(type => type.kind === "advancement").length === 8);
+      assert(first.types.filter(type => type.kind === "advancement").length === 9);
       assert(first.types.filter(type => type.kind === "item" && type.importSupport === "supported").length === 7);
     } else {
-      assert(first.types.filter(type => type.kind === "activity").length === 12);
-      assert(first.types.filter(type => type.kind === "effect").map(type => type.type).sort().join(",") === "base,enchantment");
+      assert(first.types.filter(type => type.kind === "activity").length === 13);
+      assert(first.types.filter(type => type.kind === "effect").map(type => type.type).sort().join(",") === "base,condition,enchantment");
       assert(first.types.find(type => type.kind === "activity" && type.type === "order")?.importSupport === "catalog-only");
+      assert(first.types.find(type => type.kind === "activity" && type.type === "teleport")?.importSupport === "catalog-only");
+      assert(first.types.find(type => type.kind === "effect" && type.type === "condition")?.importSupport === "catalog-only");
     }
   });
   await check("native discovery does not promote module extensions to import support", () => {
@@ -110,13 +112,25 @@ export async function runFieldCatalogChecks(moduleId) {
     });
     await check("ScaleValue discovers every native nested variant", () => {
       const variants = new Set(fields.filter(field => field.kind === "advancement" && field.type === "ScaleValue" && field.variant).map(field => field.variant));
-      assert(variants.size === 5);
+      assert(variants.size === 6);
       assert(fields.some(field => field.type === "ScaleValue" && field.variant.endsWith("dice") && field.path.endsWith(".faces")));
+      for (const [variant, path] of [["dice", "modifiers"], ["usage", "value"], ["usage", "period"]])
+        assert(fields.some(field => field.type === "ScaleValue" && field.variant === "configuration.type=" + variant
+          && field.path === "configuration.scale.{key}." + path), "Missing ScaleValue " + variant + "/" + path);
     });
     await check("item child-document fields reference companion catalogs", () => {
       const effects = find("weapon", "effects");
       assert(["catalog-reference", "embedded-documents"].includes(effects.structure.kind));
       assert(!fields.some(field => field.kind === "item" && field.type === "weapon" && field.path.startsWith("effects[*].")));
+      assert(find("weapon", "system.activities").structure.kind === "catalog-reference");
+      assert(find("class", "system.advancement").structure.kind === "catalog-reference");
+    });
+    await check("current item fields distinguish rarities and derived damage", () => {
+      assert(find("weapon", "system.rarities").coverage.yamlLocations.some(path => path.endsWith("ITEM.Rarities")));
+      assert(find("weapon", "system.damage.base.modifiers").coverage.status === "declared");
+      assert(find("spell", "system.duration.expiry").coverage.status === "declared");
+      for (const field of fields.filter(field => field.kind === "item" && /^system\.damage\.bonus(?:\.|\[|$)/.test(field.path)))
+        assert(field.storage.persisted === false && field.coverage.status === "excluded");
     });
   } else {
     await check("damage denomination validates numbers separately from dice menu choices", () => {
@@ -145,6 +159,18 @@ export async function runFieldCatalogChecks(moduleId) {
     });
     await check("inactive damage and override settings remain visible in catalog", () => {
       for (const path of ["damage.parts[*].custom.enabled", "damage.parts[*].custom.formula", "range.override", "target.override"]) find("attack", path);
+    });
+    await check("current activity behavior variants and base effect fields are native", () => {
+      const config = find("attack", "behaviors[*].config");
+      assert(config.structure.complete && config.structure.variants.join(",") === "applyActiveEffect,difficultTerrain");
+      assert(fields.some(field => field.kind === "activity" && field.type === "attack"
+        && field.path === "behaviors[*].config.types" && field.variant === "behaviors[*].type=difficultTerrain"));
+      for (const path of ["system.origin.activity", "system.conditions", "system.magical", "system.rider.statuses", "system.changes[*]._id", "system.changes[*].conditions", "system.changes[*].replacement"])
+        assert(find("base", path, "effect").coverage.status === "declared");
+      for (const path of ["attack.abilities", "attack.abilities[*]"])
+        assert(find("attack", path).storage.persisted === false && find("attack", path).coverage.status === "excluded");
+      assert(find("save", "save.dc.bonus").coverage.status === "excluded");
+      assert(find("transform", "effects[*].uuid").coverage.status === "declared");
     });
   }
   const midiFields = [], midiPages = [];
@@ -183,18 +209,21 @@ export async function runFieldCatalogChecks(moduleId) {
       const field = midiFields.find(field => field.type === type && field.path === path && field.fieldClass);
       assert(field, "Missing MIDI schema: " + type + "/" + path); return field;
     };
-    await check("MIDI targeting schema accepts strings beyond sheet and YAML enums", () => {
+    const reviewCurrent = midiPages[0].environment.midi.reviewCurrent === true;
+    await check("MIDI targeting probes respect the reviewed-version boundary", () => {
       const field = midiFind("attack", "midiProperties.autoTargetType");
       const rows = probe(field, ["enemy", "not-a-sheet-option", false]);
-      assert(rows[0].raw.valid && rows[1].raw.valid && !rows[2].raw.valid);
+      if (reviewCurrent) assert(rows[0].raw.valid && rows[1].raw.valid && !rows[2].raw.valid);
+      else assert(rows.every(row => row.raw.status === "incomplete" && row.cleaning.status === "incomplete"), "Unreviewed extension validators must not run");
       assert(field.sheet.options.some(option => option.ids.includes("enemy") && !option.ids.includes("not-a-sheet-option")));
-      assert(field.coverage.acceptedValues.includes("enemy") && field.coverage.stages.export === "unsupported");
+      assert(field.coverage.yamlLocations[0].includes("AUTOMATION") && field.coverage.stages.export === "declared");
     });
     await check("MIDI condition and macro probes check stored text without execution", () => {
       const text = "(() => { throw new Error('Catalog must not execute this'); })()";
       for (const path of ["useConditionText", "macroData.command"]) {
         const rows = probe(midiFind("attack", path), [text, "(", false]);
-        assert(rows[0].raw.valid && rows[0].cleaning.after.value === text && !rows[2].raw.valid);
+        if (reviewCurrent) assert(rows[0].raw.valid && rows[0].cleaning.after.value === text && !rows[2].raw.valid);
+        else assert(rows.every(row => row.raw.status === "incomplete" && row.cleaning.status === "incomplete"), "Unreviewed text validators must not run");
         assert(rows.every(row => row.contextual.status === "incomplete"));
       }
     });
@@ -204,12 +233,17 @@ export async function runFieldCatalogChecks(moduleId) {
       assert(midiFind("attack", "midiProperties.forceConsumeDialog").behavior.conditions.some(condition => condition.includes("forceConsumeDialog=always returns false")));
       assert(midiFind("attack", "midiProperties.skipConcentrationCheck").sheet.visibleWhen.some(condition => condition.includes("attributes.hp.value")));
       assert(midiFind("cast", "midiProperties.confirmTargets").sheet.options.some(option => JSON.stringify(option.ids) === '["never"]'));
-      assert(midiFind("attack", "overTimeProperties.turnChoice").coverage.conversions.some(condition => condition.includes("drops overtime")));
-      assert(midiFind("attack", "regionBehavior.enabled").coverage.status === "unsupported");
+      assert(midiFind("attack", "overTimeProperties.turnChoice").coverage.stages.export === "declared");
+      assert(midiFind("attack", "regionBehavior.enabled").coverage.status === "declared");
     });
     await check("MIDI Other Activity restrictions and inherited schema changes are discoverable", () => {
       for (const type of ["attack", "save", "check", "utility"]) midiFind(type, "otherActivityId");
-      assert(!midiFields.some(field => field.fieldClass && ["heal", "damage", "cast", "forward"].includes(field.type) && field.path === "otherActivityId"));
+      // MIDI 14.6 moved this field into its common activity mixin. Catalog
+      // discovery follows that registry without broadening YAML authoring.
+      for (const type of ["heal", "damage", "cast", "forward"]) {
+        const declared = !!globalThis.MidiQOL.activityTypes[type]?.documentClass?.schema?.fields?.otherActivityId;
+        assert(midiFields.some(field => field.fieldClass && field.type === type && field.path === "otherActivityId") === declared, "Other Activity registry mismatch: " + type);
+      }
       const changes = midiFields.filter(field => field.extension?.operation === "changed" && field.extension.nativeFieldId);
       assert(changes.length > 0 && changes.every(field => field.extension.baseline));
       assert(midiFields.some(field => field.configurationTarget?.includes("{name}") && field.pattern));
@@ -222,7 +256,7 @@ export async function runFieldCatalogChecks(moduleId) {
   } else {
     await check("MIDI item-specific coverage stays with Item Importer and identifies gaps", () => {
       const macro = midiFields.find(field => field.type === "weapon" && field.path === "flags.midi-qol.onUseMacroName");
-      assert(macro?.coverage.owner === moduleId && macro.coverage.status === "unsupported");
+      assert(macro?.coverage.owner === moduleId && macro.coverage.status === "declared");
     });
   }
   await check("read-only catalog and probes leave world source data unchanged", () => assert(before === sourceState()));

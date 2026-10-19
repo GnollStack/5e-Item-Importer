@@ -1,5 +1,6 @@
+import { automationFieldEntries } from "./automationFields.js";
 /** Reviewed source annotations, not validators or a generated snapshot. Keep importer copies identical. */
-export const MIDI_REVIEW = Object.freeze({ midi: "14.0.9", system: "5.3.3", foundry: "14.367" });
+export const MIDI_REVIEW = Object.freeze({ midi: "14.6.0", system: "6.0.6", foundry: "14.369" });
 const SOURCE = "modules/midi-qol/midi-qol.js";
 const TAB = "modules/midi-qol/templates/activity/parts/midi-activity-tab.hbs";
 export const MIDI_SHEET_OPTIONS = Object.freeze({
@@ -22,7 +23,7 @@ const COMMON = new Set(["useConditionText", "useConditionReason", "effectConditi
         "rollMode", "chooseEffects", "toggleEffect", "ignoreFullCover", "removeChatButtons", "magicEffect", "magicDamage", "noConcentrationCheck",
         "skipConcentrationCheck", "autoCEEffects"].map(key => "midiProperties." + key),
     "overTimeProperties", ...["turnChoice", "saveRemoves", "rollAs", "preRemoveConditionText", "postRemoveConditionText"].map(key => "overTimeProperties." + key),
-    "regionBehavior", ...["enabled", "dispositionFilter", "excludeSource", "oncePerTurn", "wallRestriction", "regionVisibility", "attachToken", "rules",
+    "regionBehavior", ...["enabled", "dispositionFilter", "excludeSource", "oncePerTurn", "wallRestriction", "regionVisibility", "attachToken", "templateOrigin", "rules",
         "rules[*]", "rules[*].trigger", "rules[*].action", "rules[*].targetId"].map(key => "regionBehavior." + key),
     "regionLight", ...["enabled", "dim", "bright", "color", "alpha", "luminosity", "animationType", "animationSpeed", "animationIntensity"].map(key => "regionLight." + key),
     "otherActivityId", "otherActivityAsParentType", "otherActivityUuid", "attackMode", "ammunition", "attackRollPerTarget", "fumbleThreshold", "friendlySave", "friendlySummon"]);
@@ -51,7 +52,7 @@ export function midiRulesFor(field, midi) {
         sheet.references.push(reference);
         behavior.status = current ? "source-reviewed" : "needs-review";
         behavior.references.push(reference, SOURCE);
-        if (!current) behavior.unresolved.push("Source review targets MIDI 14.0.9 / dnd5e 5.3.3 / Foundry 14.367; re-review this runtime.");
+        if (!current) behavior.unresolved.push("Source review targets MIDI 14.6.0 / dnd5e 6.0.6 / Foundry 14.369; re-review this runtime.");
     };
     const condition = text => { sheet.conditions.push(text); behavior.conditions.push(text); };
     const dep = (module, requiredFor) => behavior.dependencies.push({ module, requiredFor, active: globalThis.game?.modules?.get?.(module)?.active === true });
@@ -71,14 +72,14 @@ export function midiRulesFor(field, midi) {
                     "MidiQOL.midiPropertiesOptions." + registryKey, { kind: "running-midi-registry", note: "Current registry may include further extensions." })
                     : contextual("MidiQOL.midiPropertiesOptions", "Runtime registry unavailable."));
             }
-            if (leaf === "triggeredActivityRollAs") condition("The sheet restricts Roll As to self when the resolved target reports isSelfTriggerableOnly. In reviewed 14.0.9, Cast returns false; Forward is not triggerable. Historical comments are not authoritative.");
+            if (leaf === "triggeredActivityRollAs") condition("The sheet restricts Roll As to self when the resolved target reports isSelfTriggerableOnly. In reviewed 14.6.0, Cast returns false; Forward is not triggerable. Historical comments are not authoritative.");
             if (leaf === "triggeredActivityConsume") condition("Controls consumption on the triggered workflow, separately from this activity's consumption.");
             if (leaf === "triggeredActivityConfigure") condition("Controls the triggered workflow configuration dialog, separately from its resource consumption.");
         }
         if (/^otherActivity(Id|AsParentType|Uuid)$/.test(path)) {
-            condition("Top-level Other Activity fields exist on attack, save, check and utility. Do not infer support on damage/heal from canUseOtherActivity getters.");
+            condition("otherActivityId is stored by the common mixin. The top-level otherActivityAsParentType control is specific to attack, save, check and utility.");
             condition("Targets must be another compatible activity: save, check, damage, heal or utility with otherActivityCompatible enabled; actor/item context and link resolution are required.");
-            if (path === "otherActivityId") sheet.options.push(contextual("MidiActivitySheet otherActivityOptions / MidiActivityMixin.otherActivity", "Sheet lists other compatible activities on the Item; runtime also supports ID, identifier and UUID. Blank selects Auto; none disables.", ["", "none"]));
+            if (path === "otherActivityId") sheet.options.push(contextual("MidiActivitySheet otherActivityOptions / MidiActivityMixin.otherActivity", "Sheet lists other compatible activities on the Item; runtime resolves local ID or identifier. Blank selects Auto for attack; none disables.", ["", "none"]));
             if (path === "otherActivityAsParentType") condition("Overrides the other activity action type using its parent's type; distinct from midiProperties.otherActivityAsParentType, which is also declared but not this control.");
             if (path === "otherActivityUuid") { sheet.visibleWhen.push("Deprecated; no authoring control"); condition("Deprecated field; Attack sheet submission clears it. Re-author otherActivityId."); }
         }
@@ -105,7 +106,7 @@ export function midiRulesFor(field, midi) {
             behavior.dependencies.push({ setting: "midi-qol.ConfigSettings.autoFastForward / gmAutoFastForward", requiredFor: "default roll policy" });
         }
         if (leaf === "confirmTargets") {
-            condition("forcedTargetConfirmation takes precedence over the stored confirmTargets value. Cast and Forward force never in 14.0.9.");
+            condition("forcedTargetConfirmation takes precedence over the stored confirmTargets value. Cast and Forward force never in 14.6.0.");
             if (["cast", "forward"].includes(field.type)) sheet.options = [options(["never"], SOURCE + ":forcedTargetConfirmation")];
             behavior.dependencies.push({ setting: "midi-qol.TargetConfirmation", requiredFor: "default confirmation policy" });
         }
@@ -115,7 +116,7 @@ export function midiRulesFor(field, midi) {
         }
         if (leaf === "noConcentrationCheck") condition("Suppresses concentration checks caused by this workflow's damage, distinct from skipping the source's HP-consumption check.");
         if (["chooseEffects", "toggleEffect"].includes(leaf) || path === "effectConditionText") {
-            condition("Requires applicable linked/embedded effects and eligible effect targets. Transfer effects, DAE dontApply and workflow application settings affect eligibility; Cast/Forward/Transform have no supported importer APPLIED_EFFECTS workflow.");
+            condition("Requires applicable linked/embedded effects and eligible effect targets. Transfer effects, DAE dontApply and workflow application settings affect eligibility; Cast and Forward have no supported importer APPLIED_EFFECTS workflow; Transform form mode supports base effects.");
             behavior.dependencies.push({ setting: "midi-qol.ConfigSettings.autoItemEffects", requiredFor: "automatic Item effect application" });
             if (leaf === "chooseEffects") condition("Prompts for selected eligible effects; a true flag with no applicable effects cannot supply an effect.");
             if (leaf === "toggleEffect") condition("Existing matching target effects can be toggled instead of duplicated; matching/application requires runtime context.");
@@ -134,10 +135,10 @@ export function midiRulesFor(field, midi) {
         if (leaf === "automationOnly") condition("Hides the activity from normal activity selection. It remains available to applicable automation and Other Activity selection.");
         if (path === "attackMode") sheet.options.push(contextual(SOURCE + ":MidiAttackActivitySheet", "Parent Item system.attackModes; available handedness and weapon modes depend on the Item."));
         if (path === "ammunition") { sheet.visibleWhen.push("Parent Item has the amm property"); sheet.options.push(contextual(SOURCE + ":MidiAttackActivitySheet", "Parent Item ammunitionOptions depend on actor inventory; documents are not enumerated.")); }
-        if (path === "fumbleThreshold") condition("MIDI schema declares a NumberField without an integer/range bound here; do not invent a 1..20 schema constraint. YAML uses integer coercion.");
+        if (path === "fumbleThreshold") condition("MIDI schema declares a NumberField without an integer/range bound here; do not invent a 1..20 schema constraint. Canonical and legacy YAML accept finite fractional numbers.");
         if (path.startsWith("overTimeProperties")) {
             sheet.visibleWhen.push("isOverTimeFlag=true");
-            condition("Overtime controls are hidden while isOverTimeFlag=false. The schema can retain values; the current importer drops these subfields in that state.");
+            condition("Overtime controls are hidden while isOverTimeFlag=false. The schema can retain values; schema-4 export preserves these inactive values.");
             if (leaf === "turnChoice") { sheet.options.push(options(["start", "end"])); condition("Source declares default:'start', not initial:'start'; use the observed schema default/cleaning result instead of assuming these are equivalent."); }
             if (leaf === "rollAs") sheet.options.push(options(["target", "source"]));
             condition("Overtime execution requires a corresponding effect/combat trigger and actor/source context; no turn processing is performed.");
@@ -152,8 +153,8 @@ export function midiRulesFor(field, midi) {
             condition("Region configuration requires area targeting and regionBehavior.enabled; light values additionally require regionLight.enabled.");
             condition("MIDI's activity-sheet render hook may set target.override=true when region behavior is enabled. Catalog discovery never constructs or renders that sheet.");
             if (leaf === "trigger") sheet.options.push(options(["entry", "exit", "turnStart", "turnEnd"], SOURCE + ":RegionBehaviorEditor"));
-            if (leaf === "action") sheet.options.push(options(["useActivity", "applyEffect", "removeEffect"], SOURCE + ":RegionBehaviorEditor"));
-            if (leaf === "targetId") sheet.options.push(contextual(SOURCE + ":RegionBehaviorEditor", "Activity ID/identifier for useActivity; effect reference for apply/remove. The action controls interpretation; no links are resolved."));
+            if (leaf === "action") sheet.options.push(options(["useActivity", "applyEffect"], SOURCE + ":RegionBehaviorEditor"));
+            if (leaf === "targetId") sheet.options.push(contextual(SOURCE + ":RegionBehaviorEditor", "Activity identifier for useActivity; embedded Item effect ID for applyEffect. Catalog discovery performs no resolution; import preflight validates these links."));
             if (leaf === "animationType") sheet.options.push(contextual("CONFIG.Canvas.lightAnimations", "Runtime animation registry; source options may be extended by other modules."));
             if (path.startsWith("regionLight")) {
                 sheet.status = "needs-review";
@@ -221,12 +222,12 @@ export function midiDeclarations(provider, types, { unavailableTypes = [] } = {}
     } else {
         for (const type of unavailableTypes.filter(type => type !== "order")) {
             for (const path of COMMON) {
-                if (["otherActivityId", "otherActivityAsParentType"].includes(path) && !["attack", "save", "check", "utility"].includes(type)) continue;
+                if (path === "otherActivityAsParentType" && !["attack", "save", "check", "utility"].includes(type)) continue;
                 if (["attackMode", "ammunition", "fumbleThreshold", "attackRollPerTarget", "otherActivityUuid"].includes(path) && type !== "attack") continue;
                 if (path === "friendlySave" && !["save", "check"].includes(type)) continue;
                 if (path === "friendlySummon" && type !== "summon") continue;
                 declarations.push({ kind: "activity", type, path, classification: "unresolved-schema-reference",
-                    schemaReference: true, reference: SOURCE + ":reviewed MIDI 14.0.9 schema; runtime schema unavailable" });
+                    schemaReference: true, reference: SOURCE + ":reviewed MIDI 14.6.0 schema; runtime schema unavailable" });
             }
         }
         for (const { type } of types.filter(type => type.kind === "activity")) declarations.push({ kind: "activity", type,
@@ -245,6 +246,14 @@ export function midiDeclarations(provider, types, { unavailableTypes = [] } = {}
         for (const target of ["flags.midi-qol.{path}", "flags.midi-qol.OverTime", "flags.midi-qol.ActivityOverTime"]) declarations.push({
             kind: "effect", type: "base", path: "system.changes[*].value", variant: "change.key=" + target,
             configurationTarget: target, pattern: target.includes("{"), reference: SOURCE + ":setupMidiFlags / daeFieldBrowserFields" });
+    }
+    for (const {kind, type} of types) {
+        if (!['item', 'effect'].includes(kind)) continue;
+        for (const entry of automationFieldEntries(kind, type)) {
+            if (!entry.path.startsWith('flags.') || declarations.some(row => row.kind === kind && row.type === type && row.path === entry.path)) continue;
+            declarations.push({kind, type, path: entry.path, owner: entry.path.startsWith('flags.dae.') ? 'dae' : 'core',
+                integration: true, reference: 'scripts/automationFields.js: reviewed authored storage; no formal flag DataField schema'});
+        }
     }
     return declarations;
 }

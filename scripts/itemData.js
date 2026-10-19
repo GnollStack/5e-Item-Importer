@@ -6,6 +6,11 @@
 import jsyaml from './vendor/js-yaml.mjs';
 import { applyExplicitSource } from './explicitYamlFields.js';
 import { preparedState } from './itemExplicitFields.js';
+import { itemRarities } from './itemRarities.js';
+import { buildAppliedEffectProfiles, validateAppliedEffectReferences } from './activityEffectLinks.js';
+import { automationDependencyIssues, validateAutomationReferences } from './automationReferences.js';
+import { automationUpdateDeletions } from './automationFields.js';
+import { getActivitySchemaCompatibility } from './activityCompanionCapabilities.js';
 import { ItemUtils } from "./itemUtils.js";
 import {
   MODULE_NAME,
@@ -52,7 +57,7 @@ export class ItemData {
     this.recovery = null; // Array of { period, type, formula } for use recovery
     this.quantity = 1;
     this.equipped = false; // Whether item starts equipped
-    this.magicBonus = 0;
+    this.magicBonus = null;
 
     // Weapon Properties
     this.weaponType = null;
@@ -241,7 +246,7 @@ export class ItemData {
           value: this.getCostValue(),
           denomination: this.costDenomination,
         },
-        rarity: this.rarity,
+        rarities: itemRarities(this),
         identified: this.identified,
       },
     };
@@ -253,7 +258,7 @@ export class ItemData {
       delete this.#dnd5e.system.quantity;
       delete this.#dnd5e.system.weight;
       delete this.#dnd5e.system.price;
-      delete this.#dnd5e.system.rarity;
+      delete this.#dnd5e.system.rarities;
       delete this.#dnd5e.system.identified;
     }
 
@@ -423,6 +428,7 @@ export class ItemData {
     await this.#applyCustomPropertyFlags(options);
 
     applyExplicitSource(this.#dnd5e, this.explicitSource);
+    applyExplicitSource(this.#dnd5e, this.automationSource);
     if (this.explicitPropertyStates) {
       const properties = new Set(this.#dnd5e.system.properties ?? []);
       for (const [code,enabled] of Object.entries(this.explicitPropertyStates)) {
@@ -1562,6 +1568,17 @@ export class ItemData {
       updateData = ItemData.#conservativeMerge(existing, incoming, "", report);
     } else {
       updateData = incoming;
+      const automationClears = automationUpdateDeletions(existing.flags, incoming.flags);
+      if (Object.keys(automationClears).length) {
+        const applyClears = (target, patch) => {
+          for (const [key, value] of Object.entries(patch)) {
+            if (key.startsWith("-=")) target[key.slice(2)] = new foundry.data.operators.ForcedDeletion();
+            else applyClears(target[key] ??= {}, value);
+          }
+        };
+        applyClears(updateData.flags ??= {}, automationClears);
+        report.replacedPaths.push(...Object.keys(automationClears).map(provider => `flags.${provider}`));
+      }
       ItemData.#collectUpdatePaths(existing, incoming, "", report);
       const incomingHasAttunement = Object.hasOwn(incoming.system ?? {}, "attunement");
       const incomingAttunement = String(incoming.system?.attunement ?? "").trim().toLowerCase();
@@ -1861,7 +1878,7 @@ export class ItemData {
   static EFFECT_DEFAULT_ICON = "icons/svg/combat.svg";
 
   /** dnd5e activity schemas that intentionally discard applied-effect links. */
-  static ACTIVITY_TYPES_WITHOUT_EFFECTS = new Set(["cast", "forward", "transform"]);
+  static ACTIVITY_TYPES_WITHOUT_EFFECTS = new Set(["cast", "forward"]);
 
   static DEFAULT_ACTIVITY_BY_ITEM_TYPE = {
     weapon: "attack",
@@ -2035,17 +2052,9 @@ export class ItemData {
     }
   }
 
-  /** Preserve a resolvable explicit origin; otherwise bind the effect to its Item. */
+  /** Supply a parent origin only when the source omitted it. */
   async normalizeEffectOrigin(effectData, createdItem) {
-    if (!effectData) return;
-    const explicitOrigin = typeof effectData.origin === "string" ? effectData.origin.trim() : "";
-    if (explicitOrigin && typeof globalThis.fromUuid === "function") {
-      try {
-        if (await globalThis.fromUuid(explicitOrigin)) return;
-      } catch {
-        // Invalid or inaccessible origins fall back to the owning Item.
-      }
-    }
+    if (!effectData || Object.hasOwn(effectData, "origin")) return;
     effectData.origin = createdItem.uuid;
   }
 
@@ -2053,11 +2062,26 @@ export class ItemData {
    * Parse pending inline activities and effects using Activity Importer.
    *
    * @param {Array<Object>|null} [parsedResults=null] - Pre-parsed activity results with resolved UUIDs
+   * @param {Object|null|undefined} activityImporterOverride - Isolated companion dependency for diagnostics/tests
    * @returns {Promise<{results: Array<Object>|null, issues: string[], blockingIssues: string[]}>}
    */
-  async collectActivityResults(parsedResults = null) {
+  async collectActivityResults(parsedResults = null, activityImporterOverride = undefined) {
     const hasPendingSource = Array.isArray(this.pendingActivities);
     const pendingActivities = hasPendingSource ? this.pendingActivities : [];
+    if (pendingActivities.length === 0 && !(Array.isArray(parsedResults) && parsedResults.length > 0)) {
+      return { results: [], issues: [], blockingIssues: [] };
+    }
+    const activityImporter = activityImporterOverride === undefined
+      ? globalThis.game?.modules?.get?.("5e-activity-importer")
+      : activityImporterOverride;
+    if (!activityImporter?.active) {
+      const issue = "5e-activity-importer module is not active. Skipping inline activities/effects.";
+      return { results: null, issues: [issue], blockingIssues: [issue] };
+    }
+    const compatibility = getActivitySchemaCompatibility(activityImporter.api);
+    if (!compatibility.compatible) {
+      return { results: null, issues: [compatibility.reason], blockingIssues: [compatibility.reason] };
+    }
     if (Array.isArray(parsedResults) && parsedResults.length > 0) {
       if (hasPendingSource && parsedResults.length !== pendingActivities.length) {
         const issue = `Pre-parsed attachment count (${parsedResults.length}) does not match the Item attachment count (${pendingActivities.length}).`;
@@ -2098,14 +2122,6 @@ export class ItemData {
 
     const issues = [];
     const blockingIssues = [];
-    const activityImporter = game.modules.get("5e-activity-importer");
-    if (!activityImporter?.active) {
-      const issue = "5e-activity-importer module is not active. Skipping inline activities/effects.";
-      issues.push(issue);
-      blockingIssues.push(issue);
-      return { results: null, issues, blockingIssues };
-    }
-
     const parseAll = activityImporter.api?.parseAll;
     const parse = activityImporter.api?.parse;
     if (typeof parseAll !== "function" && typeof parse !== "function") {
@@ -2395,7 +2411,7 @@ export class ItemData {
         const mode = activityType === "summon"
           ? activityData.summon?.mode
           : activityData.transform?.mode;
-        if (mode !== "cr") {
+        if (mode !== "cr" && !(activityType === "transform" && mode === "form")) {
           const profiles = Array.isArray(activityData.profiles) ? activityData.profiles : [];
           if (profiles.length === 0) {
             issues.push(`${label} direct-link mode requires at least one Actor profile.`);
@@ -2476,6 +2492,7 @@ export class ItemData {
       }
       if (!result.activityData || !result.activityType) continue;
       const label = result.activityData.name || result.activityType;
+      issues.push(...automationDependencyIssues(result.activityData, result.activityType));
       const activityClass = globalThis.CONFIG?.DND5E?.activityTypes?.[result.activityType]?.documentClass;
       await validateSource(result.activityData, activityClass, label, result.activityType);
       for (const embedded of result.embeddedEffectResults ?? []) {
@@ -2527,8 +2544,15 @@ export class ItemData {
       if (invalidEmbedded.length > 0) {
         preflightIssues.push(`${result.activityData.name || result.activityType} has ${invalidEmbedded.length} invalid embedded effect result(s).`);
       }
-      if (embeddedResults.length > 0 && ItemData.ACTIVITY_TYPES_WITHOUT_EFFECTS.has(result.activityType)) {
+      if ((embeddedResults.length > 0 || result.activityData.effects?.length > 0) && ItemData.ACTIVITY_TYPES_WITHOUT_EFFECTS.has(result.activityType)) {
         preflightIssues.push(`${result.activityType} activities do not support applied effects in the current dnd5e schema.`);
+      }
+      if (!invalidEmbedded.length) {
+        try {
+          buildAppliedEffectProfiles(result,embeddedResults.map((effect,index)=>effect.effectData._id||`preflight-${index}`));
+        } catch(error) {
+          preflightIssues.push(`${result.activityData.name || result.activityType}: ${error.message}`);
+        }
       }
     }
 
@@ -2537,6 +2561,11 @@ export class ItemData {
     }
     if (preflightIssues.length === 0) {
       preflightIssues.push(...await this.validateInlineActivityReferences(results, itemContext, resolveUuid));
+    }
+    if (preflightIssues.length === 0) {
+      const findings = await validateAppliedEffectReferences(results, itemContext);
+      findings.push(...await validateAutomationReferences(results, itemContext, { resolveUuid }));
+      preflightIssues.push(...findings.filter(finding => finding.severity === "error").map(finding => finding.message));
     }
     return preflightIssues;
   }
@@ -2849,11 +2878,10 @@ export class ItemData {
               || !payloadPersisted) {
               throw new Error(`Created ${returnedIds.length} of ${effectSources.length} required embedded effects`);
             }
-            activityData.effects = payloadIds.map((id, index) => ({
-              _id: id,
-              ...(effectsToCreate[index]?.applicationData || {})
-            }));
-            ItemUtils.log("Linked effect IDs to activity:", activityData.effects);
+          }
+
+          if (!ItemData.ACTIVITY_TYPES_WITHOUT_EFFECTS.has(activityType)) {
+            activityData.effects = buildAppliedEffectProfiles(result, effectsToCreate.map(effect => effect.effectData._id));
           }
 
           await this.applyStrictYamlAttachmentFlags(activityData, result._itemImporterRawData ?? result.rawData);
@@ -2926,6 +2954,7 @@ export class ItemData {
       name: this.name,
       type: this.type,
       rarity: this.rarity,
+      rarities: itemRarities(this),
       cost: this.costInGold(),
       weight: this.weight,
       description: this.description,
@@ -2946,6 +2975,7 @@ export class ItemData {
     };
     if (this.type === "spell") {
       delete json.rarity;
+      delete json.rarities;
       delete json.cost;
       delete json.weight;
       delete json.properties.attunement;

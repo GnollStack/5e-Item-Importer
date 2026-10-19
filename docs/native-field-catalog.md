@@ -4,16 +4,18 @@ MIDI-QOL discovery is available through the same actions with layer: "midi"; the
 
 The importers expose a read-only catalog for inspecting native Foundry and D&D5e fields before extending an explicit YAML template. It combines discovered schemas, reviewed sheet annotations, and the importers' declared YAML mappings. It can also test supplied values and produce offline references and version comparisons.
 
-The reviewed runtime is **Foundry 14.367 / D&D5e 5.3.3**. The catalog records the actual runtime and module configuration on every response. No system upgrade, migration, world-document creation, new YAML root, or importer UI is introduced.
+The reviewed runtime is **Foundry 14.369 / D&D5e 6.0.6**. The catalog records the actual runtime and module configuration on every response. No system upgrade, migration, world-document creation, new YAML root, or importer UI is introduced.
 
 ## What is cataloged
 
 | Provider | Native discovery | Current YAML support |
 |---|---|---|
-| `5e-item-importer` | All 13 current native Item types and eight advancement types, including their model variants | Existing seven Item roots; additional Item types and advancements are catalog-only |
-| `5e-activity-importer` | All 12 current native Activity types and base/enchantment Active Effects | Existing eleven Activity roots and Effects; facility Order is catalog-only |
+| `5e-item-importer` | All 13 current native Item types and nine advancement types, including their model variants | Existing seven Item roots; additional Item types and advancements are catalog-only |
+| `5e-activity-importer` | All 13 current native Activity types and base/condition/enchantment Active Effects | Existing eleven Activity roots and Effects; Order, Teleport and Condition effects are catalog-only |
 
-Each provider works without the other importer. Item activity/effect relationships point to the Activity catalog rather than duplicating its field coverage. Container placement and actor crew assignments remain deferred. Custom D&D 5e Counters and expanded third-party import support are outside this feature.
+Each provider works without the other importer. Item activity/effect relationships point to the Activity catalog rather than duplicating its field coverage. Container placement and actor crew assignments remain deferred. Custom D&D 5e Counters and unreviewed third-party fields remain outside import support. Reviewed MIDI-QOL/DAE mappings are documented separately in [Automation storage in schema 4](automation-schema-4.md); catalog discovery alone adds no authoring capability.
+
+D&D5e 6 discovery follows the mapped activity/advancement fields and the native `BaseEffectData` model. Activity behavior configuration is split into applyActiveEffect and difficultTerrain variants. ScaleValue exposes six variants, including usage and dice modifiers. Parent `persisted: false` state propagates to nested fields so computed ability lists and damage bonuses do not become import claims.
 
 Native model identity is recorded separately from active replacement classes such as MIDI-QOL activities. Running CONFIG entries may contain module additions, so the report identifies their provenance rather than calling every current dropdown entry a native D&D5e option.
 
@@ -116,7 +118,7 @@ await game.modules.get("5e-item-importer").api.diagnostics.actions.runSmokeTests
 await game.modules.get("5e-activity-importer").api.diagnostics.actions.runSmokeTests({suite: "catalog"});
 ```
 
-The suite checks discovery, pagination, classifications, reviewed mapping paths, representative probes, and unchanged world-document counts. It does not run controlled creation fixtures. Source regression commands are listed in [tests/README.md](../tests/README.md).
+The suite checks discovery, pagination, classifications, reviewed mapping paths, representative probes, and unchanged world-document counts. It does not run controlled creation fixtures. Source regression commands are listed in `tests/README.md` in the source checkout; tests are excluded from the customer package.
 
 When adding explicit YAML support, update the actual parser/builder/serializer and templates/comparison first, add meaningful round-trip assertions, then update the coverage declaration and evidence references. Discovering a field or passing a mapping-path audit must never automatically enable import support or mark the mapping verified. The existing [YAML coverage checklist](explicit-yaml-v2.md) remains the reviewed import contract.
 

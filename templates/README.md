@@ -4,10 +4,16 @@
 
 Start with [explicit authoring rules](../docs/template-authoring.md), then supply the matching full reference and [concrete example](../docs/examples/README.md). State whether you are creating from a description or preserving stored data. Missing material mechanics and required references need clarification before final YAML. A linked file must actually be supplied/read; links alone do not make a template bundle self-contained.
 
-The first YAML block in each explicit template remains the complete field reference. The later marked example is concrete input with stated prerequisites. Select fields from the source intent for new content; preserve all supported supplied fields when reproducing data.
+The first YAML block in each explicit template remains the native field reference; reviewed canonical automation fields are in the [schema 4 automation reference](../docs/automation-schema-4.md). The later marked example is concrete input with stated prerequisites. Select fields from the source intent for new content; preserve all supported supplied fields when reproducing data.
 
 
 5e Item Importer is free and works standalone. The forthcoming optional premium 5e Activity Importer adds authored activity/effect import and full Item YAML export when installed. It is not included in this free release. Premium examples below apply only when companion availability is explicitly confirmed or premium output is requested. The same strict Item format supports both workflows.
+
+## Use the generated output
+
+Paste the result into the importer's main source field and click **Preview**. Templates, recipes and saved presets share one picker; **Manage** opens preset controls. Read the [import-window guide](../docs/import-window.md) for reference checks, optional History and restoring window defaults.
+
+When starting from prose, the optional **Show generated YAML editor** under **View options** exposes parsed values and defaults without replacing the source. **Use and preview** applies your edits to the main source. Copy/download uses the current preview, so apply edits first.
 
 ## Choose a generation mode
 
@@ -39,12 +45,33 @@ Activity Importer must be active when attachments are imported. If it is absent,
 Free imports retain normal dnd5e Item fields and system behavior. Description enrichers provide clickable text but do not generate source-specific activities. Loot and Container support passive `effects` only and must never include `Activities`. MIDI-QOL and DAE are separate optional integrations; select their fields only when that automation is intended and available.
 
 
-## Explicit YAML v2 reference
+## Explicit YAML schema 4 reference
 
 See the [native field coverage and value rules](../docs/explicit-yaml-v2.md). The first YAML block in each of the seven full reference templates shows its supported Item controls. Optional recovery entries have an adjacent commented list schema. The later attachment examples illustrate nesting and canonical syntax; use the companion's full reference when authoring an activity or effect. Quick-start examples remain compact.
 
 Preserve value types: booleans, finite numbers, nullable values, empty strings and collections are distinct. Keep quoted formulas intact. `USAGE.Uses Max` supports a nonnegative integer or a deterministic formula such as `"1 + @prof"`, with the restrictions stated in each usable Item template. It does not accept dice or a bare fractional maximum. Tool Bonus may contain dice; Magic Bonus is deterministic. A hidden native control can retain supplied data without enabling its checkbox.
 
-New damage uses the nine-field `DAMAGE_DATA` mapping. Existing formula shorthand remains valid input when explicit data is absent. Consumable magic bonuses belong in `ATTUNEMENT.Magic Bonus`; the old ammunition spelling is compatibility input. Native consumable subtype and its required ammo/poison parser alias must agree. Effects use `DURATION.Value`/`Units`, string `Change Type`, status lists, and typed `Value` entries.
+New damage uses the ten-field `DAMAGE_DATA` mapping. Existing formula shorthand remains valid input when explicit data is absent. Consumable magic bonuses belong in `ATTUNEMENT.Magic Bonus`; the old ammunition spelling is compatibility input. Native consumable subtype and its required ammo/poison parser alias must agree. Effects use `DURATION.Value`/`Units`, string `Change Type`, status lists, and typed `Value` entries.
 
-These templates do not promise every native value or type is importable: Container quantity remains fixed at 1 and is omitted from export, Loot has no equipped state, Tool proficiency 1.5 is not accepted by the existing parser, and additional Item types and relationships remain deferred. The [native field catalog](../docs/native-field-catalog.md) separates native schema, sheet options, and declared YAML mappings; its unreviewed fields need further investigation.
+These templates do not promise every native value or type is importable: Container quantity remains fixed at 1 and is omitted from export, Loot has no equipped state, Tool proficiency accepts Automatic/null or 0, 0.5, 1, 1.5 and 2, and additional Item types and relationships remain deferred. The [native field catalog](../docs/native-field-catalog.md) separates native schema, sheet options, and declared YAML mappings; its unreviewed fields need further investigation.
+
+## Schema 4 automation and recipes
+
+The existing window selector includes editable recipes. Selecting one stages YAML; it does not create a document. If you already have text, confirm replacement or cancel to keep the draft. A recipe that needs an external reference prompts for an existing document UUID and checks its document type. Cancelling or supplying an invalid reference keeps your draft.
+
+1. Choose the appropriate Activity/Effect mode or Item recipe. Integration choices appear only when their provider is active.
+2. Edit the drafted names, rules, values and links for your content.
+3. Click **Preview** and inspect warnings and references. For a direct Activity/Effect import, use **Check import** before adding it. Enable **Compare after import** beforehand if you want to review the written result.
+4. Check intended gameplay in the relevant actor, combat, area or calendar context.
+
+Full typed automation fields are documented in [Automation storage in schema 4](../docs/automation-schema-4.md). Older YAML remains readable; exports use schema 4.
+
+| Recipe | Availability | Starting behavior |
+| --- | --- | --- |
+| Native: multiple rarities | Item Importer alone | A wondrous Item with uncommon and rare categories. |
+| Native: dawn recovery | Item Importer alone | Three charges recover at dawn using the world calendar. |
+| Native: dusk recovery | Item Importer alone | Three charges recover at dusk using the world calendar. |
+| MIDI: Item automation settings | MIDI-QOL active | Editable Item reaction and on-use macro settings; importing does not execute a macro. |
+| Activity Importer recipes | Compatible premium companion active | Native/integration activity and effect drafts wrapped in a complete Equipment Item. Provider-dependent recipes also require that provider. |
+
+The companion supplies its own recipe content. Item Importer remains standalone and free; Activity/Effect attachment authoring requires Activity Importer. Dawn/dusk recovery depends on the native calendar and recovery context; a recipe does not advance world time.

@@ -5,6 +5,7 @@
  */
 
 import { ItemData } from "../../scripts/itemData.js";
+import { withCompatibleActivityCompanion } from "../helpers/compatibleActivityCompanion.js";
 import { parseItemText } from "../../scripts/parserRouting.js";
 import { exportStrictItemYaml } from "../../scripts/itemYamlExporter.js";
 import { ITEM_TEMPLATES } from "../../scripts/ui/itemTemplates.js";
@@ -40,7 +41,7 @@ function castRaw(uuid = "n/a", name = "Cast Fireball") {
 }
 
 async function testResolvedUuidProvenance() {
-    const item = new ItemData("Resolved UUID");
+    const item = withCompatibleActivityCompanion(new ItemData("Resolved UUID"));
     item.pendingActivities = [{ key: "ACTIVITY_CAST", name: "Cast Fireball", rawData: castRaw() }];
     const resolved = castRaw("Compendium.dnd5e.spells.Item.fireball");
     const prepared = await item.collectActivityResults([{
@@ -66,6 +67,18 @@ async function testResolvedUuidProvenance() {
         rawData: tampered
     }]);
     assert(rejected.blockingIssues.length === 1, "Non-UUID provenance changes must fail closed.");
+}
+
+async function testInactiveCompanionAttachmentsBlock() {
+    const item = new ItemData("Inactive companion");
+    item.pendingActivities = [{ key: "ACTIVITY_CAST", name: "Cast Fireball", rawData: castRaw() }];
+    const result = await item.collectActivityResults([{
+        success: true, activityType: "cast", activityData: { name: "Cast Fireball" }, rawData: castRaw()
+    }], { active: false });
+    assert(result.results === null && result.blockingIssues.some(issue => issue.includes("not active")),
+        "An inactive companion must block even pre-parsed attachments.");
+    const core = await new ItemData("Core only").collectActivityResults(null, { active: false });
+    assert(core.blockingIssues.length === 0, "Core-only Items must remain available without the companion.");
 }
 
 function testInlineIdCollisionFailsClosed() {
@@ -438,6 +451,7 @@ function testPreviewAndComparisonAccounting() {
 export async function runItemPlatformFeatureTests() {
     const tests = [
         ["resolved UUID provenance", testResolvedUuidProvenance],
+        ["inactive companion blocks attachments only", testInactiveCompanionAttachmentsBlock],
         ["Activity ID collision", testInlineIdCollisionFailsClosed],
         ["recursive merge signatures", testRecursiveMergeSignatures],
         ["existing attachment dedupe", testExistingAttachmentDedupe],

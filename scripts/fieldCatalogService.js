@@ -136,14 +136,14 @@ function unresolvedChildren(schema, source, allowSystem = false, seen = new Set(
     if (value === undefined || value === null || (typeof value === "object" && !Object.keys(value).length)) continue;
     const names = [];
     for (let node = field; node; node = Object.getPrototypeOf(node)) names.push(node.constructor?.name);
-    if (names.some(name => ["ActivityField", "AdvancementField", "EmbeddedCollectionField", "EmbeddedDocumentField"].includes(name))) return true;
+    if (names.some(name => ["ActivityField", "AdvancementField", "TypeDataField5e", "EmbeddedCollectionField", "EmbeddedDocumentField"].includes(name))) return true;
     if (names.includes("TypeDataField")) { if (allowSystem && key === "system") continue; return true; }
     if (field.fields && unresolvedChildren(field, value, false, next)) return true;
     if (field.element && typeof value === "object") {
       for (const entry of Object.values(value)) {
         const elementNames = [];
         for (let node = field.element; node; node = Object.getPrototypeOf(node)) elementNames.push(node.constructor?.name);
-        if (elementNames.some(name => ["ActivityField", "AdvancementField", "TypeDataField"].includes(name))) return true;
+        if (elementNames.some(name => ["ActivityField", "AdvancementField", "TypeDataField", "TypeDataField5e"].includes(name))) return true;
         if (unresolvedChildren(field.element, entry, false, next)) return true;
       }
     }

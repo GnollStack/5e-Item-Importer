@@ -351,7 +351,7 @@ export async function runItemCoreFeatureTests(options = {}) {
         && parsed.item?.type === fixture.type
         && fixture.validate(parsed.item)
         && foundryData?.type === fixture.type
-        && parsed.trace?.normalizedStrictTemplate?.includes("SCHEMA_VERSION: 2"),
+        && parsed.trace?.normalizedStrictTemplate?.includes("SCHEMA_VERSION: 4"),
       { parsed, foundryData });
   }
 
@@ -779,7 +779,7 @@ export async function runItemCoreFeatureTests(options = {}) {
   } catch (error) {
     sharedEffectError = error;
   }
-  record(results, "exporter rejects shared Activity effects instead of duplicating them",
+  record(results, "legacy provenance export rejects duplicated shared Activity effects",
     sharedEffectError?.code === "ITEM_EXPORT_SHARED_ACTIVITY_EFFECT"
       && sharedEffectError?.effectId === "shared-effect"
       && /prevent data loss/i.test(sharedEffectError?.message ?? ""),

@@ -5,7 +5,7 @@ import { EXPLICIT_ITEM_FIELDS } from "./itemExplicitFields.js";
  * These declarations are not validation results and never enable importer support.
  */
 const OWNER = "5e-item-importer";
-const VERIFIED_VERSION = "5.3.3";
+const VERIFIED_VERSION = "6.0.6";
 const SUPPORTED = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"];
 const PHYSICAL = SUPPORTED.filter(type => type !== "spell");
 const EQUIPPABLE = PHYSICAL.filter(type => type !== "loot");
@@ -20,6 +20,7 @@ const DAMAGE_FIELDS = [
   ["denomination", "Die Denomination", "nullable non-negative integer"],
   ["bonus", "Bonus", "formula string"],
   ["types", "Damage Types", "list of registered damage/healing identifiers"],
+  ["modifiers", "Modifiers", "list of dice modifier strings"],
   ["custom.enabled", "Custom Enabled", "boolean"],
   ["custom.formula", "Custom Formula", "formula string"],
   ["scaling.mode", "Scaling Mode", "none | whole | half"],
@@ -52,7 +53,9 @@ add(PHYSICAL, "system.quantity", "INVENTORY.Quantity", "exact non-negative integ
   conditions: ["Container imports use quantity 1; quantity is not a free container control."],
   conversions: ["Container quantity is fixed to 1 by the existing builder."]
 });
-add(PHYSICAL, "system.rarity", "ITEM.Rarity", "native rarity identifier");
+add(PHYSICAL, "system.rarities", "ITEM.Rarities", "list of native rarity identifiers", {
+  aliases: ["ITEM.Rarity"], conversions: ["Legacy scalar Rarity becomes a one-entry list; an explicit empty list remains mundane. Equivalent aliases are accepted and conflicting values fail."]
+});
 addGroup(PHYSICAL, "system.weight.", "COST_AND_WEIGHT.", [["value", "Weight Value", "non-negative finite number"], ["units", "Weight Units", "native weight unit identifier"]]);
 addGroup(PHYSICAL, "system.price.", "COST_AND_WEIGHT.", [["value", "Price Value", "non-negative finite number"], ["denomination", "Price Denomination", "native currency identifier"]]);
 add(PHYSICAL, "system.identified", "INVENTORY.Identified", "boolean");
@@ -65,8 +68,8 @@ for (const [type, label] of [["weapon", "Weapon"], ["equipment", "Equipment"], [
 add(["weapon"], "system.range.units", "RANGE.Range Units", "native distance unit identifier");
 add(["weapon"], "system.mastery", "MASTERY.Mastery", "native mastery identifier or blank");
 add(["weapon", "equipment"], "system.proficient", "PROFICIENCY.Proficient", "Automatic/null or native 0/1");
-add(["tool"], "system.proficient", "ABILITY_CHECK.Proficient", "Automatic/null or 0, 0.5, 1, 2", {
-  conversions: ["The native 1.5 value is not supported by the current YAML parser; it warns and uses Automatic."]
+add(["tool"], "system.proficient", "ABILITY_CHECK.Proficient", "Automatic/null or 0, 0.5, 1, 1.5, 2", {
+  conversions: ["The native 1.5 multiplier is accepted and preserved alongside 0, 0.5, 1 and 2; Automatic maps to null."]
 });
 add(["tool"], "system.ability", "ABILITY_CHECK.Ability", "native ability identifier");
 add(["tool"], "system.bonus", "PROPERTIES.Tool Bonus", "formula string");
@@ -121,14 +124,14 @@ for (const [types, native, yaml] of [[["weapon", "consumable"], "system.damage.b
   }
 }
 add(["consumable"], "system.damage.replace", "DAMAGE.Replace", "boolean", { aliases: ["AMMUNITION_PROPERTIES.Damage Replace"] });
-add(["weapon", "consumable"], "system.damage.base", "DAMAGE.DAMAGE_DATA", "mapping of nine explicit damage leaves", {
+add(["weapon", "consumable"], "system.damage.base", "DAMAGE.DAMAGE_DATA", "mapping of explicit damage leaves", {
   aliases: ["DAMAGE.Damage Formula", "DAMAGE.Damage Type"],
   conversions: ["Formula/type aliases are legacy shorthand, accepted only when explicit DAMAGE_DATA is absent; ammunition aliases apply only to Consumable."]
 });
-add(["consumable"], "system.damage.base", "DAMAGE.DAMAGE_DATA", "mapping of nine explicit damage leaves", {
+add(["consumable"], "system.damage.base", "DAMAGE.DAMAGE_DATA", "mapping of explicit damage leaves", {
   aliases: ["AMMUNITION_PROPERTIES.Damage Formula", "AMMUNITION_PROPERTIES.Damage Type"]
 });
-add(["weapon"], "system.damage.versatile", "VERSATILE_DAMAGE.DAMAGE_DATA", "mapping of nine explicit damage leaves", {
+add(["weapon"], "system.damage.versatile", "VERSATILE_DAMAGE.DAMAGE_DATA", "mapping of explicit damage leaves", {
   aliases: ["VERSATILE_DAMAGE.Versatile Formula", "VERSATILE_DAMAGE.Versatile Damage Type"],
   conversions: ["Legacy formula/type shorthand is accepted only when DAMAGE_DATA is absent."]
 });
@@ -170,14 +173,14 @@ function sheetFor(field, entries, current) {
   const reviewed = (reference, conditions = [], inactive = "Stored inactive values are retained without enabling their controlling checkbox.") => {
     sheet.status = current ? "reviewed" : "needs-review";
     sheet.verifiedVersion = VERIFIED_VERSION;
-    sheet.verifiedFoundryVersion = "14.367";
+    sheet.verifiedFoundryVersion = "14.369";
     sheet.references.push(reference);
     sheet.conditions.push(...conditions);
     sheet.inactiveBehavior = inactive;
   };
   if (field.type === "spell" && path === "system.prepared") {
     reviewed("systems/dnd5e/templates/items/details/details-spell.hbs", ["Preparation dropdown appears only when canPrepare is true for the current spellcasting method."]);
-    sheet.options.push(reviewedOption("DND5E.spellPreparationStates (5.3.3)", [0, 1, 2]), runningOptions("spellPreparationStates"));
+    sheet.options.push(reviewedOption("DND5E.spellPreparationStates (6.0.6)", [0, 1, 2]), runningOptions("spellPreparationStates"));
   }
   if (field.type === "spell" && path === "system.sourceItem")
     reviewed("systems/dnd5e/templates/items/details/details-spell.hbs", ["Shown for actor-owned spells; options depend on the actor's spellcasting classes and may be locked."], "Stored source identifier is retained; this catalog does not enumerate world actor/item documents.");
@@ -190,14 +193,18 @@ function sheetFor(field, entries, current) {
     if (field.type === "consumable") sheet.conditions.push("Native consumable damage controls appear for ammo subtype; YAML retains damage for other subtypes.");
     if (/\.(number|denomination|bonus)$/.test(path) && !path.includes(".scaling.")) sheet.conditions.push("Structured controls are active when custom.enabled is false; stored structured values remain when it is true.");
     if (path.endsWith(".custom.formula")) sheet.conditions.push("Custom formula control is active when custom.enabled is true; its stored value remains when false.");
-    if (path.endsWith(".denomination")) sheet.options.push(reviewedOption("Native sheet blank + DND5E.dieSteps (5.3.3)", ["", 4, 6, 8, 10, 12, 20, 100]), runningOptions("dieSteps"));
-    if (/\.types(?:\[\])?$/.test(path)) sheet.options.push(reviewedOption("Native " + field.type + " damage choices (5.3.3)", field.type === "weapon" ? [...DAMAGE_TYPES, "maximum"] : [...DAMAGE_TYPES]), runningOptions("damageTypes"));
-    if (path.endsWith(".scaling.mode")) sheet.options.push(reviewedOption("DND5E.damageScalingModes (5.3.3)", ["", "whole", "half"]), runningOptions("damageScalingModes"));
+    if (path.endsWith(".denomination")) sheet.options.push(reviewedOption("Native sheet blank + DND5E.dieSteps (6.0.6)", ["", 4, 6, 8, 10, 12, 20, 100]), runningOptions("dieSteps"));
+    if (/\.types(?:\[\])?$/.test(path)) sheet.options.push(reviewedOption("Native " + field.type + " damage choices (6.0.6)", field.type === "weapon" ? [...DAMAGE_TYPES, "maximum"] : [...DAMAGE_TYPES]), runningOptions("damageTypes"));
+    if (path.endsWith(".scaling.mode")) sheet.options.push(reviewedOption("DND5E.damageScalingModes (6.0.6)", ["", "whole", "half"]), runningOptions("damageScalingModes"));
     if (path.includes(".scaling.")) sheet.conditions.push("Damage scaling is stored by DamageField; item sheets may omit scaling controls. Activity and resource scaling are separate.");
   }
   if (samePath(path, "system.properties")) sheet.options.push(runningOptions("itemProperties"));
   if (field.type === "spell" && (/^system\.(range|duration)\./.test(path) || path.startsWith("system.target.")))
     reviewed("systems/dnd5e/templates/items/details/details-spell.hbs", ["Units, target type and area shape control displayed inputs; formulas and inactive dimensions are retained."]);
+  if (field.type === "spell" && path === "system.duration.expiry") {
+    sheet.references.push("systems/dnd5e/templates/shared/fields/field-duration.hbs");
+    sheet.options.push(reviewedOption("ActiveEffect5e expiry options (6.0.6)", [null, "turnStart", "turnEnd", "roundStart", "roundEnd", "combatStart", "combatEnd", "longRest", "shortRest", "sourceStart", "sourceEnd", "targetStart", "targetEnd"]));
+  }
   if (["weapon", "equipment"].includes(field.type) && /^system\.(crew|speed|hp|cover|armor)\b/.test(path)) {
     reviewed("systems/dnd5e/templates/items/details/details-" + field.type + ".hbs", ["Mountable/siege/vehicle and armor controls depend on item category; hidden stored values remain importable."]);
   }
@@ -216,7 +223,7 @@ function decorate(field, environment) {
   const output = clone(field);
   const path = pathKey(field.path);
   const version = environment?.systemVersion ?? "";
-  const current = version === VERIFIED_VERSION && environment?.foundryVersion === "14.367";
+  const current = version === VERIFIED_VERSION && environment?.foundryVersion === "14.369";
   const applicable = mappings.filter(entry => entry.types.includes(field.type) && samePath(path, entry.path));
   const coverage = { status: "needs-review", owner: OWNER, yamlLocations: [], aliases: [], acceptedRepresentations: [], conversions: [], stages: stages("needs-review"), evidence: [] };
   const excluded = excludedReason(field, path);
@@ -246,7 +253,7 @@ function decorate(field, environment) {
       evidence: applicable.flatMap(entry => entry.evidence ?? []).map(entry => ({...entry, test: entry.test.replace("<item type>", field.type)})),
       references: uniq([REFERENCE, PARSER, "scripts/itemData.js", "scripts/itemYamlExporter.js", ...applicable.map(entry => entry.implementation).filter(Boolean)]),
       reviewedSystemVersion: VERIFIED_VERSION,
-      reviewedFoundryVersion: "14.367"
+      reviewedFoundryVersion: "14.369"
     });
     const members = applicable.flatMap(entry => entry.members ?? []);
     if (members.length) coverage.members = members.map(entry => ({ ...entry, yaml: prefix + entry.yaml }));
@@ -255,7 +262,7 @@ function decorate(field, environment) {
       coverage.evidence = [0, 1, 2, false, true, "unprepared", "prepared", "always"].map(input => ({file:EXPLICIT_TESTS,test:"Preparation " + JSON.stringify(input),status:"referenced"}));
     }
     if (!coverage.evidence.length) coverage.evidence.push({file:"tests/unit/itemCoreFeatureTests.js",test:"strict exporter round-trips " + field.type,status:"referenced",limitation:"Type fixture reference; individual leaf assertions have not been audited."});
-    if (!current) coverage.reason = "Mapping reviewed for Foundry 14.367 / dnd5e 5.3.3; compare the discovered contract before treating it as supported on this runtime.";
+    if (!current) coverage.reason = "Mapping reviewed for Foundry 14.369 / dnd5e 6.0.6; compare the discovered contract before treating it as supported on this runtime.";
     if (field.type === "container" && path === "system.quantity") coverage.stages = { ...stages("declared"), build: "unsupported", export: "unsupported" };
   } else {
     const children = mappings.some(entry => entry.types.includes(field.type) && (entry.path.startsWith(path + ".") || entry.path.startsWith(path + "[]")));

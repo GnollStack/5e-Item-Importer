@@ -101,7 +101,7 @@ WEAPON:
           Icon: "icons/svg/sword.svg"
           Sort: 0
         CHAT_FLAVOR:
-          Chat Description: |
+          Chat Description: |-
             <p>Expend one use to strike with the glaive. On a hit, add lightning and thunder damage and apply Resonant Shackles for 1 round.</p>
         ATTACK:
           Attack Type: melee
@@ -239,7 +239,7 @@ WEAPON:
           Icon: "icons/svg/lightning.svg"
           Sort: 100000
         CHAT_FLAVOR:
-          Chat Description: |
+          Chat Description: |-
             <p>A cone of stormglass erupts. Make the Constitution save; take half damage on a success. On a failure, apply Storm-Sundered for 1 round. Each extra scaling step spends one extra charge and adds 1d8 to each damage part.</p>
         BEHAVIOR:
           Consume Spell Slot: false

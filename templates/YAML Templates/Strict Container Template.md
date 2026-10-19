@@ -2,11 +2,11 @@
 
 ## Destination and prerequisites
 
-Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 2` and the `CONTAINER` root.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 4` and the `CONTAINER` root.
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 5.3.3 / Foundry 14.367; MIDI annotations, when used, target MIDI-QOL 14.0.9. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 / Foundry 14.369; MIDI/DAE annotations, when used, target the reviewed 14.6.0 integrations. Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -26,7 +26,7 @@ Read the [generation guide](../README.md) and [authoring rules and validation](.
 | Context-dependent | Needs a parent Item, actor, accessible document, registry or workflow context. |
 | Compatibility input | An accepted older spelling/representation; use the canonical spelling for new YAML. |
 
-The first YAML block is a **complete field reference**, not a ready-made item to import unchanged. Placeholders describe choices, not default values. Later examples contain concrete values.
+The first YAML block is the **native and legacy field reference**, not a ready-made item to import unchanged. Placeholders describe choices, not default values. Later examples contain concrete values. The separate [schema 4 automation reference](../../docs/automation-schema-4.md) defines reviewed typed integration fields. Do not combine canonical AUTOMATION with legacy MIDI/DAE sections in one Activity or Effect.
 
 Missing, `null`, `false`, `0`, `""`, `[]` and `{}` are distinct. Use `n/a` only for fields that document it as an unset marker. Never use it as a universal substitute for null or empty data. `CHANGES.Value` retains its YAML type, including the literal text `n/a`. Formula syntax acceptance does not establish that referenced variables exist.
 
@@ -35,7 +35,7 @@ For new physical Items, ordinary defaults are quantity 1, identified true, equip
 ## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 CONTAINER:
   SOURCE:
     Book: "[text|n/a]"
@@ -50,7 +50,7 @@ CONTAINER:
     Identifier: "[text|n/a]"
     Sort: 0 # Integer ordering value; preserve an authored zero.
     Name: "[text]"
-    Rarity: "[common|uncommon|rare|veryRare|legendary|artifact|n/a]"
+    Rarities: [] # Native rarity IDs: common, uncommon, rare, veryRare, legendary, artifact. [] means mundane.
 
   INVENTORY:
     Quantity: 1 # Compatibility input only: creation fixes quantity at 1; export omits it.
@@ -118,11 +118,11 @@ A free/core container import. Preserve the complete description; it does not aut
 
 <!-- AUTHORING-EXAMPLE:START -->
 ```yaml
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 CONTAINER:
   ITEM:
     Name: Bag of Holding
-    Rarity: uncommon
+    Rarities: [uncommon]
   INVENTORY:
     Quantity: 1
     Identified: true
@@ -162,7 +162,7 @@ Full Item export needs companion serializers for its attachments; unsupported at
 
 The core Item fields and description import without `5e-activity-importer`. Description enrichers create clickable text; they do not construct roll activities or passive bonuses. Strict YAML description text does not generate automation.
 
-Loot and Container items do not expose `system.activities` in dnd5e 5.3.3. Never emit an `Activities` section for either type. Keep active mechanics in the description for manual use. A different, activity-capable Item type is appropriate only when it fits the source and the requested workflow; do not silently change the Item type to add automation.
+Loot and Container items do not expose `system.activities` in dnd5e 6.0.6. Never emit an `Activities` section for either type. Keep active mechanics in the description for manual use. A different, activity-capable Item type is appropriate only when it fits the source and the requested workflow; do not silently change the Item type to add automation.
 
 If the source grants a passive effect and premium/full mode is selected, append `effects` at the same indentation as `DESCRIPTION` and `CHAT_FLAVOR`, beneath the Item type key. This requires the companion module to be active at import time. Use the complete Effect template from `modules/5e-activity-importer/templates/Base Activity Templates/`, or its MIDI variant when that automation is intended. Preserve source mechanics; never invent bonuses, UUIDs, macros, or module-specific effect keys. Without companion support, omit `effects` and retain the complete rules in the description.
 
@@ -294,9 +294,9 @@ This completed example demonstrates array nesting for a passive +1 AC ward. Incl
 ---
 
 
-## Explicit fields in Item YAML schema 2
+## Explicit fields in Item YAML schema 4
 
-Verification target: D&D5e 5.3.3 / Foundry 14.367. Item YAML versions 0 and 1 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 and 3 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|

@@ -770,7 +770,7 @@ function buildLightYamlStrictTemplate(fields) {
     };
 
     if (topKey !== "SPELL") {
-        data.ITEM.Rarity = fields.rarity || "common";
+        data.ITEM.Rarities = [fields.rarity || "common"];
         data.INVENTORY = {
             Quantity: 1,
             Identified: true,

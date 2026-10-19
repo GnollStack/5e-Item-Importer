@@ -1,8 +1,8 @@
 /**
  * Mutating MCP diagnostics for dedicated test worlds.
  *
- * All fixture cleanup requires both a visible fixture name prefix and a
- * module-owned fixture flag.
+ * Fixture cleanup requires a prefixed source name and module-owned flag.
+ * Exact-run recovery also accepts the canonical prefixed name in that flag.
  */
 
 import { MODULE_NAME } from "./itemConfig.js";
@@ -85,18 +85,19 @@ export function getFixtureCounts(runId = null) {
 }
 
 export async function runItemImporterAutomation(args = {}) {
-    if (args.confirmMutation !== true) {
-        return {
-            success: false,
-            error: "confirmMutation: true is required."
-        };
+    if (args.suite === "view") {
+        const { runImportViewFixtures } = await import("./diagnostics/importViewFixtures.js");
+        const { ItemWindow } = await import("./itemWindow.js");
+        const Actions = await import("./ui/itemWindowActions.js");
+        const Renderer = await import("./ui/itemWindowRenderer.js");
+        return runImportViewFixtures({ Window: ItemWindow, Actions, moduleId: MODULE_NAME, prefix: "ii", text: FIXTURE_ITEM_TEXT, Renderer });
     }
-
     const runId = normalizeRunId(args.runId);
     const cleanupBefore = args.cleanupBefore !== false;
     const cleanupAfter = args.cleanupAfter !== false;
     const steps = [];
     const countsBefore = getWorldDocumentCounts();
+    const sourcesBefore = snapshotNonFixtureDocumentSources();
 
     if (cleanupBefore) {
         steps.push({
@@ -143,6 +144,8 @@ export async function runItemImporterAutomation(args = {}) {
 
     const countsAfter = getWorldDocumentCounts();
     const remainingFixtures = getFixtureCounts(runId);
+    const nonFixtureSourcesUnchanged = snapshotNonFixtureDocumentSources() === sourcesBefore;
+    steps.push({step:"nonFixtureSourcesUnchanged",success:nonFixtureSourcesUnchanged});
 
     return {
         success: Boolean(createdItem)
@@ -162,6 +165,7 @@ export async function runItemImporterAutomation(args = {}) {
         error: creationError,
         cleanupAfterResult,
         remainingFixtures,
+        nonFixtureSourcesUnchanged,
         steps
     };
 }
@@ -276,15 +280,19 @@ function findFixtureItems(runId = null) {
 
 function isFixtureItem(item, runId = null) {
     const marker = getFixtureMarker(item);
-    const name = String(item?.name ?? "");
+    const name = String(item?._source?.name ?? item?.name ?? "");
     const markerName = String(marker?.fixtureName ?? "");
     const requestedRunId = normalizeRunId(runId, { allowEmpty: true });
 
-    if (!name.startsWith(FIXTURE_PREFIX)) return false;
     if (!marker || typeof marker !== "object") return false;
-    if (!markerName.startsWith(FIXTURE_PREFIX)) return false;
+    const markerRunId = normalizeRunId(marker.runId, { allowEmpty: true });
+    if (!markerRunId || !markerName.startsWith(`${FIXTURE_PREFIX} ${markerRunId} `)) return false;
     if (marker.worldId !== getWorldId()) return false;
     if (requestedRunId && marker.runId !== requestedRunId) return false;
+    // Native unidentified preparation can replace the visible name; use the
+    // stored name first. A renamed fixture is recoverable only for an exact,
+    // explicitly requested run backed by its canonical module marker.
+    if (!name.startsWith(FIXTURE_PREFIX) && !(requestedRunId && marker.runId === requestedRunId)) return false;
 
     return true;
 }
@@ -326,6 +334,15 @@ function getWorldDocumentCounts() {
         scenes: Number(game.scenes?.size ?? game.scenes?.length ?? 0),
         activeSceneTokens: Number(canvas?.scene?.tokens?.size ?? canvas?.scene?.tokens?.length ?? 0)
     };
+}
+
+function snapshotNonFixtureDocumentSources() {
+    const collections = game.collections?.entries?.() ?? [["Item", game.items], ["Actor", game.actors], ["Scene", game.scenes]];
+    return JSON.stringify(Array.from(collections, ([name, collection]) => [name, collectionValues(collection)
+        .filter(document => name !== "Item" || !isFixtureItem(document, getFixtureMarker(document)?.runId))
+        .map(document => document.toObject?.() ?? document._source ?? document)
+        .sort((left, right) => String(left?._id ?? "").localeCompare(String(right?._id ?? "")))
+    ]).sort(([left], [right]) => String(left).localeCompare(String(right))));
 }
 
 function collectionValues(collection) {

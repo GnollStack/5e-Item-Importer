@@ -25,6 +25,9 @@ class TypedSchemaField extends DataField {
 class EmbeddedCollectionField extends DataField {}
 class EmbeddedDocumentField extends DataField {}
 class TypeDataField extends DataField {}
+class TypeDataField5e extends ObjectField {}
+class ActivitiesField extends MappingField {}
+class AdvancementCollectionField extends MappingField {}
 class ActivityField extends DataField {}
 class AdvancementField extends DataField {}
 class AdvancementDataField extends DataField {}
@@ -37,7 +40,7 @@ class MysteryField extends ObjectField {}
 class RecursiveMysteryField extends DataField { static recursive = true; }
 const fieldClasses = { DataField, StringField, NumberField, BooleanField, AnyField, ObjectField, SchemaField,
   ArrayField, SetField, TypedObjectField, MappingField, TypedSchemaField, EmbeddedCollectionField, EmbeddedDocumentField,
-  TypeDataField, ActivityField, AdvancementField, AdvancementDataField, ScaleValueEntryField, FormulaField,
+  TypeDataField, TypeDataField5e, ActivitiesField, AdvancementCollectionField, ActivityField, AdvancementField, AdvancementDataField, ScaleValueEntryField, FormulaField,
   DocumentIdField, ForeignDocumentField, DocumentUUIDField, MysteryField, RecursiveMysteryField };
 function assert(value, message = "Assertion failed") { if (!value) throw new Error(message); }
 function ordered(value) {
@@ -127,6 +130,51 @@ function installNativeProviderModels() {
         ScaleValue: { documentClass: ScaleValueAdvancement, validItemTypes: ["weapon"] } } }
   };
   return { WeaponData, AttackActivity };
+}
+
+/** Modern metadata shapes use mappings, native BaseEffectData and typed behavior configs. */
+function installCurrentNativeProviderModels() {
+  const models = installNativeProviderModels();
+  globalThis.game.version = "14.369"; globalThis.game.system.version = "6.0.6";
+  models.WeaponData.schema = new SchemaField({ rarities: new SetField(new StringField()),
+    activities: new ActivitiesField(new TypeDataField5e()),
+    advancement: new AdvancementCollectionField(new TypeDataField5e()) });
+  models.AttackActivity.schema = new SchemaField({
+    behaviors: new ArrayField(new SchemaField({ type: new StringField(), config: new TypeDataField5e() })),
+    attack: new SchemaField({ abilities: new SetField(new StringField(), { persisted: false }) })
+  });
+  class ApplyActiveEffectActivityBehavior {}
+  ApplyActiveEffectActivityBehavior.schema = new SchemaField({ effects: new SetField(new DocumentUUIDField()),
+    sizes: new SetField(new StringField()), types: new SetField(new StringField()) });
+  class DifficultTerrainActivityBehavior {}
+  DifficultTerrainActivityBehavior.schema = new SchemaField({ types: new SetField(new StringField()) });
+  globalThis.dnd5e.dataModels.regionBehavior = { ApplyActiveEffectActivityBehavior, DifficultTerrainActivityBehavior };
+  globalThis.CONFIG.DND5E.activityBehaviorTypes = { applyActiveEffect: { model: ApplyActiveEffectActivityBehavior },
+    difficultTerrain: { model: DifficultTerrainActivityBehavior } };
+  class BaseEffectData {}
+  BaseEffectData.schema = new SchemaField({ magical: new BooleanField(), conditions: new StringField(),
+    origin: new SchemaField({ activity: new DocumentUUIDField() }) });
+  class ConditionData {}
+  ConditionData.schema = new SchemaField({ type: new StringField() });
+  Object.assign(globalThis.dnd5e.dataModels.activeEffect, { BaseEffectData, ConditionData });
+  Object.assign(globalThis.CONFIG.ActiveEffect.dataModels, { base: BaseEffectData, condition: ConditionData });
+  globalThis.game.system._source.documentTypes.ActiveEffect.condition = {};
+  const scale = globalThis.dnd5e.documents.advancement.ScaleValueAdvancement;
+  class ScaleConfiguration {}
+  ScaleConfiguration.schema = new SchemaField({ type: new StringField(), scale: new MappingField(new ObjectField()) });
+  class ScaleDice {}
+  ScaleDice.schema = new SchemaField({ number: new NumberField(), faces: new NumberField(), modifiers: new SetField(new StringField()) });
+  class ScaleUsage {}
+  ScaleUsage.schema = new SchemaField({ value: new NumberField(), period: new StringField() });
+  class ScaleNumber {}
+  ScaleNumber.schema = new SchemaField({ value: new NumberField() });
+  class ScaleString {}
+  ScaleString.schema = new SchemaField({ value: new StringField() });
+  scale.metadata.dataModels.configuration = ScaleConfiguration;
+  scale.schema = new SchemaField({ configuration: new AdvancementDataField() });
+  scale.TYPES = { string: ScaleString, number: ScaleNumber, cr: ScaleNumber, dice: ScaleDice, distance: ScaleNumber, usage: ScaleUsage };
+  delete globalThis.dnd5e.dataModels.advancement.scaleValue;
+  return { ...models, ApplyActiveEffectActivityBehavior, DifficultTerrainActivityBehavior, ScaleValueAdvancement: scale };
 }
 
 export function runFieldCatalogCoreTests({ provider, discover }) {
@@ -296,6 +344,12 @@ export function runFieldCatalogCoreTests({ provider, discover }) {
     equal(at(result, "system.actor").classification, "relationship");
     equal(at(result, "system.computed").classification, "non-persisted");
   });
+  run("nonpersisted parents propagate storage limits through nested schemas and collections", () => {
+    const result = catalog({ derived: new SchemaField({ list: new SetField(new StringField()),
+      children: new MappingField(new SchemaField({ value: new NumberField() })) }, { persisted: false }) });
+    assert(result.fields.length > 4);
+    assert(result.fields.every(field => field.storage.persisted === false && field.classification === "non-persisted"));
+  });
   run("repeated discovery produces stable unique types, fields and JSON-safe metadata", () => {
     const fields = { second: new StringField(), first: new NumberField() };
     const first = catalog(fields), second = catalog(fields);
@@ -345,6 +399,46 @@ export function runFieldCatalogCoreTests({ provider, discover }) {
     assert(!result.types.some(type => type.type === "custom"));
     const code = provider === "5e-item-importer" ? "runtime-item-extension" : "runtime-activity-extension";
     assert(result.diagnostics.some(entry => entry.code === code));
+  });
+  run("6.0.6 native model shapes expose mappings, variants and base effect data", () => {
+    installCurrentNativeProviderModels();
+    const result = discover();
+    if (provider === "5e-item-importer") {
+      for (const path of ["system.activities", "system.advancement"]) equal(at(result, path).structure.kind, "catalog-reference");
+      assert(!result.fields.some(field => field.path.startsWith("system.activities.")));
+      equal(at(result, "configuration.scale.{key}").structure.variants, ["cr", "dice", "distance", "number", "string", "usage"]);
+      at(result, "configuration.scale.{key}.modifiers[*]", "configuration.type=dice");
+      at(result, "configuration.scale.{key}.period", "configuration.type=usage");
+    } else {
+      equal(at(result, "behaviors[*].config").structure.variants, ["applyActiveEffect", "difficultTerrain"]);
+      at(result, "behaviors[*].config.effects[*]", "behaviors[*].type=applyActiveEffect");
+      at(result, "behaviors[*].config.types[*]", "behaviors[*].type=difficultTerrain");
+      const base = result.fields.find(field => field.kind === "effect" && field.type === "base" && field.path === "system.magical");
+      assert(base && base.provenance.source.export === "BaseEffectData");
+      equal(result.types.find(type => type.kind === "effect" && type.type === "condition").importSupport, "catalog-only");
+      assert(result.fields.filter(field => field.path.startsWith("attack.abilities")).every(field => !field.storage.persisted));
+    }
+    assert(!result.diagnostics.some(entry => entry.code === "unresolved-native-field"));
+  });
+  run("missing current native variant schemas are explicitly incomplete", () => {
+    const models = installCurrentNativeProviderModels();
+    if (provider === "5e-item-importer") models.ScaleValueAdvancement.TYPES.usage = class MissingUsage {};
+    else delete globalThis.dnd5e.dataModels.regionBehavior.DifficultTerrainActivityBehavior;
+    const result = discover();
+    const path = provider === "5e-item-importer" ? "configuration.scale.{key}" : "behaviors[*].config";
+    assert(at(result, path).structure.complete === false);
+    assert(result.diagnostics.some(entry => entry.code === "unresolved-native-field" && entry.fieldId === at(result, path).id));
+  });
+  if (provider === "5e-activity-importer") run("activity behavior overrides and additions never replace native config schemas", () => {
+    const { ApplyActiveEffectActivityBehavior } = installCurrentNativeProviderModels();
+    class ReplacedBehavior extends ApplyActiveEffectActivityBehavior {}
+    ReplacedBehavior.schema = new SchemaField({ extensionCounter: new NumberField() });
+    globalThis.CONFIG.DND5E.activityBehaviorTypes.applyActiveEffect.model = ReplacedBehavior;
+    globalThis.CONFIG.DND5E.activityBehaviorTypes.custom = { model: ReplacedBehavior };
+    const result = discover();
+    assert(result.environment.modelOverrides.some(entry => entry.kind === "activity-behavior"));
+    assert(result.diagnostics.some(entry => entry.code === "runtime-activity-behavior-extension"));
+    assert(!result.fields.some(field => field.path.includes("extensionCounter")));
   });
   return { provider, total: results.length, passed: results.filter(result => result.passed).length,
     failed: results.filter(result => !result.passed).length, results };

@@ -6,9 +6,11 @@
 import { ItemUtils } from "./itemUtils.js";
 import { MODULE_NAME } from "./itemConfig.js";
 import { ITEM_TEMPLATES } from "./ui/itemTemplates.js";
+import { getItemRecipes } from "./ui/itemRecipes.js";
 import * as Actions from "./ui/itemWindowActions.js";
 import {
   getImportHistory,
+  getLastUndoableSession,
   listActorDestinations,
   listCompendiumDestinations,
   listSavedPresets,
@@ -16,6 +18,9 @@ import {
   normalizeDestination
 } from "./ui/itemWorkflowServices.js";
 import { getActivityCapabilities } from "./ui/itemFeatureAdapters.js";
+
+import { ImportViewLayout } from "./ui/importViewLayout.js";
+import { bindImportWindowDefaults } from "./ui/importWindowDefaults.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -62,6 +67,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     this.selectedBatchItems = new Set();
     this.comparisonActive = false;
     this.normalizedText = "";
+    this.normalizedError = "";
     this.activePresetId = null;
     this.importCancelled = false;
     this.importInProgress = false;
@@ -150,11 +156,13 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     this.selectedBatchItems = new Set();
     this.comparisonActive = false;
     this.normalizedText = "";
+    this.normalizedError = "";
     this.importCancelled = true;
     this.importInProgress = false;
     this.closeRequestedDuringImport = false;
     this.droppedItemUuid = null;
     ItemWindow.instance = null;
+    this.viewLayout?.destroy();
     return super.close(options);
   }
 
@@ -186,6 +194,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       autoParse: game.settings.get(MODULE_NAME, "autoParse"),
       placeholder: localize("II.Input.Placeholder", "Paste item text here, select a template, or drop a document/file..."),
       templates: ITEM_TEMPLATES,
+      recipes: getItemRecipes(),
       savedPresets: listSavedPresets(),
       actorDestinations,
       compendiumDestinations,
@@ -225,7 +234,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
           Actions.importItemsWorkflow.call(this);
         }
       }
-      if (e.key === "Escape" && document.activeElement !== input) {
+      if (e.key === "Escape" && !e.target.closest("input, textarea, select, button, summary, details")) {
         e.preventDefault();
         Actions.reset.call(this);
       }
@@ -248,14 +257,17 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Template dropdown
     if (templateSelect) {
-      templateSelect.addEventListener("change", (e) => {
+      templateSelect.addEventListener("change", async (e) => {
         const value = e.target.value;
         if (value.startsWith("builtin:")) {
+          const previous = this.activePresetId;
+          const loaded = await Actions.insertTemplate.call(this, null, { templateId: value.slice(8) });
+          if (!loaded) { e.target.value = previous ? `saved:${previous}` : ""; return; }
           this.activePresetId = null;
-          Actions.insertTemplate.call(this, null, { templateId: value.slice(8) });
         } else if (value.startsWith("saved:")) {
-          this.activePresetId = value.slice(6);
-          Actions.insertSavedPreset.call(this, this.activePresetId);
+          const previous = this.activePresetId;
+          const loaded = await Actions.insertSavedPreset.call(this, value.slice(6));
+          if (!loaded) { e.target.value = previous ? `saved:${previous}` : ""; return; }
           const presetName = this.element.querySelector("#ii-preset-name");
           const preset = listSavedPresets().find(candidate => candidate.id === this.activePresetId);
           if (presetName && preset) presetName.value = preset.name;
@@ -312,10 +324,43 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const normalizedInput = this.element.querySelector("#ii-normalized-input");
     if (normalizedInput) normalizedInput.value = this.normalizedText;
 
+    this.viewLayout?.destroy();
+    this.viewLayout = new ImportViewLayout(this.element, { moduleId: MODULE_NAME, prefix: "ii" });
+        bindImportWindowDefaults(this, { moduleId: MODULE_NAME, prefix: "ii", parse: () => Actions.parse.call(this) });
+    this._refreshViewSummaries();
+    this.element.addEventListener("change", () => this._refreshViewSummaries(), { signal: this.viewLayout.controller.signal });
+
     // Initial state
     this._updateParseState("empty");
 
     ItemUtils.log("Item window rendered");
+  }
+
+  /** Keep the destination and active options visible while their editors are closed. */
+  _refreshViewSummaries() {
+    const root = this.element;
+    this.viewLayout?.applyContext();
+    const selectedLabel = selector => {
+      const select = root.querySelector(selector);
+      return select?.selectedOptions?.[0]?.textContent?.trim() || localize("II.View.ChooseDestination", "Choose a destination");
+    };
+    const kind = root.querySelector("#ii-destination-kind")?.value;
+    const summary = root.querySelector("#ii-destination-summary");
+    if (summary) {
+      const location = kind === "actor" ? selectedLabel("#ii-actor-select")
+        : kind === "compendium" ? selectedLabel("#ii-pack-select")
+          : (game.folders?.get(this.selectedFolderId)?.name || localize("II.Destination.Root", "Root folder"));
+      summary.textContent = `${selectedLabel("#ii-destination-kind")} / ${location}`;
+      summary.title = summary.textContent;
+    }
+    const options = root.querySelector("#ii-options-summary");
+    if (options) {
+      const active = [];
+      for (const [selector, key, label] of [["#ii-setting-identified", "II.Settings.CreateIdentified", "Identified"], ["#ii-setting-match-icons", "II.Settings.MatchIcons", "Match icons"], ["#ii-setting-semantic", "II.Settings.SemanticIcons", "Semantic icons"], ["#ii-suggest-automation", "II.Settings.SuggestAutomation", "Suggest automation"], ["#ii-use-autoanimations", "II.Settings.Animations", "Animations"]]) {
+        if (root.querySelector(selector)?.checked) active.push(localize(key, label));
+      }
+      options.textContent = active.join(" / ") || localize("II.View.NoOptions", "Optional settings off");
+    }
   }
 
   /** Set up folder browser event listeners */
@@ -332,6 +377,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   async _persistDestination() {
+    this._refreshViewSummaries();
     try {
       await game.settings.set(MODULE_NAME, "lastDestination", this._getDestination());
     } catch (error) {
@@ -376,6 +422,14 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     const container = this.element.querySelector("#ii-history-list");
     if (!container) return;
     const sessions = getImportHistory();
+    const actions = this.element.querySelector("[data-history-actions]");
+    if (actions) actions.hidden = !sessions.length;
+    const undo = this.element.querySelector('[data-action="undoLast"]');
+    if (undo) undo.disabled = !getLastUndoableSession();
+    const history = this.element.querySelector('[data-view-panel="history"]');
+    const latest = sessions[0];
+    if (history && !history.hidden && latest && latest.id !== this.lastDisplayedSession) history.open = true;
+    this.lastDisplayedSession = latest?.id;
     if (sessions.length === 0) {
       container.innerHTML = `<p class="hint">${ItemUtils.escapeHtml(localize("II.History.Empty", "No imports in this browser session."))}</p>`;
       return;
@@ -812,8 +866,24 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /** Update the visual parse state indicator */
+  _refreshContextTools() {
+    const root = this.element;
+    const parsed = this.currentParseResult;
+    const builder = root.querySelector('[data-action="openActivityBuilder"]');
+    if (builder) builder.hidden = !(parsed?.success && parsed.item && !parsed.successes);
+    const exports = root.querySelector("[data-generated-tools]");
+    if (exports) exports.hidden = !this.normalizedText;
+    const error = root.querySelector("[data-yaml-error]");
+    if (error) { error.textContent = this.normalizedError || ""; error.hidden = !this.normalizedError; }
+    const apply = root.querySelector('[data-action="reparseNormalized"]');
+    if (apply) apply.disabled = !this.normalizedText;
+    this.viewLayout?.applyContext();
+  }
+
   _updateParseState(state) {
+    this._refreshContextTools();
     this.parseState = state;
+    this.viewLayout?.applySections();
     const inputGroup = this.element.querySelector(".ii-input-group");
     const stateIndicator = this.element.querySelector(".ii-state-indicator");
 
@@ -826,11 +896,16 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       const icons = {
         empty: `<i class="fas fa-edit" aria-hidden="true"></i> ${localize("II.State.Ready", "Ready")}`,
         parsing: `<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> ${localize("II.State.Parsing", "Parsing...")}`,
-        valid: `<i class="fas fa-check-circle" aria-hidden="true"></i> ${localize("II.State.Valid", "Valid")}`,
+        valid: `<i class="fas fa-check-circle" aria-hidden="true"></i> ${localize("II.State.Parsed", "Parsed")}`,
         error: `<i class="fas fa-exclamation-circle" aria-hidden="true"></i> ${localize("II.State.Error", "Error")}`
       };
       stateIndicator.innerHTML = icons[state] || icons.empty;
       stateIndicator.className = `ii-state-indicator state-${state}`;
+      if (state === "valid" && this.element.querySelector(".ii-section-issues, .ai-section-issues, .ai-parse-warning, .ii-parse-warning, .ai-uuid-dropzone")) {
+        stateIndicator.textContent = localize("II.State.Review", "Parsed: review findings");
+        stateIndicator.classList.add("state-review");
+      }
+      stateIndicator.title = localize("II.State.ParsedHint", "Parsing checks the supplied data; test imported behavior separately.");
     }
   }
 
@@ -849,6 +924,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     this.currentParseResult = null;
     this.selectedBatchItems = new Set();
     this.normalizedText = "";
+    this.normalizedError = "";
     const normalizedInput = this.element.querySelector("#ii-normalized-input");
     if (normalizedInput) normalizedInput.value = "";
 
@@ -910,37 +986,8 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** Set up click handlers for collapsible sections and batch items */
   _setupCollapsibleSections() {
-    const bindCollapsibleHeader = (header, sectionSelector) => {
-      const section = header.closest(sectionSelector);
-      if (!section) return;
-      header.setAttribute("role", "button");
-      header.tabIndex = 0;
-      const syncExpanded = () => {
-        header.setAttribute("aria-expanded", String(!section.classList.contains("collapsed")));
-      };
-      syncExpanded();
-      if (header.dataset.iiCollapseBound === "true") return;
-      header.dataset.iiCollapseBound = "true";
-      const toggle = () => {
-        section.classList.toggle("collapsed");
-        syncExpanded();
-      };
-      header.addEventListener("click", toggle);
-      header.addEventListener("keydown", event => {
-        if (!["Enter", " "].includes(event.key)) return;
-        event.preventDefault();
-        header.click();
-      });
-    };
-
-    // Collapsible headers (item and embedded Activity importer sections)
-    this.element.querySelectorAll(".ii-section-header").forEach(header => {
-      bindCollapsibleHeader(header, ".ii-section");
-    });
-
-    this.element.querySelectorAll(".ai-section-header").forEach(header => {
-      bindCollapsibleHeader(header, ".ai-section");
-    });
+    this._refreshContextTools();
+    this.viewLayout?.applySections();
 
     // Batch checkboxes
     this.element.querySelectorAll(".ii-batch-checkbox").forEach(checkbox => {

@@ -48,15 +48,18 @@ function advancementAdapter(system, model) {
                 reason: "This advancement declares defaults but no closed child data model." },
                 ...(defaults === undefined ? {} : { default: { kind: "literal", value: toCatalogValue(defaults) } }) };
         }
-        if (isFieldKind(field, "ScaleValueEntryField")) {
-            const types = system?.dataModels?.advancement?.scaleValue?.TYPES;
+        if (isFieldKind(field, "ScaleValueEntryField") || (model.typeName === "ScaleValue"
+            && context.path === "configuration.scale.{key}" && isFieldKind(field, "ObjectField"))) {
+            const types = model.TYPES ?? system?.dataModels?.advancement?.scaleValue?.TYPES;
             if (!types || !Object.keys(types).length) return {
                 classification: "unresolved", structure: { kind: "unresolved", complete: false,
                     reason: "Native scale-value variant models are unavailable." }
             };
+            const missing = Object.entries(types).filter(([, nested]) => !nested?.schema?.fields).map(([type]) => type);
             return {
-                structure: { kind: "variant", complete: true, discriminator: "configuration.type",
-                    variants: Object.keys(types).sort() },
+                structure: { kind: "variant", complete: !missing.length, discriminator: "configuration.type",
+                    variants: Object.keys(types).sort(),
+                    ...(missing.length ? { reason: "Native scale-value models unavailable: " + missing.join(", ") } : {}) },
                 contextRequired: true,
                 children: Object.entries(types).sort(([a], [b]) => a.localeCompare(b)).flatMap(([type, nested]) =>
                     Object.entries(nested.schema?.fields ?? {}).map(([name, child]) => ({
@@ -77,7 +80,7 @@ export function discoverNativeCatalog() {
     const manifest = globalThis.game?.system?._source?.documentTypes?.Item
         ?? globalThis.game?.system?.documentTypes?.Item;
     const declaredTypes = manifest && typeof manifest === "object" ? Object.keys(manifest) : Object.keys(KNOWN_ITEMS);
-    // 5.3.3 retains this manifest entry for migration but excludes it from Item creation.
+    // The manifest retains this entry for migration but excludes it from Item creation.
     // A new registered/exported Backpack model must be investigated instead of being hidden as an alias.
     const legacyBackpack = declaredTypes.includes("backpack") && !namespace?.BackpackData && !registry.backpack;
     const currentTypes = declaredTypes.filter(type => type !== "backpack" || !legacyBackpack);
@@ -87,7 +90,7 @@ export function discoverNativeCatalog() {
         "The manifest retains backpack for migration to container; it is not a separate editable Item type.",
         { severity: "info", kind: "item", type: "backpack", replacement: "container" });
     if (!manifest) addCatalogDiagnostic(acc, "manifest-types-unavailable",
-        "Native manifest type metadata is unavailable; the reviewed 5.3.3 type list is being used.");
+        "Native manifest type metadata is unavailable; the reviewed 6.0.6 type list is being used.");
     const advancements = advancementTypes(system);
     const nativeActivities = Object.values(system?.documents?.activity ?? {})
         .filter(model => typeof model === "function" && typeof model.metadata?.type === "string")
@@ -117,9 +120,14 @@ export function discoverNativeCatalog() {
                 }
                 return null;
             } });
-        addCatalogModel(acc, { ...common, model, prefix: "system", adapter: field => {
-            if (isFieldKind(field, "ActivityField")) return references("activity", nativeActivities);
-            if (isFieldKind(field, "AdvancementField")) return references("advancement", advancements.map(entry => entry.type));
+        addCatalogModel(acc, { ...common, model, prefix: "system", adapter: (field, context) => {
+            if (isFieldKind(field, "ActivityField") || isFieldKind(field, "ActivitiesField")
+                || (context.path === "system.activities" && isFieldKind(field, "MappingField")))
+                return references("activity", nativeActivities);
+            if (isFieldKind(field, "AdvancementField") || ((context.path === "system.advancement"
+                || context.path === "system.advancement.{key}" || context.path === "system.advancement[*]")
+                && (isFieldKind(field, "MappingField") || isFieldKind(field, "TypeDataField5e"))))
+                return references("advancement", advancements.map(entry => entry.type));
             return null;
         } });
     }

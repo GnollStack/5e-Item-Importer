@@ -1,8 +1,8 @@
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 CONTAINER:
   ITEM:
     Name: Bag of Holding
-    Rarity: uncommon
+    Rarities: [uncommon]
   INVENTORY:
     Quantity: 1
     Identified: true

@@ -63,6 +63,7 @@ try {
         $_ -ne "scripts/diagnostics/runtimeSmokeTests.js" -and
         [System.IO.Path]::GetFileName($_) -match "Tests?\.(js|mjs)$"
     })
+    $unexpected += @($entryNames | Where-Object { $_ -match '^docs/(README\.html|verification[^/]*\.json)$' })
     $unexpected = @($unexpected | Select-Object -Unique)
     if ($unexpected.Count -gt 0) {
         throw "Release contains developer-only entries: $($unexpected -join ', ')"
@@ -97,7 +98,8 @@ try {
 
     Assert-ImporterReleaseManifest $manifest | Out-Null
 
-    $requiredPaths = @("module.json", "LICENSE.txt", "THIRD_PARTY_NOTICES.txt", "README.md", "scripts/diagnostics/runtimeSmokeTests.js")
+    $requiredPaths = @("module.json", "LICENSE.txt", "THIRD_PARTY_NOTICES.txt", "README.md", "scripts/diagnostics/runtimeSmokeTests.js",
+        "docs/import-window.md", "docs/automation-schema-4.md", "docs/template-authoring.md", "docs/explicit-yaml-v2.md", "docs/native-field-catalog.md", "docs/midi-field-catalog.md", "docs/examples/README.md")
     $requiredPaths += @($manifest.esmodules)
     $requiredPaths += @($manifest.styles | ForEach-Object {
         if ($_ -is [string]) {
@@ -168,6 +170,29 @@ try {
         $socketEnabled = ($manifest.PSObject.Properties.Name -contains "socket") -and $manifest.socket -eq $true
         if ($debugSource -match "\bgame\.socket\b" -and -not $socketEnabled) {
             throw "Runtime uses game.socket but module.json does not declare socket: true."
+        }
+        $assetBlock = [regex]::Match($debugSource, '(?s)const MODULE_ASSETS = Object\.freeze\(\[(.*?)\]\);')
+        if (-not $assetBlock.Success) { throw "Could not inspect the installed diagnostics asset list." }
+        foreach ($match in [regex]::Matches($assetBlock.Groups[1].Value, '"([^"\r\n]+)"')) {
+            if (-not $entrySet.Contains($match.Groups[1].Value)) { throw "Release is missing diagnostics asset: $($match.Groups[1].Value)" }
+        }
+    }
+
+    # Resolve local documentation links against the archive, without reading world data.
+    $virtualRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..")) + [System.IO.Path]::DirectorySeparatorChar
+    foreach ($entry in $archive.Entries | Where-Object { $_.FullName.EndsWith(".md") }) {
+        $stream = $entry.Open()
+        $reader = [System.IO.StreamReader]::new($stream)
+        try { $source = $reader.ReadToEnd() } finally { $reader.Dispose(); $stream.Dispose() }
+        foreach ($match in [regex]::Matches($source, '\[[^\]]*\]\(([^)]+)\)')) {
+            $href = $match.Groups[1].Value
+            if ($href -match '^(https?://|mailto:|#)') { continue }
+            $relative = [uri]::UnescapeDataString(($href -split '#', 2)[0])
+            $target = [System.IO.Path]::GetFullPath((Join-Path (Split-Path (Join-Path $virtualRoot $entry.FullName) -Parent) $relative))
+            if (-not $target.StartsWith($virtualRoot, [StringComparison]::OrdinalIgnoreCase)) { throw "Documentation link leaves package: $($entry.FullName) -> $href" }
+            $key = $target.Substring($virtualRoot.Length).Replace("\", "/").TrimEnd("/")
+            $directoryLink = @($entryNames | Where-Object { $_.StartsWith($key + '/', [StringComparison]::Ordinal) }).Count -gt 0
+            if (-not $entrySet.Contains($key) -and -not $directoryLink) { throw "Documentation link is missing: $($entry.FullName) -> $href" }
         }
     }
 

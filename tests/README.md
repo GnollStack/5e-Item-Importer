@@ -40,7 +40,7 @@ Neither suite should create Foundry world documents. Use the module's gated MCP
 automation actions only when fixture mutation is explicitly intended.
 
 
-## Explicit YAML v2 regression checks
+## Explicit YAML schema 4 regression checks
 
 Run `node --experimental-vm-modules tools/Test-ExplicitYaml.mjs` for read-only parser/serializer regressions and full-template checks. Native validation also runs in the existing full Foundry suite. The fixed creation tests use the existing `runAutomation` action with `{suite:"explicit",confirmMutation:true,cleanupBefore:true,cleanupAfter:true}` and remove their marked fixtures in finally. See the [coverage checklist](../docs/explicit-yaml-v2.md) for individual fields and exclusions.
 
@@ -61,7 +61,7 @@ The full reference templates are checked against this importer's current catalog
 
 ```powershell
 node --experimental-vm-modules tools/Test-TemplateCompleteness.mjs
-node --test tools/template-completeness.test.mjs
+node --experimental-vm-modules --test tools/template-completeness.test.mjs
 ```
 
 The ordinary `tools/Test-ExplicitYaml.mjs` suite also runs the reference checks. Synthetic regressions verify that removed fields, conflicting canonical/legacy controls, and misleading value placeholders fail. Keep parser acceptance, native validation, sheet behavior, and template completeness as separate conclusions. Legacy compatibility fixtures remain valid; quick-start examples remain compact.
@@ -79,7 +79,7 @@ Run the source-only walker/provider, query/probe, and offline report regressions
 ```powershell
 node --experimental-vm-modules tools/Test-FieldCatalogCore.mjs
 node --experimental-vm-modules tools/Test-FieldCatalog.mjs
-node --test tools/field-catalog-reports.test.mjs
+node --experimental-vm-modules --test tools/field-catalog-reports.test.mjs
 ```
 
 The live suite checks full pagination, field identities, native-path coverage audits, representative raw/cleaned/contextual probes, unsupported-type classification, and unchanged world counts. Offline tests cover schema structures and variants, bounded inputs, omitted/null/false/zero values, stale cursors, complete snapshot assembly, and meaningful snapshot diffs. A mapping-path audit checks that declared paths exist; it does not prove every YAML value or sheet control.
@@ -93,6 +93,19 @@ Run node --experimental-vm-modules tools/Test-MidiFieldCatalog.mjs for isolated 
 Source-reviewed gameplay rules, declared mappings, named parser tests and candidate validation are separate evidence. These tests do not execute MIDI workflows, macros, conditions or resource consumption. See [the MIDI guide](../docs/midi-field-catalog.md).
 
 
+## Schema 4 automation and recipe checks
+
+`tools/Test-ExplicitYaml.mjs` includes `tests/unit/automationTests.js`: reviewed typed fields, inactive/null/empty states, strict rejection, reference preflight and recipe staging. Run the Node regression suite with `node --experimental-vm-modules --test tools/*.test.mjs` (or enumerate the files in PowerShell). Native model persistence and recipe gameplay require the separate gated live fixtures; read-only parser/catalog success is not gameplay proof.
+
 ## Template authoring checks
 
-Run `node --experimental-vm-modules tools/Test-TemplateAuthoring.mjs` for marked example/file parity, source parser results, prerequisites and semantic assertions. Run `node --test tools/template-authoring.test.mjs` for negative documentation cases. The existing explicit YAML/completeness suites additionally check the declared MIDI template mappings. Keep native completeness, MIDI tests, full read-only smoke suites and shared-helper parity passing. These checks do not execute gameplay or establish independent LLM generation reliability.
+Run `node --experimental-vm-modules tools/Test-TemplateAuthoring.mjs` for marked example/file parity, source parser results, prerequisites and semantic assertions. Run `node --experimental-vm-modules --test tools/template-authoring.test.mjs` for negative documentation cases. The existing explicit YAML/completeness suites additionally check the declared MIDI template mappings. Keep native completeness, MIDI tests, full read-only smoke suites and shared-helper parity passing. These checks do not execute gameplay or establish independent LLM generation reliability.
+
+
+## Import window layout regression checks
+
+Customer behavior is documented in the [import-window guide](../docs/import-window.md). Run `node --test tools/import-view-layout.test.mjs` for preference defaults, bounded/corrupt/unavailable storage, user/world/module isolation, and registered-default restoration with rollback on a setting failure.
+
+Keep `scripts/ui/importViewLayout.js`, `scripts/ui/importWindowDefaults.js` and `scripts/diagnostics/importViewFixtures.js` byte-identical in both distributions. The existing gated diagnostics `runAutomation` action accepts `{ suite: "view", confirmMutation: true }` in a connected test world. It opens a disposable importer window and checks real parsing, Full/Compact previews, keyboard expansion, visible warnings/references, unified presets, contextual options and reset behavior.
+
+Item checks include the optional generated-YAML editor, natural-text generation, explicit application of edits, stale parse protection, destination summaries and batch builder visibility. Both suites check optional History visibility and persistence, restored import/view defaults, and preserved drafts, destinations, history and presets. The fixture restores the original client settings, layout preferences and window singleton, verifies unchanged Item, Actor and Scene sources, and creates no documents. UI checks are separate from gameplay validation.

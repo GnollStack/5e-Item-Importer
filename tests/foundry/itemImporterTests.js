@@ -9,6 +9,7 @@
 import { ItemUtils } from "../../scripts/itemUtils.js";
 import { MODULE_TITLE } from "../../scripts/itemConfig.js";
 import { ItemData } from "../../scripts/itemData.js";
+import { withCompatibleActivityCompanion } from "../helpers/compatibleActivityCompanion.js";
 import { parseItemText } from "../../scripts/parserRouting.js";
 import { NaturalItemParser } from "../../scripts/naturalItemParser.js";
 import { ITEM_TEMPLATES } from "../../scripts/ui/itemTemplates.js";
@@ -1126,7 +1127,7 @@ export class ItemImporterTests {
         }
 
         try {
-            const harness = Object.create(ItemData.prototype);
+            const harness = withCompatibleActivityCompanion();
             const plannedAttackId = "AtkPlan000000001";
             const existingActivityId = "ExistAct00000001";
             const missingActivityId = "MissAct000000001";
@@ -1279,7 +1280,7 @@ export class ItemImporterTests {
                 { validForwardIssues, invalidForwardIssues }
             );
 
-            const legacyPlannerHarness = Object.create(ItemData.prototype);
+            const legacyPlannerHarness = withCompatibleActivityCompanion();
             legacyPlannerHarness.planInlineActivityResults = async results => ({
                 supported: false,
                 validated: false,
@@ -1549,7 +1550,7 @@ export class ItemImporterTests {
                 { rewrittenBatch }
             );
 
-            const softBoundaryHarness = Object.create(ItemData.prototype);
+            const softBoundaryHarness = withCompatibleActivityCompanion();
             softBoundaryHarness.applyActivities = async () => {
                 throw new Error("simulated post-create attachment failure");
             };
@@ -1635,7 +1636,7 @@ export class ItemImporterTests {
             };
 
             let plannerCall = null;
-            const orderedHarness = Object.create(ItemData.prototype);
+            const orderedHarness = withCompatibleActivityCompanion();
             useIsolatedPlanner(orderedHarness, async (results, options = {}) => {
                 plannerCall = {
                     order: results.map(result => result.activityType),
@@ -1708,7 +1709,7 @@ export class ItemImporterTests {
                     throw new Error("direct plan must not run when dryRun is available");
                 }
             };
-            const schemaHarness = Object.create(ItemData.prototype);
+            const schemaHarness = withCompatibleActivityCompanion();
             useIsolatedActivityApi(schemaHarness, schemaRejectingApi);
             const precreatePlan = await schemaHarness.planInlineActivityResults([schemaInvalidAttack], null);
             const baselineSource = { type: "weapon", system: {} };
@@ -1765,7 +1766,7 @@ export class ItemImporterTests {
                 }
             ];
             for (const failureCase of failureCases) {
-                const failureHarness = Object.create(ItemData.prototype);
+                const failureHarness = withCompatibleActivityCompanion();
                 useIsolatedPlanner(failureHarness, failureCase.planner);
                 const failureTarget = makePlannerItem(`Planner ${failureCase.name}`);
                 const failureResult = await failureHarness.applyActivities(
@@ -1781,7 +1782,7 @@ export class ItemImporterTests {
                 );
             }
 
-            const legacyHarness = Object.create(ItemData.prototype);
+            const legacyHarness = withCompatibleActivityCompanion();
             legacyHarness.planInlineActivityResults = (results, item) => ItemData.prototype.planInlineActivityResults.call(
                 legacyHarness,
                 results,

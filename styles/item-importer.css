@@ -1112,3 +1112,50 @@ body.theme-dark .ii-shortcuts-hint kbd {
         grid-template-columns: 1fr;
     }
 }
+
+/* Remembered presentation controls; full preview markup and import controls stay intact. */
+:is(.ai-window, .ii-window) .import-view-options {
+    align-self: flex-end;
+    width: min(100%, 340px);
+    margin: 0 0 6px auto;
+    border: 1px solid var(--ai-border, var(--ii-border, #8886));
+    border-radius: 6px;
+    padding: 6px 10px;
+}
+:is(.ai-window, .ii-window) .import-view-options > summary { cursor: pointer; text-align: right; }
+:is(.ai-window, .ii-window) [data-view-options-body] { display: grid; gap: 8px; padding: 12px 0 4px; }
+:is(.ai-window, .ii-window) [data-view-options-body] label { display: flex; align-items: center; gap: 8px; }
+:is(.ai-window, .ii-window) [data-view-options-body] p { margin: 0; font-size: 12px; }
+:is(.ai-window, .ii-window) [data-view-options-body] select { flex: 1; }
+:is(.ai-window, .ii-window) [data-view-options-body] input { flex: 0 0 auto; }
+:is(.ai-window, .ii-window) :is(.ai-section-header, .ii-section-header):focus-visible {
+    outline: 2px solid var(--ai-primary, var(--ii-primary, #3f88c5));
+    outline-offset: 2px;
+}
+:is(.ai-window, .ii-window) .state-review { color: var(--ai-warning, var(--ii-warning, #a66b00)); }
+
+.ii-window .ii-destination-picker { margin-bottom: 10px; }
+.ii-window .ii-destination-picker > summary { cursor: pointer; padding: 4px 0; overflow-wrap: anywhere; }
+.ii-window .ii-destination-change { float: right; margin-left: 12px; text-decoration: underline; }
+.ii-window .ii-destination-picker[open] > summary { margin-bottom: 10px; }
+.ii-window .ii-options-panel > summary small { white-space: normal; text-align: right; }
+.ii-window .ii-options-panel .ii-checkbox-wrapper { padding: 0 12px 8px; }
+.ii-window [data-action="resolveReferences"][hidden] { display: none; }
+
+:is(.ai-window, .ii-window) .import-view-options:not([open]) { width: fit-content; }
+
+/* Contextual importer tools. Hidden controls keep their values. */
+.ai-window [hidden], .ii-window [hidden] { display: none !important; }
+.ai-window .ai-compatibility { display: block; }
+.ai-window .ai-compatibility details p { margin: .5rem 0; }
+.ai-window .ai-compatibility summary { cursor: pointer; }
+.ai-window .ai-input-header-right > button, .ii-window .ii-input-header-right > button { flex: 0 0 auto; width: auto; }
+.ai-window .ai-tool-row, .ii-window .ii-inline-actions { flex-wrap: wrap; }
+.ii-window .ii-image-options { display: flex; gap: .6rem; flex-wrap: wrap; width: 100%; }
+.ai-window .ai-uuid-search, .ii-window .ai-uuid-search { width: auto; margin-left: .5rem; }
+
+.ai-window .ai-input-header, .ii-window .ii-input-header { flex-wrap: wrap; }
+.ai-window .ai-input-header-right, .ii-window .ii-input-header-right { flex: 1 1 100%; min-width: 0; }
+.ai-window .ai-template-group { flex: 1 1 0; min-width: 0; }
+.ai-window #ai-template-select { width: 100%; min-width: 0; }
+.ii-window #ii-template-select { flex: 1 1 0; width: 0; min-width: 0; }

@@ -10,6 +10,7 @@
 
 import { itemExplicitRows, explicitItemSource } from "../itemExplicitFields.js";
 import { damageDataToYaml } from "../explicitYamlFields.js";
+import { formatItemRarities } from "../itemRarities.js";
 
 
 function appendDamageSummary(props, damage, versatile = false) {
@@ -21,7 +22,7 @@ function appendDamageSummary(props, damage, versatile = false) {
     let formula = "";
     if (damage.custom?.enabled && damage.custom.formula) formula = damage.custom.formula;
     else if (damage.number && damage.denomination) {
-        formula = damage.number + "d" + damage.denomination;
+        formula = damage.number + "d" + damage.denomination + [...(damage.modifiers ?? [])].join("");
         if (damage.bonus) formula += " + " + damage.bonus;
     }
     if (formula) props.push({section:"Combat Statistics",label:versatile ? "Versatile" : "Damage",value:formula});
@@ -29,8 +30,13 @@ function appendDamageSummary(props, damage, versatile = false) {
 
 function isDefaultDamage(damage) {
     if (!damage) return false;
-    const empty = {number:null,denomination:null,bonus:"",types:[],custom:{enabled:false,formula:""},scaling:{mode:"",number:1,formula:""}};
-    return JSON.stringify(damageDataToYaml(damage)) === JSON.stringify(damageDataToYaml(empty));
+    const empty = {number:null,denomination:null,bonus:"",types:[],modifiers:[],custom:{enabled:false,formula:""},scaling:{mode:"",number:1,formula:""}};
+    // dnd5e 6 omits optional blank formula fields from stored damage sources.
+    // Fill only absent defaults; authored null, zero and non-empty values stay visible.
+    const defined = object => Object.fromEntries(Object.entries(object ?? {}).filter(([, value]) => value !== undefined));
+    const normalized = { ...damage, bonus: damage.bonus === undefined ? "" : damage.bonus,
+        custom: { ...empty.custom, ...defined(damage.custom) }, scaling: { ...empty.scaling, ...defined(damage.scaling) } };
+    return JSON.stringify(damageDataToYaml(normalized)) === JSON.stringify(damageDataToYaml(empty));
 }
 
 const WEAPON_TYPES = {
@@ -56,11 +62,6 @@ const TOOL_TYPES = {
 const LOOT_TYPES = {
     art: "Art Object", gear: "Adventuring Gear", gem: "Gemstone",
     treasure: "Treasure", material: "Material", resource: "Resource", junk: "Junk"
-};
-
-const RARITY_NAMES = {
-    common: "Common", uncommon: "Uncommon", rare: "Rare",
-    veryRare: "Very Rare", legendary: "Legendary", artifact: "Artifact"
 };
 
 const TYPE_NAMES = {
@@ -134,7 +135,7 @@ export function extractExpectedItemProps(parseResult) {
     // Header
     props.push({ section: "Header", label: "Name", value: item.name || "" });
     props.push({ section: "Header", label: "Type", value: TYPE_NAMES[item.type] || item.type || "" });
-    props.push({ section: "Header", label: "Rarity", value: RARITY_NAMES[item.rarity] || item.rarity || "Common" });
+    if (item.type !== "spell") props.push({ section: "Header", label: "Rarities", value: formatItemRarities(item) });
 
     if (item.isMagical) props.push({ section: "Header", label: "Magical", value: "Yes" });
     if (item.attunement && item.attunement !== "none" && item.attunement !== "") {
@@ -334,7 +335,7 @@ export function extractActualItemProps(foundryItem, parseResult = null) {
     // Header
     props.push({ section: "Header", label: "Name", value: foundryItem.name || "" });
     props.push({ section: "Header", label: "Type", value: TYPE_NAMES[foundryItem.type] || foundryItem.type || "" });
-    props.push({ section: "Header", label: "Rarity", value: RARITY_NAMES[sys.rarity] || sys.rarity || "Common" });
+    if (foundryItem.type !== "spell") props.push({ section: "Header", label: "Rarities", value: formatItemRarities(foundryItem) });
 
     const hasMagic = sys.properties instanceof Set ? sys.properties.has("mgc") : sys.properties?.includes?.("mgc");
     if (hasMagic) props.push({ section: "Header", label: "Magical", value: "Yes" });
@@ -409,7 +410,10 @@ export function extractActualItemProps(foundryItem, parseResult = null) {
 
     let explicit = itemExplicitRows(foundryItem);
     const expected = parseResult?.item;
-    if (expected && explicitItemSource(expected).system?.damage?.versatile === undefined
+    // Native creation can add defaults to the builder's working data. Preserve
+    // the original explicit input as the authority for whether this was authored.
+    const expectedSource = expected?.explicitSource ?? (expected ? explicitItemSource(expected) : null);
+    if (expected && expectedSource?.system?.damage?.versatile === undefined
         && !expected.versatileDamage?.formula && isDefaultDamage(sys.damage?.versatile)) {
         // Ignore only the complete untouched native default. Authored empty
         // damage, inactive formulas, and non-default zero values remain visible.

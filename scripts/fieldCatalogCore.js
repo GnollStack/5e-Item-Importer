@@ -201,6 +201,8 @@ export function addCatalogModel(acc, spec) {
     });
     const prefix = spec.prefix ? spec.prefix.split(".") : [];
     const visit = (field, relative, variant = spec.variant ?? "", ancestry = new Set(), state = {}) => {
+        const persisted = state.persisted !== false && field.persisted !== false;
+        state = { ...state, persisted };
         const fullSegments = [...prefix, ...relative];
         const path = pathText(fullSegments);
         const id = fieldCatalogId(spec.kind, spec.type, path, variant);
@@ -209,8 +211,8 @@ export function addCatalogModel(acc, spec) {
         const record = {
             id, kind: spec.kind, type: spec.type, path, variant,
             fieldClass: field.constructor?.name ?? "unknown",
-            classification: field.persisted === false ? "non-persisted" : "stored",
-            storage: { persisted: field.persisted !== false, required: Boolean(field.required),
+            classification: persisted ? "stored" : "non-persisted",
+            storage: { persisted, required: Boolean(field.required),
                 nullable: Boolean(field.nullable), readonly: Boolean(field.readonly ?? field.options?.readOnly),
                 gmOnly: Boolean(field.gmOnly) },
             constraints: describeConstraints(field), default: describeDefault(field),

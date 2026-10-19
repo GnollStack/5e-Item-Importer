@@ -1,5 +1,7 @@
 import jsyaml from "./vendor/js-yaml.mjs";
+import { itemRarities } from "./itemRarities.js";
 import { exportExplicitItemFields } from "./itemExplicitFields.js";
+import { exportAutomation } from "./automationFields.js";
 import {
   ITEM_YAML_SCHEMA_KEY,
   ITEM_YAML_SCHEMA_VERSION
@@ -275,7 +277,7 @@ function buildWeapon(item) {
   const properties = propertySet(item);
   const itemSection = {
     Name: String(item?.name ?? "Unnamed Item"),
-    Rarity: item?.rarity ?? getPath(item, "system.rarity") ?? "common",
+    Rarities: itemRarities(item),
     "Weapon Type": read(item, "weaponType", "system.type.value") ?? "improv",
     "Base Weapon": na(read(item, "baseWeapon", "system.type.baseItem"))
   };
@@ -331,7 +333,7 @@ function buildEquipment(item) {
   const equipmentType = read(item, "armorType", "system.type.value") ?? "wondrous";
   const data = commonSections(item, {
     Name: String(item?.name ?? "Unnamed Item"),
-    Rarity: item?.rarity ?? getPath(item, "system.rarity") ?? "common",
+    Rarities: itemRarities(item),
     "Equipment Type": equipmentType,
     "Base Equipment": na(read(item, "baseEquipment", "system.type.baseItem"))
   }, "equipment");
@@ -374,7 +376,7 @@ function buildConsumable(item) {
   const consumableType = read(item, "consumableType", "system.type.value") ?? "trinket";
   const data = commonSections(item, {
     Name: String(item?.name ?? "Unnamed Item"),
-    Rarity: item?.rarity ?? getPath(item, "system.rarity") ?? "common",
+    Rarities: itemRarities(item),
     "Consumable Type": consumableType
   }, "consumable");
   data.PROPERTIES = { Magical: magical(item, properties) };
@@ -413,7 +415,7 @@ function buildTool(item) {
   const properties = propertySet(item);
   const data = commonSections(item, {
     Name: String(item?.name ?? "Unnamed Item"),
-    Rarity: item?.rarity ?? getPath(item, "system.rarity") ?? "common",
+    Rarities: itemRarities(item),
     "Tool Type": read(item, "toolType", "system.type.value") ?? "",
     "Base Tool": read(item, "baseToolItem", "system.type.baseItem") ?? "thief"
   }, "tool");
@@ -441,7 +443,7 @@ function buildLoot(item) {
   const properties = propertySet(item);
   const data = commonSections(item, {
     Name: String(item?.name ?? "Unnamed Item"),
-    Rarity: item?.rarity ?? getPath(item, "system.rarity") ?? "common",
+    Rarities: itemRarities(item),
     "Loot Type": read(item, "lootType", "system.type.value") ?? "gear"
   }, "loot");
   data.PROPERTIES = { Magical: magical(item, properties) };
@@ -452,7 +454,7 @@ function buildContainer(item) {
   const properties = propertySet(item);
   const data = commonSections(item, {
     Name: String(item?.name ?? "Unnamed Item"),
-    Rarity: item?.rarity ?? getPath(item, "system.rarity") ?? "common"
+    Rarities: itemRarities(item)
   }, "container");
   data.PROPERTIES = {
     Magical: magical(item, properties),
@@ -577,7 +579,7 @@ function strictActivityPayload(value) {
     }
   }
   if (!isObject(source)) return null;
-  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2].includes(source.schemaVersion)) return null;
+  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2, 3, 4].includes(source.schemaVersion)) return null;
   const candidates = [
     source,
     source.strictYaml,
@@ -631,9 +633,9 @@ function serializeLiveActivity(activity, item, options) {
     };
   }
   const source = plainClone(
-    typeof activity?.toObject === "function" ? activity.toObject() : activity
+    activity?._source ?? (typeof activity?.toObject === "function" ? activity.toObject() : activity)
   );
-  const linkedEffects = asCollection(activity?.effects)
+  const linkedEffects = asCollection(source.effects)
     .map((reference) => {
       const id = isObject(reference) ? firstDefined(reference._id, reference.id) : reference;
       return asCollection(item?.effects).find((effect) =>
@@ -652,7 +654,8 @@ function serializeLiveActivity(activity, item, options) {
       itemType: item?.type ?? null,
       activityType: activity?.type ?? source?.type ?? null,
       includeLinkedEffects: options.includeEffects !== false,
-      linkedEffects
+      linkedEffects,
+      effectReferenceIds: options.effectReferenceIds ?? []
     });
     if (serialized && typeof serialized.then === "function") {
       return {
@@ -708,7 +711,7 @@ function strictEffectPayload(value) {
     }
   }
   if (!isObject(source)) return null;
-  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2].includes(source.schemaVersion)) return null;
+  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2, 3, 4].includes(source.schemaVersion)) return null;
   const candidates = [
     source,
     source.strictYaml,
@@ -786,7 +789,7 @@ function localizedEffectExportError(effect, reason) {
 function sharedActivityEffectExportError(effectId, firstActivity, secondActivity) {
   const firstName = String(firstActivity?.name ?? firstActivity?.type ?? "Unnamed Activity");
   const secondName = String(secondActivity?.name ?? secondActivity?.type ?? "Unnamed Activity");
-  const fallback = `Cannot export Activities "${firstName}" and "${secondName}" as strict YAML because both reference Active Effect "${effectId}". The strict format cannot preserve a shared effect without duplicating it, so export stopped to prevent data loss.`;
+  const fallback = `Cannot export Activities "${firstName}" and "${secondName}" because the available serializer embedded shared Active Effect "${effectId}" more than once. Use a compatible schema 4 Activity Importer that supports shared effect references. Export stopped to prevent data loss.`;
   let message = fallback;
   try {
     if (typeof globalThis.game?.i18n?.format === "function") {
@@ -910,14 +913,31 @@ function addAttachments(data, item, options) {
       activities.push(raw);
     }
   }
-  for (const activity of includeActivities ? asCollection(item?.system?.activities) : []) {
+  const collection = item?.system?.activities;
+  const storedActivities = item?._source?.system?.activities
+    ?? (isObject(collection) && !Array.isArray(collection) && typeof collection.values !== "function" ? collection : null);
+  const currentActivities = asCollection(collection);
+  const sourceActivities = storedActivities && !Array.isArray(storedActivities)
+    ? Object.entries(storedActivities).map(([id, source]) => currentActivities.find(activity => String(activity?.id ?? activity?._id) === id) ?? source)
+    : currentActivities;
+  const effectReferenceCounts = new Map();
+  const availableEffectIds = new Set(asCollection(item?.effects).map(effect=>String(effect?._id ?? effect?.id ?? "")));
+  for (const activity of includeActivities && includeEffects ? sourceActivities : []) {
+    const source = activity?._source ?? (typeof activity?.toObject === "function" ? activity.toObject() : activity);
+    for (const profile of asCollection(source?.effects)) {
+      const id = isObject(profile) ? firstDefined(profile._id, profile.id) : profile;
+      if (id && !profile?.uuid && availableEffectIds.has(String(id))) effectReferenceCounts.set(String(id),(effectReferenceCounts.get(String(id)) ?? 0)+1);
+    }
+  }
+  const sharedEffectIds = [...effectReferenceCounts].filter(([,count])=>count>1).map(([id])=>id);
+  for (const activity of includeActivities ? sourceActivities : []) {
     const stored = activity?.rawData
       ?? activity?.flags?.[MODULE_ID]?.strictYaml
       ?? activity?.flags?.[MODULE_ID]?.rawData;
     let raw = null;
     let serializedEffectIds = [];
     if (hasActivitySerializer(options)) {
-      const serialized = serializeLiveActivity(activity, item, { ...options, includeEffects });
+      const serialized = serializeLiveActivity(activity, item, { ...options, includeEffects, effectReferenceIds:sharedEffectIds });
       raw = serialized.payload;
       if (!raw) throw localizedActivityExportError(activity, serialized.reason);
       serializedEffectIds = serialized.serializedEffectIds ?? [];
@@ -999,6 +1019,8 @@ export function itemToStrictYamlDocument(item, options = {}) {
   const data = builders[type](item._source ?? item);
   exportExplicitItemFields(data, item);
   addCustomProperties(data, item, options);
+  const automation = exportAutomation(item.automationSource ?? item, "item", type);
+  if (Object.keys(automation).length) data.AUTOMATION = automation;
   addAttachments(data, item, options);
   return {
     [ITEM_YAML_SCHEMA_KEY]: ITEM_YAML_SCHEMA_VERSION,

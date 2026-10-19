@@ -1,4 +1,4 @@
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 WEAPON:
   SOURCE:
     Custom: Homebrew - MIDI catalog test item
@@ -6,7 +6,7 @@ WEAPON:
   ITEM:
     Name: Tempest's Oath
     Identifier: tempests-oath
-    Rarity: veryRare
+    Rarities: [veryRare]
     Weapon Type: martialM
     Base Weapon: longsword
   INVENTORY:
@@ -37,6 +37,7 @@ WEAPON:
       Bonus: ""
       Damage Types:
         - slashing
+      Modifiers: []
       Custom Enabled: false
       Custom Formula: ""
       Scaling Mode: none
@@ -49,6 +50,7 @@ WEAPON:
       Bonus: ""
       Damage Types:
         - slashing
+      Modifiers: []
       Custom Enabled: false
       Custom Formula: ""
       Scaling Mode: none
@@ -147,6 +149,7 @@ WEAPON:
                 Bonus: ""
                 Damage Types:
                   - lightning
+                Modifiers: []
                 Custom Enabled: false
                 Custom Formula: ""
                 Scaling Mode: none
@@ -207,6 +210,7 @@ WEAPON:
                 Bonus: ""
                 Damage Types:
                   - lightning
+                Modifiers: []
                 Custom Enabled: false
                 Custom Formula: ""
                 Scaling Mode: none
@@ -218,6 +222,7 @@ WEAPON:
                 Bonus: ""
                 Damage Types:
                   - thunder
+                Modifiers: []
                 Custom Enabled: false
                 Custom Formula: ""
                 Scaling Mode: none
@@ -348,6 +353,7 @@ WEAPON:
                 Bonus: ""
                 Damage Types:
                   - lightning
+                Modifiers: []
                 Custom Enabled: false
                 Custom Formula: ""
                 Scaling Mode: none
@@ -405,6 +411,7 @@ WEAPON:
             Bonus: "4"
             Damage Types:
               - temphp
+            Modifiers: []
             Custom Enabled: false
             Custom Formula: ""
             Scaling Mode: none

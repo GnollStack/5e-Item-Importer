@@ -1,8 +1,8 @@
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 WEAPON:
   ITEM:
     Name: Longsword +1
-    Rarity: uncommon
+    Rarities: [uncommon]
     Weapon Type: martialM
     Base Weapon: longsword
   INVENTORY:
@@ -28,6 +28,7 @@ WEAPON:
       Bonus: ""
       Damage Types:
         - slashing
+      Modifiers: []
       Custom Enabled: false
       Custom Formula: ""
       Scaling Mode: none
@@ -40,6 +41,7 @@ WEAPON:
       Bonus: ""
       Damage Types:
         - slashing
+      Modifiers: []
       Custom Enabled: false
       Custom Formula: ""
       Scaling Mode: none

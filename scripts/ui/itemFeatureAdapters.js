@@ -6,6 +6,7 @@
  */
 
 import { ItemUtils } from "../itemUtils.js";
+import { getActivitySchemaCompatibility } from "../activityCompanionCapabilities.js";
 
 let itemCorePromise = null;
 
@@ -92,7 +93,7 @@ export async function buildParseInsights({ text, result, trace = null, parser = 
             return await Promise.resolve(core.buildItemParseInsights({
                 text,
                 result,
-                trace: trace ?? result?.trace ?? null,
+                trace: trace ?? result?.trace ?? {},
                 parser
             }));
         } catch (error) {
@@ -211,13 +212,15 @@ export function getActivityApi() {
 
 export function getActivityCapabilities() {
     const api = getActivityApi();
-    const activitySerialization = typeof api?.serializeActivity === "function";
-    const effectSerialization = typeof api?.serializeEffect === "function";
+    const compatibility = getActivitySchemaCompatibility(api);
+    const activitySerialization = compatibility.compatible && typeof api?.serializeActivity === "function";
+    const effectSerialization = compatibility.compatible && typeof api?.serializeEffect === "function";
     return {
         available: !!api,
+        ...compatibility,
         schemaVersion: api?.schemaVersion ?? 1,
         capabilities: api?.capabilities ?? {},
-        builder: typeof api?.openBuilder === "function",
+        builder: compatibility.compatible && typeof api?.openBuilder === "function",
         serialization: activitySerialization,
         activitySerialization,
         effectSerialization,
@@ -234,6 +237,8 @@ export async function openActivityBuilder(options = {}) {
     if (typeof api?.openBuilder !== "function") {
         throw new Error("The active 5e Activity Importer does not expose its builder API.");
     }
+    const compatibility = getActivitySchemaCompatibility(api);
+    if (!compatibility.compatible) throw new Error(compatibility.reason);
     return api.openBuilder(options);
 }
 
@@ -257,5 +262,7 @@ export async function parseActivities(text, options = {}) {
     if (typeof parseAll !== "function") {
         throw new Error("The active 5e Activity Importer does not expose a compatible parseAll API.");
     }
+    const compatibility = getActivitySchemaCompatibility(api);
+    if (!compatibility.compatible) throw new Error(compatibility.reason);
     return Promise.resolve(parseAll.call(api, text, options));
 }

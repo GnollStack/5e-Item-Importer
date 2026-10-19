@@ -1,4 +1,5 @@
 import { itemExplicitRows } from "../itemExplicitFields.js";
+import { formatItemRarities } from "../itemRarities.js";
 /**
  * 5e Item Importer - Window Renderer
  * Handles all HTML generation for the item window
@@ -402,11 +403,22 @@ function renderSuggestedAutomation(item, itemIndex = "") {
     </div>`;
 }
 
+export function collectReviewMessages(result) {
+    const messages = [...(result.errors || []), ...(result.warnings || []), ...(result._workflow?.insights?.suggestions || [])];
+    const seen = new Set();
+    return messages.map(entry => String(entry?.message ?? entry).trim()).filter(message => {
+        const key = message.replace(/\s+/g, " ").toLocaleLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
 function renderWorkflowInsights(result) {
     const workflow = result?._workflow;
     if (!workflow) return "";
     const insights = workflow.insights || {};
-    const suggestions = Array.isArray(insights.suggestions) ? insights.suggestions : [];
+
     const confidence = Number(insights.confidence?.overall);
     const provenance = Array.isArray(insights.provenance) ? insights.provenance : [];
     const iconCandidates = Array.isArray(workflow.iconCandidates) ? workflow.iconCandidates : [];
@@ -416,7 +428,7 @@ function renderWorkflowInsights(result) {
     const customCount = (Array.isArray(custom?.registered) ? custom.registered.length : 0)
         + Object.keys(custom?.metadata || custom?.values || {}).length;
 
-    return `<div class="ii-section ii-insights-section">
+    return `<div class="ii-section ii-insights-section" data-default-collapsed>
       <div class="ii-section-header">
         <i class="fas fa-magnifying-glass-chart ii-section-icon" aria-hidden="true"></i>
         <span class="ii-section-title">${esc(localize("II.Insights.Title", "Local Parse Insights"))}</span>
@@ -428,9 +440,6 @@ function renderWorkflowInsights(result) {
           ${insights.parser ? `<span><strong>${esc(localize("II.Insights.Parser", "Parser"))}:</strong> ${esc(insights.parser)}</span>` : ""}
           ${provenance.length ? `<span><strong>${esc(localize("II.Insights.Fields", "Traced fields"))}:</strong> ${provenance.length}</span>` : ""}
         </div>
-        ${suggestions.length ? `<ul class="ii-insight-suggestions">${suggestions.slice(0, 12).map(suggestion =>
-            `<li class="severity-${esc(suggestion.severity || "info")}">${esc(suggestion.message || suggestion)}</li>`
-        ).join("")}</ul>` : `<p class="hint">${esc(localize("II.Insights.NoSuggestions", "No local review suggestions."))}</p>`}
         ${selectedIcon ? `<p class="ii-insight-choice"><strong>${esc(localize("II.Preview.IconCandidates", "Compendium Image Candidates"))}:</strong>
           ${esc(selectedIcon.name)} (${Math.round(Number(selectedIcon.score || 0) * 100)}%, ${iconCandidates.length} shown)</p>` : ""}
         ${animation ? `<p class="ii-insight-choice"><strong>${esc(localize("II.Preview.Animation", "AutoAnimations Preview"))}:</strong> ${esc(animation.label || animation.id)}</p>` : ""}
@@ -459,7 +468,7 @@ export function renderItemCard(item, result) {
     html += `<div class="ii-card-subtitle">`;
     html += `<span class="ii-card-type-badge type-${esc(item.type)}"><i class="fas ${esc(typeIcon)}"></i> ${esc(formatType(item.type))}</span>`;
     if (item.type !== "spell") {
-        html += `<span class="ii-card-rarity rarity-${esc(item.rarity)}">${esc(formatRarity(item.rarity))}</span>`;
+        html += `<span class="ii-card-rarity rarity-${esc(item.rarity)}">${esc(formatItemRarities(item))}</span>`;
     }
 
     if (item.isMagical) {
@@ -574,12 +583,12 @@ export function renderItemCard(item, result) {
     }
 
     // Issues Section
-    const allIssues = [...(result.errors || []), ...(result.warnings || [])];
+    const allIssues = collectReviewMessages(result);
     if (allIssues.length > 0) {
         html += `<div class="ii-section ii-section-issues">
       <div class="ii-section-header">
         <i class="fas fa-exclamation-triangle ii-section-icon"></i>
-        <span class="ii-section-title">Warnings (${allIssues.length})</span>
+        <span class="ii-section-title">Review (${allIssues.length})</span>
         <i class="fas fa-chevron-down ii-section-toggle"></i>
       </div>
       <div class="ii-section-content">
@@ -674,7 +683,7 @@ export function renderBatchSummary(results, selectedItems) {
         </div>
         <div class="ii-batch-item-info">
           <div class="ii-batch-item-name">${esc(res.item.name)}</div>
-          <div class="ii-batch-item-type">${esc(formatType(res.item.type))}${res.item.type === "spell" ? "" : ` &bull; ${esc(formatRarity(res.item.rarity))}`}</div>
+          <div class="ii-batch-item-type">${esc(formatType(res.item.type))}${res.item.type === "spell" ? "" : ` &bull; ${esc(formatItemRarities(res.item))}`}</div>
           ${hasUnresolvedUuids ? '<div class="ii-parse-warning">Resolve inline activity UUIDs to select this item.</div>' : ""}
           <label class="ii-entry-mode-label">
             ${esc(localize("II.Batch.DuplicatePolicy", "Duplicate policy"))}
@@ -686,6 +695,7 @@ export function renderBatchSummary(results, selectedItems) {
               <option value="skip"${duplicateMode === "skip" ? " selected" : ""}>${esc(localize("II.Duplicates.Skip", "Skip duplicate"))}</option>
             </select>
           </label>
+          ${collectReviewMessages(res).length ? `<ul class="ii-issues-list ii-section-issues">${collectReviewMessages(res).map(message => `<li>${esc(message)}</li>`).join("")}</ul>` : ""}
           ${renderSuggestedAutomation(res.item, index)}
         </div>
       </div>`;

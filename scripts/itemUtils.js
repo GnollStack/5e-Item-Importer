@@ -160,10 +160,10 @@ export class ItemUtils {
     static async getIconFiles(path) {
         try {
             // Try data path first (most common)
-            let response = await FilePicker.browse("data", path);
+            let response = await foundry.applications.apps.FilePicker.implementation.browse("data", path);
             if (!response.files || response.files.length === 0) {
                 // Try public path
-                response = await FilePicker.browse("public", path);
+                response = await foundry.applications.apps.FilePicker.implementation.browse("public", path);
             }
 
             const files = response.files || [];
@@ -302,7 +302,7 @@ export class ItemUtils {
 
         for (const base of basePaths) {
             try {
-                const response = await FilePicker.browse("data", base);
+                const response = await foundry.applications.apps.FilePicker.implementation.browse("data", base);
                 console.log(`📁 ${base}:`);
                 console.log("  Dirs:", response.dirs);
                 console.log("  Files:", response.files?.length || 0);

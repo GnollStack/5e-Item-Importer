@@ -1,5 +1,7 @@
 # Natural-language Item authoring
 
+Paste the description into **Item source** and click **Preview**. To inspect the resulting strict YAML beside your prose, enable **View options > Show generated YAML editor**. It includes parsed values and defaults. Secondary edits take effect only after **Use and preview**; copy/download actions export the current parsed preview. See the [import-window guide](../docs/import-window.md) for the full workflow and optional History.
+
 **Note:** This parser is flexible, but following the **Standard D&D 5e Statblock Format** yields the highest accuracy.
 
 ```text

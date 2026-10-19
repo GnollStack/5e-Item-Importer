@@ -16,6 +16,8 @@ import {
     stripItemCodeFences
 } from "../parserRouting.js";
 import { ITEM_TEMPLATES } from "./itemTemplates.js";
+import { getItemRecipes } from "./itemRecipes.js";
+import { prepareRecipeText } from "./recipeEditor.js";
 import * as Renderer from "./itemWindowRenderer.js";
 import { extractExpectedItemProps, extractActualItemProps } from "./itemComparisonExtractor.js";
 import { compareProperties } from "./itemComparisonEngine.js";
@@ -41,7 +43,6 @@ import {
     exportFullItemYaml,
     exportItemYaml,
     getActivityCapabilities,
-    getNormalizedItemText,
     openActivityBuilder,
     resolveActivityReferences
 } from "./itemFeatureAdapters.js";
@@ -108,6 +109,10 @@ function beginParse(window, importBtn) {
     window.parseStateTimeout = null;
     window.parseGeneration = (window.parseGeneration ?? 0) + 1;
     window.currentParseResult = null;
+    window.normalizedText = "";
+    window.normalizedError = "";
+    const editor = window.element.querySelector("#ii-normalized-input");
+    if (editor) editor.value = "";
     window.selectedBatchItems = new Set();
     importBtn.disabled = true;
     importBtn.classList.remove("has-selection");
@@ -134,7 +139,6 @@ function markSynthesizedActivities(result) {
 }
 
 async function decorateWorkflowPreview(window, text, result, {
-    updateEditor = true,
     includeIconCandidates = true
 } = {}) {
     if (!result?.item) return result;
@@ -148,23 +152,23 @@ async function decorateWorkflowPreview(window, text, result, {
         includeIconCandidates: includeIconCandidates
             && !!window.element.querySelector("#ii-setting-match-icons")?.checked
     });
-    result._workflow.normalizedText = getNormalizedItemText(text, result);
-    if (result.item.pendingActivities?.length) {
-        try {
-            result._workflow.normalizedText = await exportItemYaml(result.item, {
-                includeActivities: true,
-                includeEffects: true
-            });
-        } catch (error) {
-            ItemUtils.warn(`Could not include attachments in normalized YAML: ${error?.message || error}`);
-        }
-    }
-    if (updateEditor) {
-        window.normalizedText = result._workflow.normalizedText;
-        const editor = window.element.querySelector("#ii-normalized-input");
-        if (editor) editor.value = window.normalizedText;
+    try {
+        result._workflow.normalizedText = await exportItemYaml(result.item, {
+            includeActivities: true, includeEffects: true
+        });
+    } catch (error) {
+        result._workflow.normalizedText = "";
+        result._workflow.normalizedError = `Generated YAML unavailable: ${error?.message || error}`;
+        ItemUtils.warn(result._workflow.normalizedError);
     }
     return result;
+}
+
+function commitGeneratedYaml(window, results) {
+    window.normalizedError = results.map(result => result._workflow?.normalizedError).filter(Boolean).join(" ");
+    window.normalizedText = window.normalizedError ? "" : results.map(result => result._workflow?.normalizedText || "").join("\n---\n");
+    const editor = window.element.querySelector("#ii-normalized-input");
+    if (editor) editor.value = window.normalizedText;
 }
 
 /** Cached reference to the Activity Importer's public UUID helper API. */
@@ -305,6 +309,8 @@ function setupItemUuidDropZones(helper) {
  * @param {Object} helper - The UUID helper module
  */
 async function syncParsedAttachmentsAndNormalized(window) {
+    const parseResult = window.currentParseResult;
+    const generation = window.parseGeneration;
     const entries = window.currentParseResult?.successes
         ?? (window.currentParseResult?.item ? [window.currentParseResult] : []);
     const normalized = [];
@@ -321,15 +327,25 @@ async function syncParsedAttachmentsAndNormalized(window) {
         if (entry?._workflow) entry._workflow.normalizedText = yaml;
         normalized.push(yaml);
     }
+    if (window.currentParseResult !== parseResult || window.parseGeneration !== generation) return false;
+    window.normalizedError = "";
     window.normalizedText = normalized.join("\n---\n");
     const editor = window.element.querySelector("#ii-normalized-input");
     if (editor) editor.value = window.normalizedText;
+    return true;
 }
 
 async function reRenderItemActivities(helper) {
+    const parseResult = this.currentParseResult;
+    const generation = this.parseGeneration;
     try {
-        await syncParsedAttachmentsAndNormalized(this);
+        if (!await syncParsedAttachmentsAndNormalized(this)) return;
     } catch (error) {
+        if (this.currentParseResult !== parseResult || this.parseGeneration !== generation) return;
+        this.normalizedText = "";
+        this.normalizedError = `Generated YAML unavailable: ${error?.message || error}`;
+        const editor = this.element.querySelector("#ii-normalized-input");
+        if (editor) editor.value = "";
         ItemUtils.warn(`Could not synchronize resolved attachment YAML: ${error?.message || error}`);
     }
     // Trigger a full re-render of the parse preview
@@ -417,6 +433,7 @@ export async function parse() {
         await decorateWorkflowPreview(this, text, result);
         if (!isCurrentParse(this, input, text, generation)) return;
         this.currentParseResult = result;
+        commitGeneratedYaml(this, [result]);
 
         // Generate card-based preview
         const item = result.item;
@@ -508,12 +525,10 @@ export async function handleBatchParse(text, generation = this.parseGeneration) 
 
     if (!isCurrentParse(this, input, text, generation)) return;
     for (const result of results.successes) {
-        await decorateWorkflowPreview(this, result._batchSourceText, result, { updateEditor: false, includeIconCandidates: false });
+        await decorateWorkflowPreview(this, result._batchSourceText, result, { includeIconCandidates: false });
         if (!isCurrentParse(this, input, text, generation)) return;
     }
-    this.normalizedText = results.successes.map(result => result._workflow?.normalizedText).filter(Boolean).join("\n---\n");
-    const normalizedEditor = this.element.querySelector("#ii-normalized-input");
-    if (normalizedEditor) normalizedEditor.value = this.normalizedText;
+    commitGeneratedYaml(this, results.successes);
 
     // Store results and initialize selection
     this.currentParseResult = results;
@@ -585,12 +600,10 @@ async function handleYamlBatchParse(text, generation = this.parseGeneration) {
 
     if (!isCurrentParse(this, input, text, generation)) return;
     for (const result of results.successes) {
-        await decorateWorkflowPreview(this, result._batchSourceText || text, result, { updateEditor: false, includeIconCandidates: false });
+        await decorateWorkflowPreview(this, result._batchSourceText || text, result, { includeIconCandidates: false });
         if (!isCurrentParse(this, input, text, generation)) return;
     }
-    this.normalizedText = results.successes.map(result => result._workflow?.normalizedText).filter(Boolean).join("\n---\n");
-    const normalizedEditor = this.element.querySelector("#ii-normalized-input");
-    if (normalizedEditor) normalizedEditor.value = this.normalizedText;
+    commitGeneratedYaml(this, results.successes);
 
     // Store results and initialize selection
     this.currentParseResult = results;
@@ -922,17 +935,19 @@ export function reset() {
  * @param {Event} event - Click event
  * @param {Object} data - Contains templateId
  */
-export function insertTemplate(event, targetOrOptions = {}) {
+export async function insertTemplate(event, targetOrOptions = {}) {
     const { templateId } = targetOrOptions?.dataset ?? targetOrOptions;
-    this.droppedItemUuid = null;
-    const template = ITEM_TEMPLATES.find(t => t.id === templateId);
+    const template = ITEM_TEMPLATES.find(t => t.id === templateId) || getItemRecipes().find(t => t.id === templateId);
 
     if (!template) return;
 
     const input = this.element.querySelector("#ii-input");
     if (input) {
+        const prepared = await prepareRecipeText(template, input.value);
+        if (prepared === null) return false;
+        this.droppedItemUuid = null;
         const createIdentified = game.settings.get(MODULE_NAME, "createIdentified");
-        const templateText = template.text.replace(
+        const templateText = prepared.replace(
             /(^\s*Identified:\s*)(true|false)/im,
             `$1${createIdentified}`
         );
@@ -952,6 +967,7 @@ export function insertTemplate(event, targetOrOptions = {}) {
     }
 
     ItemUtils.log("Template inserted:", templateId);
+    return !!input;
 }
 
 /**
@@ -1033,16 +1049,19 @@ function refreshSavedPresetOptions(window) {
     if (window.activePresetId) select.value = `saved:${window.activePresetId}`;
 }
 
-export function insertSavedPreset(presetId) {
-    this.droppedItemUuid = null;
+export async function insertSavedPreset(presetId) {
     const preset = listSavedPresets().find(candidate => candidate.id === presetId);
     if (!preset) return;
     const input = this.element.querySelector("#ii-input");
     if (!input) return;
-    input.value = preset.text;
+    const text = await prepareRecipeText({ text: preset.text }, input.value);
+    if (text === null) return false;
+    this.droppedItemUuid = null;
+    input.value = text;
     this.activePresetId = preset.id;
     this._invalidateParseResult();
-    parse.call(this);
+    await parse.call(this);
+    return true;
 }
 
 export async function saveCurrentPreset() {
@@ -1082,10 +1101,9 @@ export async function deleteCurrentPreset() {
 }
 
 export async function copyNormalized() {
-    const editor = this.element.querySelector("#ii-normalized-input");
     try {
-        if (!editor?.value.trim()) throw new Error("Parse an Item before copying normalized YAML.");
-        await copyText(editor.value);
+        if (!this.normalizedText?.trim()) throw new Error(this.normalizedError || "Preview an Item before copying generated YAML.");
+        await copyText(this.normalizedText);
         ui.notifications.info(localize("II.Notifications.Copied", "Copied normalized YAML."));
     } catch (error) {
         ui.notifications.error(error?.message || String(error));
@@ -1093,15 +1111,14 @@ export async function copyNormalized() {
 }
 
 export function downloadNormalized() {
-    const editor = this.element.querySelector("#ii-normalized-input");
-    if (!editor?.value.trim()) {
-        ui.notifications.warn("Parse an Item before downloading normalized YAML.");
+    if (!this.normalizedText?.trim()) {
+        ui.notifications.warn(this.normalizedError || "Preview an Item before downloading generated YAML.");
         return;
     }
     const name = this.currentParseResult?.item?.name
         ?? this.currentParseResult?.successes?.[0]?.item?.name
         ?? "5e-items";
-    downloadText(editor.value, `${name}.yaml`);
+    downloadText(this.normalizedText, `${name}.yaml`);
 }
 
 export async function reparseNormalized() {
@@ -1163,8 +1180,8 @@ export async function undoLastImport(_event, targetOrOptions) {
     } catch (error) {
         ui.notifications.error(error?.message || String(error));
     } finally {
-        if (undoButton?.isConnected !== false) undoButton.disabled = false;
-        if (importButton?.isConnected !== false) importButton.disabled = importWasDisabled;
+        if (undoButton && undoButton.isConnected !== false) undoButton.disabled = !getLastUndoableSession();
+        if (importButton && importButton.isConnected !== false) importButton.disabled = importWasDisabled;
     }
 }
 
@@ -1229,10 +1246,8 @@ export async function openInlineActivityBuilder() {
                     return;
                 }
                 const input = this.element.querySelector("#ii-input");
-                const normalizedEditor = this.element.querySelector("#ii-normalized-input");
-                const base = normalizedEditor?.value?.trim()
-                    ? normalizedEditor.value
-                    : this.normalizedText || input?.value || "";
+                const base = this.normalizedText;
+                if (!base) throw new Error(this.normalizedError || "Preview the Item before adding activities.");
                 input.value = addCapturedAttachmentsToYaml(base, payload);
                 this._invalidateParseResult();
                 await parse.call(this);
@@ -1474,7 +1489,7 @@ export async function handleInputDrop(event) {
 
         let dragData = null;
         try {
-            dragData = TextEditor.getDragEventData(event);
+            dragData = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
         } catch {
             dragData = null;
         }

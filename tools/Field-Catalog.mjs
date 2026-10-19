@@ -30,6 +30,8 @@ async function main(argv) {
     if (argv.length !== 2) throw new Error("--check-parity requires exactly one companion repository.");
     const localRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
     const names = ["tools/Field-Catalog.mjs", "tools/field-catalog-reports.mjs", "tools/field-catalog-reports.test.mjs",
+      "scripts/explicitYamlFields.js", "scripts/activityEffectLinks.js",
+      "scripts/automationFields.js", "scripts/automationReferences.js", "scripts/ui/recipeEditor.js", "tests/unit/automationTests.js",
       "scripts/fieldCatalogCore.js", "scripts/fieldCatalogService.js", "scripts/diagnostics/fieldCatalogChecks.js",
       "scripts/fieldCatalogMidi.js", "scripts/fieldCatalogMidiRules.js", "tools/Test-MidiFieldCatalog.mjs", "tests/unit/midiFieldCatalogTests.js",
       "tools/template-completeness.mjs", "tools/template-completeness.test.mjs", "tools/Test-TemplateCompleteness.mjs",

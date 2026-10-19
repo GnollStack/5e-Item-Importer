@@ -1,6 +1,6 @@
 # MIDI-QOL field discovery and YAML coverage
 
-The existing read-only catalog actions accept an optional layer selector. The default remains native Foundry/D&D5e discovery. Catalog format version 1, YAML versions, diagnostic gates and the MCP transport are unchanged.
+The existing read-only catalog actions accept an optional layer selector. The default remains native Foundry/D&D5e discovery. Catalog format version 1, diagnostic gates and the MCP transport are unchanged. Schema 4 automation storage is a separate contract, documented in [the automation reference](automation-schema-4.md); discovery alone does not extend YAML support.
 
 | Selection | Contents |
 | --- | --- |
@@ -38,7 +38,7 @@ The query searches paths, IDs, variants, configurationTarget and canonical YAML 
 | Declared importer mapping | Canonical YAML locations, aliases, values, conversions, conditions and separate parse/build/export/template/preview/comparison statuses. |
 | Named tests | Referenced test cases for specified stages. Run results are separate evidence; no mapping becomes universally verified because one test or probe passes. Gameplay is explicitly untested by discovery. |
 
-The reviewed source baseline is MIDI-QOL 14.0.9, D&D5e 5.3.3 and Foundry 14.367. Review status is downgraded on a different runtime. Current versions, selected MIDI settings and active constructor boundaries are recorded in environment.midi. Captures are environment-specific and belong outside shipped documentation.
+The reviewed source baseline is MIDI-QOL 14.6.0, D&D5e 6.0.6 and Foundry 14.369. Review status is downgraded on a different runtime. Current versions, selected MIDI settings and active constructor boundaries are recorded in environment.midi. Captures are environment-specific and belong outside shipped documentation.
 
 Native constructors are compared with the class that MIDI actually extended, MIDI's public activity constructor registry, and later active replacements. Earlier/later extensions are kept unattributed. A class name alone is not proof of MIDI ownership. Native constructors can themselves consult modified CONFIG registries, so this is not a pristine reconstruction of D&D5e configuration. Changed inherited fields retain the baseline contract, changed properties and native identity. Callback presence/names are metadata; callback implementation changes cannot be established by snapshot equality.
 
@@ -53,17 +53,17 @@ Published MidiQOL.midiFlags entries are declaration evidence. Editor types, incl
 | Area target type/action | Sheet controls appear for an area target. Schema StringFields accept more strings than the menu; walls/dispositions/integrations affect targets. | MIDI CONDITIONS.AoE Target Type / Target on Template Draw use the importer's explicit enums. |
 | Trigger | Target pools depend on workflow results; links, triggerability and cycles require context. Subcontrols hide when trigger ID is none. | IDs/identifiers/UUIDs are stored. Use none to disable. Legacy auto becomes blank and conflicts with the nonblank trigger schema. |
 | Resource/dialog overrides | forceConsumeDialog=always overrides autoConsume=true; never forces automatic consumption; default uses workflow and PC/GM settings. | Parse/build are declared; the catalog never consumes a resource or opens a dialog. |
-| Other Activity | Top-level fields exist on attack/save/check/utility. Candidate types and otherActivityCompatible impose further restrictions. | Unsupported types warn and omit these fields. Nested midiProperties.otherActivityAsParentType is a separate, unresolved mapping. |
-| Target confirmation | Cast and Forward force never in reviewed 14.0.9, independently of the stored value. | The schema and importer can retain a broader value than the effective control. |
+| Other Activity | otherActivityId is common; the top-level parent-type override is limited to attack/save/check/utility. Candidate types and otherActivityCompatible impose further restrictions. | The unsupported top-level override warns; canonical mappings preserve the common link and separate nested override flag. |
+| Target confirmation | Cast and Forward force never in reviewed 14.6.0, independently of the stored value. | The schema and importer can retain a broader value than the effective control. |
 | Effects / concentration | Requires applicable effects, effect targets and automation settings. Skip Concentration Save applies to HP consumption. Convenient Effects requires its optional integration. | Existing mappings remain; setting a flag does not supply missing effects or dependencies. |
-| Overtime | Schema stores hidden subfields independently of isOverTimeFlag. Defaults must be read from schema metadata, not guessed from menu entries. | Current parser drops overtime subfields when Is Over Time is false. Activity Macro still stores command text. |
-| Region behavior/light | Added schema fields and constraints are discovered. Region-sheet render can change target.override; light editing remains partly unreviewed. | Unsupported fields remain coverage gaps. No parser/export expansion accompanies discovery. |
-| Fumble threshold | MIDI declares a NumberField without an integer/range bound. | YAML requires a safe integer/exact numeric string and rejects fractions or formula prefixes. |
+| Overtime | Schema stores hidden subfields independently of isOverTimeFlag. Defaults must be read from schema metadata, not guessed from menu entries. | Inactive overtime subfields and macro names/commands survive schema-4 export and import. |
+| Region behavior/light | Added schema fields and constraints are discovered. Region-sheet render can change target.override; light editing remains partly unreviewed. | Reviewed fields have canonical typed AUTOMATION mappings. Unknown additions remain coverage gaps. |
+| Fumble threshold | MIDI declares a NumberField without an integer/range bound. | Finite fractional numbers are supported; malformed numeric prefixes are rejected. |
 | Effect change keys | MIDI registry keys/patterns describe applied targets, not native validation. Typed values are retained. | Generic CHANGES storage and strict serialization are supported; key-specific gameplay is unreviewed. |
-| Midi-QOL incapacitation control | The stored path is flags.dae.disableIncapacitated, owned by DAE. | Existing section aliases are recorded; strict effect export rejects third-party flags. |
-| Item MIDI flags | Declared or explicitly unresolved; no fabricated child DataField schemas. | No item-specific MIDI mapping is declared. Item Importer remains independent of Activity Importer. |
+| Midi-QOL incapacitation control | The stored path is flags.dae.disableIncapacitated, owned by DAE. | Legacy aliases remain readable; canonical export preserves reviewed DAE flags. |
+| Item MIDI flags | Declared or explicitly unresolved; no fabricated child DataField schemas. | Reviewed Item on-use macro and reaction flags, plus DAE ItemMacro data, round trip independently of Activity Importer. |
 
-Strict live Activity YAML export rejects MIDI extension fields. Dedicated MIDI preview/comparison extraction is absent. Preserved original YAML/provenance and generic feature serialization do not establish a lossless export of a live MIDI Activity. Consult each stage instead of treating parse/build support as end-to-end support.
+Schema 4 exports reviewed MIDI Activity fields and DAE authored flags, including inactive values. Preview and comparison display them as inert data. See [the exact field reference](automation-schema-4.md). Unsupported extensions still fail closed; catalog discovery never grants support or proves gameplay.
 
 ## Read-only candidates
 

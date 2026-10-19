@@ -3,7 +3,7 @@
   "title": "5e Item Importer",
   "type": "module",
   "description": "Import D&D 5e Items from text or strict YAML, with previews and comparison tools. Works on its own; the optional premium 5e Activity Importer adds activities and Active Effects.",
-  "version": "14.1.4",
+  "version": "14.2.0",
   "authors": [
     {
       "name": "GnollStack",
@@ -12,8 +12,8 @@
     }
   ],
   "compatibility": {
-    "minimum": "14",
-    "verified": "14.367",
+    "minimum": "14.369",
+    "verified": "14.369",
     "maximum": "14"
   },
   "relationships": {
@@ -22,8 +22,8 @@
         "id": "dnd5e",
         "type": "system",
         "compatibility": {
-          "minimum": "5.3.0",
-          "verified": "5.3.3"
+          "minimum": "6.0.6",
+          "verified": "6.0.6"
         }
       }
     ]
@@ -57,16 +57,16 @@
   "url": "https://github.com/GnollStack/5e-Item-Importer",
   "readme": "https://github.com/GnollStack/5e-Item-Importer/blob/main/README.md",
   "bugs": "https://github.com/GnollStack/5e-Item-Importer/issues",
-  "changelog": "https://github.com/GnollStack/Bakshi-s-Bazaar-Media/blob/main/5e-item-importer/CHANGELOG.md",
+  "changelog": "https://github.com/GnollStack/bakshis-bazaar-archives/blob/main/5e-item-importer/CHANGELOG.md",
   "media": [
     {
       "type": "cover",
-      "url": "https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/5e-item-importer/images/5e-item-importer-preview.png",
+      "url": "https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/5e-item-importer/images/5e-item-importer-preview.png",
       "caption": "5e Item Importer preview"
     },
     {
       "type": "screenshot",
-      "url": "https://raw.githubusercontent.com/GnollStack/Bakshi-s-Bazaar-Media/main/activity-Importer-5e/gifs/Import-Full-Item.gif",
+      "url": "https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/activity-Importer-5e/gifs/Import-Full-Item.gif",
       "caption": "Importing a complete Item with activities and effects using the premium 5e Activity Importer"
     },
     {
@@ -76,5 +76,5 @@
     }
   ],
   "manifest": "https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.json",
-  "download": "https://github.com/GnollStack/5e-Item-Importer/releases/download/V14.1.4/5e-item-importer.zip"
+  "download": "https://github.com/GnollStack/5e-Item-Importer/releases/download/V14.2.0/5e-item-importer.zip"
 }

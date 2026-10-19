@@ -10,11 +10,11 @@ export const ITEM_TEMPLATES = [
     {
         id: "weapon",
         label: "Magic Weapon",
-        text: `SCHEMA_VERSION: 2
+        text: `SCHEMA_VERSION: 4
 WEAPON:
   ITEM:
     Name: "Longsword +1"
-    Rarity: uncommon
+    Rarities: [uncommon]
     Weapon Type: martialM
     Base Weapon: longsword
 
@@ -57,11 +57,11 @@ WEAPON:
     {
         id: "armor",
         label: "Wondrous Item",
-        text: `SCHEMA_VERSION: 2
+        text: `SCHEMA_VERSION: 4
 EQUIPMENT:
   ITEM:
     Name: "Cloak of Protection"
-    Rarity: uncommon
+    Rarities: [uncommon]
     Equipment Type: wondrous
     Base Equipment: n/a
 
@@ -88,11 +88,11 @@ EQUIPMENT:
     {
         id: "potion",
         label: "Potion",
-        text: `SCHEMA_VERSION: 2
+        text: `SCHEMA_VERSION: 4
 CONSUMABLE:
   ITEM:
     Name: "Potion of Healing"
-    Rarity: common
+    Rarities: [common]
     Consumable Type: potion
 
   INVENTORY:
@@ -120,11 +120,11 @@ CONSUMABLE:
     {
         id: "tool",
         label: "Tool",
-        text: `SCHEMA_VERSION: 2
+        text: `SCHEMA_VERSION: 4
 TOOL:
   ITEM:
     Name: "Alchemist's Supplies"
-    Rarity: common
+    Rarities: [common]
     Tool Type: art
     Base Tool: alchemist
 
@@ -152,11 +152,11 @@ TOOL:
     {
         id: "container",
         label: "Container",
-        text: `SCHEMA_VERSION: 2
+        text: `SCHEMA_VERSION: 4
 CONTAINER:
   ITEM:
     Name: "Bag of Holding"
-    Rarity: uncommon
+    Rarities: [uncommon]
 
   INVENTORY:
     Quantity: 1
@@ -188,11 +188,11 @@ CONTAINER:
     {
         id: "loot",
         label: "Loot/Gear",
-        text: `SCHEMA_VERSION: 2
+        text: `SCHEMA_VERSION: 4
 LOOT:
   ITEM:
     Name: "Ruby"
-    Rarity: common
+    Rarities: [common]
     Loot Type: gem
 
   INVENTORY:
@@ -216,7 +216,7 @@ LOOT:
         id: "spell",
         label: "Spell (Core Fields)",
         text: `# Core spell fields only. Add Activities with Activity Importer for automated rolls.
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 SPELL:
   ITEM:
     Name: "Magic Missile"
@@ -262,11 +262,11 @@ SPELL:
     {
         id: "batch",
         label: "Multi-Item Batch",
-        text: `SCHEMA_VERSION: 2
+        text: `SCHEMA_VERSION: 4
 WEAPON:
   ITEM:
     Name: "Shortsword +1"
-    Rarity: uncommon
+    Rarities: [uncommon]
     Weapon Type: martialM
     Base Weapon: shortsword
   PROPERTIES:
@@ -295,7 +295,7 @@ WEAPON:
 CONSUMABLE:
   ITEM:
     Name: "Potion of Greater Healing"
-    Rarity: uncommon
+    Rarities: [uncommon]
     Consumable Type: potion
   COST_AND_WEIGHT:
     Price Value: 150
@@ -315,7 +315,7 @@ CONSUMABLE:
 LOOT:
   ITEM:
     Name: "50 Gold Pieces"
-    Rarity: common
+    Rarities: [common]
     Loot Type: treasure
   COST_AND_WEIGHT:
     Price Value: 50
@@ -331,11 +331,11 @@ LOOT:
     {
         id: "mixed-damage-weapon",
         label: "Mixed Damage Weapon",
-        text: `SCHEMA_VERSION: 2
+        text: `SCHEMA_VERSION: 4
 WEAPON:
   ITEM:
     Name: "Flame Tongue Longsword"
-    Rarity: rare
+    Rarities: [rare]
     Weapon Type: martialM
     Base Weapon: longsword
 

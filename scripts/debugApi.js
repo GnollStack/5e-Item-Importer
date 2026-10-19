@@ -48,8 +48,8 @@ const READ_ONLY_ACTIONS = [
 const MUTATING_ACTIONS = ["runAutomation", "cleanupFixtures"];
 const ACTION_NAMES = [...READ_ONLY_ACTIONS, ...MUTATING_ACTIONS];
 const COMPATIBILITY_TARGETS = Object.freeze({
-    foundry: Object.freeze({ minimum: "14", verified: "14.367" }),
-    dnd5e: Object.freeze({ minimum: "5.3.0", verified: "5.3.3" })
+    foundry: Object.freeze({ minimum: "14.369", verified: "14.369" }),
+    dnd5e: Object.freeze({ minimum: "6.0.6", verified: "6.0.6" })
 });
 const SETTINGS_SCHEMA = Object.freeze({
     debug: { type: "boolean" },
@@ -74,6 +74,14 @@ const SETTINGS_SCHEMA = Object.freeze({
 });
 const MODULE_ASSETS = Object.freeze([
     "module.json",
+    "scripts/automationFields.js",
+    "scripts/automationReferences.js",
+    "scripts/ui/recipeEditor.js",
+    "scripts/ui/importViewLayout.js",
+    "scripts/ui/importWindowDefaults.js",
+    "scripts/diagnostics/importViewFixtures.js",
+    "scripts/ui/itemRecipes.js",
+    "docs/automation-schema-4.md",
     "LICENSE.txt",
     "THIRD_PARTY_NOTICES.txt",
     "README.md",
@@ -868,7 +876,7 @@ export function createDiagnosticsApi({ parse, openWindow }) {
             return withGate("runSmokeTests", async () => {
                 const tests = [];
                 const beforeCounts = getWorldDocumentCounts();
-                const requestedSuite = ["full", "catalog"].includes(input.suite) ? input.suite : "runtime";
+                const requestedSuite = ["full", "catalog", "native"].includes(input.suite) ? input.suite : "runtime";
 
                 record(tests, "diagnostics action allowlist matches contract", () => {
                     const actual = Object.keys(game.modules.get(MODULE_NAME)?.api?.diagnostics?.actions ?? {}).sort();
@@ -879,7 +887,10 @@ export function createDiagnosticsApi({ parse, openWindow }) {
 
                 let runSuite;
                 try {
-                    if (requestedSuite === "catalog") {
+                    if (requestedSuite === "native") {
+                        const { runNativeCompatibilityTests } = await import("../tests/foundry/nativeCompatibilityTests.js");
+                        runSuite = runNativeCompatibilityTests;
+                    } else if (requestedSuite === "catalog") {
                         const { runFieldCatalogChecks } = await import("./diagnostics/fieldCatalogChecks.js");
                         runSuite = () => runFieldCatalogChecks(MODULE_NAME);
                     } else if (requestedSuite === "full") {
@@ -894,8 +905,8 @@ export function createDiagnosticsApi({ parse, openWindow }) {
                         success: false,
                         available: true,
                         suite: requestedSuite,
-                        sourceOnly: requestedSuite === "full",
-                        errors: [requestedSuite === "full"
+                        sourceOnly: ["full", "native"].includes(requestedSuite),
+                        errors: [["full", "native"].includes(requestedSuite)
                             ? "The full source test suite is not included in production release archives."
                             : "Runtime smoke tests are unavailable."],
                         detail: error.message,
@@ -908,7 +919,7 @@ export function createDiagnosticsApi({ parse, openWindow }) {
                         success: false,
                         available: true,
                         suite: requestedSuite,
-                        sourceOnly: requestedSuite === "full",
+                        sourceOnly: ["full", "native"].includes(requestedSuite),
                         errors: [`${requestedSuite === "full" ? "Full source" : "Runtime"} smoke tests are unavailable.`],
                         tests
                     };
@@ -920,9 +931,9 @@ export function createDiagnosticsApi({ parse, openWindow }) {
                     JSON.stringify(beforeCounts) === JSON.stringify(afterCounts)
                 );
 
-                const normalizedStructuredTests = (structured.tests ?? []).map(test => ({
+                const normalizedStructuredTests = (structured.tests ?? structured.results ?? []).map(test => ({
                     ...test,
-                    pass: test.pass ?? test.success
+                    pass: test.pass ?? test.success ?? test.passed
                 }));
                 const combinedTests = [...tests, ...normalizedStructuredTests];
                 const failed = combinedTests.filter(test => !(test.pass ?? test.success));

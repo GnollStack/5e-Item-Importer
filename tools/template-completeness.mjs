@@ -127,12 +127,12 @@ export function checkTemplate({ markdown, requirements, yaml, itemModule, type }
   catch (error) { return { success: false, issues: [{ code: "invalid-main-yaml", message: error.message }], exceptions }; }
   const root = itemModule ? type.toUpperCase() : type === "effect" ? "EFFECT" : "ACTIVITY_" + type.toUpperCase();
   if (!object(main) || !object(main[root])) return { success: false, issues: [{ code: "wrong-main-root", root }], exceptions };
-  if (itemModule && main.SCHEMA_VERSION !== 2) issues.push({ code: "wrong-item-schema-version", expected: 2 });
+  if (itemModule && main.SCHEMA_VERSION !== 4) issues.push({ code: "wrong-item-schema-version", expected: 4 });
   const paths = structuralPaths(main), alternatives = itemModule ? commentedRecovery(blocks[0], root, yaml) : new Map();
   const mainRequirements = requirements.filter(entry => itemModule ? entry.kind === "item" && entry.type === type
     : type === "effect" ? entry.kind === "effect" : entry.kind === "activity" && entry.type === type);
-  if (!itemModule && type !== "effect" && !["cast", "forward", "transform"].includes(type)) {
-    mainRequirements.push(...requirements.filter(entry => entry.kind === "effect").map(entry => ({
+  if (!itemModule && type !== "effect" && !["cast", "forward"].includes(type)) {
+    mainRequirements.push(...requirements.filter(entry => entry.kind === "effect" && entry.type === (type === "enchant" ? "enchantment" : "base")).map(entry => ({
       ...entry, path: root + ".APPLIED_EFFECTS[]." + entry.path.slice("EFFECT.".length), inline: true
     })));
   }

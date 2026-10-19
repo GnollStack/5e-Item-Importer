@@ -133,6 +133,10 @@ export function runFieldCatalogServiceTests() {
     handle.model = { name: "WeaponData", cleanData: value => { cleaned = true; return value; } };
     const nested = service.probeFieldValues({ fieldId: fields[0].id, values: [{ bad: { type: "attack", _id: "bad" } }], context: { source: { type: "weapon", activities: {} } } });
     assert(nested.results[0].contextual.status === "incomplete" && !cleaned);
+    const TypeDataField5e = class TypeDataField5e {};
+    handle.rootSchema.fields.activities.element = new TypeDataField5e();
+    const modern = service.probeFieldValues({ fieldId: fields[0].id, values: [{ bad: { type: "attack", _id: "bad" } }], context: { source: { type: "weapon", activities: {} } } });
+    assert(modern.results[0].contextual.status === "incomplete" && !cleaned);
     handle.contextSourcePrefix = "system"; handle.pathSegments = ["value"];
     handle.rootSchema = { fields: {}, validate() {} };
     const mismatch = service.probeFieldValues({ fieldId: fields[0].id, values: [1], context: { source: { type: "spell", system: { value: 1 } } } });

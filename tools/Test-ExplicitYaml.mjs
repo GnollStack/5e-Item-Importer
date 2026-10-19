@@ -16,7 +16,7 @@ const localize=key=>getProperty(catalog,key)??key;
 const quiet={log(){},warn(){},error(){},group(){},groupEnd(){},assert(){}};
 const context=vm.createContext({
  console:quiet,Set,Map,Date,Math,URL,structuredClone,
- game:{release:{generation:14},version:"14.367",system:{id:"dnd5e",version:"5.3.3"},settings:{get(){return false;}},modules:new Map(),packs:[],
+ game:{release:{generation:14},version:"14.369",system:{id:"dnd5e",version:"6.0.6"},settings:{get(){return false;}},modules:new Map(),packs:[],
  i18n:{localize,format:(key,data={})=>String(localize(key)).replace(/\{(\w+)\}/g,(_,k)=>String(data[k]??""))}},
  CONFIG:{DND5E:{itemProperties:{},validProperties:{}}},
  foundry:{utils:{getProperty,setProperty,deepClone:structuredClone,mergeObject:(a,b)=>Object.assign(a,b)}},
@@ -45,6 +45,7 @@ async function api(file) {
 const explicit=await api("tests/unit/explicitYamlTests.js");
 const reports=[await explicit[itemModule?"runExplicitItemYamlTests":"runExplicitActivityYamlTests"]()];
 if(itemModule)reports.push(await (await api("tests/unit/itemCoreFeatureTests.js")).runItemCoreFeatureTests({log:false}));
+reports.push(await (await api("tests/unit/automationTests.js")).runAutomationContractTests({itemModule}));
 const yaml=(await api("scripts/vendor/js-yaml.mjs")).default;
 const diagnostics=itemModule?null:await api("scripts/activityDiagnostics.js");
 const parser=itemModule?null:await api("scripts/activityParsers/yamlParser.js");

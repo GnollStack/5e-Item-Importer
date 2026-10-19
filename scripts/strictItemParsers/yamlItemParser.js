@@ -3,6 +3,8 @@
 import jsyaml from '../vendor/js-yaml.mjs';
 import { extendExplicitItemSchema, parseExplicitItemFields, preparedState } from '../itemExplicitFields.js';
 import { formulaValue, exactNumber } from '../explicitYamlFields.js';
+import { parseItemRarities } from '../itemRarities.js';
+import { parseAutomation } from '../automationFields.js';
 import { ItemData } from '../itemData.js';
 import { ItemUtils } from '../itemUtils.js';
 import { MODULE_NAME } from '../itemConfig.js';
@@ -177,16 +179,6 @@ function shouldShowNormalizationWarnings() {
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const RARITY_MAP = {
-    'common': 'common',
-    'uncommon': 'uncommon',
-    'rare': 'rare',
-    'veryrare': 'veryRare',
-    'very rare': 'veryRare',
-    'legendary': 'legendary',
-    'artifact': 'artifact'
-};
-
 const VALID_DENOMINATIONS = ['pp', 'gp', 'ep', 'sp', 'cp'];
 const WEIGHT_UNIT_MAP = { lb: 'lb', tn: 'tn', kg: 'kg', mg: 'Mg', t: 'Mg' };
 const VALID_WEIGHT_UNITS = Object.keys(WEIGHT_UNIT_MAP);
@@ -333,7 +325,7 @@ const VALID_AREA_SHAPES = ['cone', 'cube', 'cylinder', 'radius', 'line', 'sphere
 const VALID_AREA_UNITS = ['ft', 'mi', 'm', 'km'];
 
 const COMMON_SECTION_KEYS = {
-    ITEM: ['Name', 'Rarity'],
+    ITEM: ['Name', 'Rarities', 'Rarity'],
     INVENTORY: ['Quantity', 'Identified', 'Equipped'],
     COST_AND_WEIGHT: ['Price Value', 'Price Denomination', 'Weight Value', 'Weight Units'],
     DESCRIPTION: ['Description'],
@@ -347,7 +339,7 @@ const RECOVERY_KEYS = ['Period', 'Type', 'Formula'];
 const SPELL_UNSUPPORTED_SECTIONS = new Set([
     'INVENTORY', 'COST_AND_WEIGHT', 'UNIDENTIFIED_DESCRIPTION'
 ]);
-const SPELL_UNSUPPORTED_ITEM_KEYS = new Set(['Rarity']);
+const SPELL_UNSUPPORTED_ITEM_KEYS = new Set(['Rarity', 'Rarities']);
 
 // This schema is intentionally warning-only. It catches misspelled or stale
 // fields without preventing forward-compatible data from being inspected.
@@ -555,6 +547,7 @@ export class YamlItemParser {
             }
 
             parseExplicitItemFields(itemData, data, message => this.addWarning(message));
+            itemData.automationSource = parseAutomation(data.AUTOMATION, "item", type);
 
             // 5b. Extract inline activities and effects
             itemData.pendingActivities = this.extractActivities(data);
@@ -806,7 +799,7 @@ export class YamlItemParser {
 
         extendExplicitItemSchema(sectionSchemas, type);
         const passthroughSections = new Set([
-            'Activities', 'effects', 'Effects', 'EFFECTS', 'CUSTOM_PROPERTIES'
+            'Activities', 'effects', 'Effects', 'EFFECTS', 'CUSTOM_PROPERTIES', 'AUTOMATION'
         ]);
         const allowedSections = Object.keys(sectionSchemas);
 
@@ -905,11 +898,8 @@ export class YamlItemParser {
 
         if (type !== 'spell') {
             // Physical/identifiable fields are not part of current dnd5e SpellData.
-            const rarityRaw = asString(itemSection['Rarity'], 'common').toLowerCase().replace(/\s+/g, '');
-            itemData.rarity = RARITY_MAP[rarityRaw] || 'common';
-            if (!RARITY_MAP[rarityRaw] && rarityRaw !== 'n/a' && rarityRaw !== '') {
-                this.addWarning(`Unknown rarity "${itemSection['Rarity']}", defaulting to common`);
-            }
+            itemData.rarities = parseItemRarities(itemSection);
+            itemData.rarity = itemData.rarities[0] ?? "";
 
             const inv = data?.INVENTORY || {};
             const hasQuantity = Object.prototype.hasOwnProperty.call(inv, 'Quantity');
@@ -1794,7 +1784,7 @@ export class YamlItemParser {
         // Ability Check section
         const abilityCheck = data?.ABILITY_CHECK || {};
         const profRaw = String(asString(abilityCheck['Proficient'], 'Automatic')).trim().toLowerCase();
-        const toolProfMap = { 'automatic': null, '0': 0, '0.5': 0.5, '1': 1, '2': 2 };
+        const toolProfMap = { 'automatic': null, '0': 0, '0.5': 0.5, '1': 1, '1.5': 1.5, '2': 2 };
         if (toolProfMap.hasOwnProperty(profRaw)) {
             item.proficient = toolProfMap[profRaw];
         } else {

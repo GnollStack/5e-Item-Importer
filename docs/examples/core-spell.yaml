@@ -1,4 +1,4 @@
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 SPELL:
   ITEM:
     Name: Magic Missile

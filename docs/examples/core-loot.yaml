@@ -1,8 +1,8 @@
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 LOOT:
   ITEM:
     Name: Ruby
-    Rarity: common
+    Rarities: [common]
     Loot Type: gem
   INVENTORY:
     Quantity: 1

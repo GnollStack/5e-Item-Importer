@@ -425,7 +425,7 @@ export class NaturalItemParser {
 
     data.ITEM = {
       Name: extracted.name || "Unnamed Item",
-      Rarity: extracted.rarity || "common",
+      Rarities: [extracted.rarity || "common"],
     };
 
     data.INVENTORY = {

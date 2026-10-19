@@ -1,8 +1,8 @@
-SCHEMA_VERSION: 2
+SCHEMA_VERSION: 4
 CONSUMABLE:
   ITEM:
     Name: Potion of Healing
-    Rarity: common
+    Rarities: [common]
     Consumable Type: potion
   INVENTORY:
     Quantity: 1

@@ -4,7 +4,7 @@
  */
 export const DAMAGE_DATA_KEYS = Object.freeze([
   "Dice Count", "Die Denomination", "Bonus", "Damage Types", "Custom Enabled",
-  "Custom Formula", "Scaling Mode", "Scaling Dice Count", "Scaling Formula"
+  "Custom Formula", "Modifiers", "Scaling Mode", "Scaling Dice Count", "Scaling Formula"
 ]);
 export const isMapping = value => !!value && typeof value === "object"
   && !Array.isArray(value) && !(value instanceof Set) && !(value instanceof Map);
@@ -53,6 +53,13 @@ export function stringList(value, label) {
   if (!entries || entries.some(entry => typeof entry !== "string")) throw new Error(label + " must be a list of strings.");
   return [...new Set(entries.map(entry => entry.trim()).filter(Boolean))];
 }
+function damageModifierList(value, label) {
+  if (isUnset(value)) return [];
+  const entries = Array.isArray(value) ? value : typeof value === "string" ? value.split(",").map(entry=>entry.trim()) : null;
+  if (!entries || entries.some(entry => typeof entry !== "string")) throw new Error(label + " must be a list of strings.");
+  // Preserve authored spelling/order; the native SetField canonicalizes duplicates.
+  return [...entries];
+}
 export function readPath(source, path) {
   return path.split(".").reduce((value, key) => value?.[key], source);
 }
@@ -92,17 +99,18 @@ export function parseDamageData(value, path = "DAMAGE_DATA") {
   return {
     number: exactNumber(value["Dice Count"], path + ".Dice Count", {integer:true,min:0}),
     denomination: exactNumber(value["Die Denomination"], path + ".Die Denomination", {integer:true,min:0}),
-    bonus: formulaValue(value.Bonus, path + ".Bonus"),
+    ...(Object.hasOwn(value,"Bonus") ? {bonus:formulaValue(value.Bonus, path + ".Bonus")} : {}),
     types,
+    modifiers: damageModifierList(value.Modifiers, path + ".Modifiers"),
     custom: {
       enabled: exactBoolean(value["Custom Enabled"], path + ".Custom Enabled"),
-      formula: formulaValue(value["Custom Formula"], path + ".Custom Formula")
+      ...(Object.hasOwn(value,"Custom Formula") ? {formula:formulaValue(value["Custom Formula"], path + ".Custom Formula")} : {})
     },
     scaling: {
-      mode,
+      ...(Object.hasOwn(value,"Scaling Mode") ? {mode} : {}),
       number: Object.hasOwn(value, "Scaling Dice Count")
         ? exactNumber(value["Scaling Dice Count"], path + ".Scaling Dice Count", {integer:true,min:0}) : 1,
-      formula: formulaValue(value["Scaling Formula"], path + ".Scaling Formula")
+      ...(Object.hasOwn(value,"Scaling Formula") ? {formula:formulaValue(value["Scaling Formula"], path + ".Scaling Formula")} : {})
     }
   };
 }
@@ -110,10 +118,13 @@ export function damageDataToYaml(value = {}) {
   const source = value?._source ?? value;
   return {
     "Dice Count": source.number ?? null, "Die Denomination": source.denomination ?? null,
-    Bonus: source.bonus ?? "", "Damage Types": stringList(source.types ?? [], "Damage Types"),
-    "Custom Enabled": source.custom?.enabled ?? false, "Custom Formula": source.custom?.formula ?? "",
-    "Scaling Mode": source.scaling?.mode || "none",
-    "Scaling Dice Count": source.scaling?.number ?? null, "Scaling Formula": source.scaling?.formula ?? ""
+    ...(source.bonus !== undefined ? {Bonus:source.bonus} : {}), "Damage Types": stringList(source.types ?? [], "Damage Types"),
+    Modifiers: damageModifierList(source.modifiers ?? [], "Modifiers"),
+    "Custom Enabled": source.custom?.enabled ?? false,
+    ...(source.custom?.formula !== undefined ? {"Custom Formula":source.custom.formula} : {}),
+    ...(source.scaling?.mode !== undefined ? {"Scaling Mode":source.scaling.mode || "none"} : {}),
+    "Scaling Dice Count": source.scaling?.number ?? null,
+    ...(source.scaling?.formula !== undefined ? {"Scaling Formula":source.scaling.formula} : {})
   };
 }
 export function explicitRows(value, section = "Explicit fields", prefix = "") {

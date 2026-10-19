@@ -1,4 +1,5 @@
 import { explicitRows, applyExplicitSource, cloneExplicit, damageDataToYaml, exactBoolean, exactNumber, formulaValue, isUnset, parseDamageData, readPath, rejectDamageShorthand, writePath } from "./explicitYamlFields.js";
+import { automationRows } from "./automationFields.js";
 
 // Fixed, reviewed native paths. This is deliberately not an arbitrary path API.
 const ALL = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"];
@@ -29,6 +30,7 @@ field(["spell"],"PREPARATION","Source Item","system.sourceItem");
 field(["spell"],"PREPARATION","Prepared","system.prepared","prepared");
 field(["spell"],"RANGE","Special","system.range.special");
 field(["spell"],"DURATION","Special","system.duration.special");
+field(["spell"],"DURATION","Expiry","system.duration.expiry","nullableString");
 field(["spell"],"AREA","Stationary","system.target.template.stationary","boolean");
 for (const [section, label, path] of [
   ["RANGE","Value","range.value"],["DURATION","Value","duration.value"],
@@ -79,6 +81,7 @@ function parseField(value, descriptor) {
   const {section,label,kind,options} = descriptor;
   const location = section + "." + label;
   if (kind === "nullableText" && value === null) return null;
+  if (kind === "nullableString" && isUnset(value)) return null;
   if (kind === "method") return value === "prepared" ? "spell" : isUnset(value) ? "" : String(value);
   if (kind === "prepared") return preparedState(value);
   if (kind === "attunement") {
@@ -98,6 +101,7 @@ function parseField(value, descriptor) {
   return String(value);
 }
 export function extendExplicitItemSchema(schema,type) {
+  schema.AUTOMATION = null;
   for (const {types,section,label} of fields.filter(f => f.types.includes(type))) {
     schema[section] ??= [];
     if (!schema[section].includes(label)) schema[section].push(label);
@@ -141,7 +145,7 @@ export function parseExplicitItemFields(item,data,warn = () => {}) {
   }
   if (item.type === "weapon" && !isUnset(data.RELOAD?.["Reload Amount"])) {
     writePath(source,"flags.5e-item-importer.reloadAmount",exactNumber(data.RELOAD["Reload Amount"],"RELOAD.Reload Amount",{integer:true,min:1,nullable:false}));
-    warn("Reload Amount is stored as flags.5e-item-importer.reloadAmount metadata. D&D5e 5.3.3 has no native reload amount field or automation.");
+    warn("Reload Amount is stored as flags.5e-item-importer.reloadAmount metadata. D&D5e 6.0.6 has no native reload amount field or automation.");
   }
   item.explicitPropertyStates = {};
   for (const {types,section,label,code} of propertyFields.filter(f => f.types.includes(item.type))) {
@@ -165,14 +169,21 @@ export function explicitItemSource(item) {
 }
 export function itemExplicitRows(item) {
   const data = exportExplicitItemFields({}, item);
-  return Object.entries(data).flatMap(([section,value]) => explicitRows(value, section));
+  return [...Object.entries(data).flatMap(([section,value]) => explicitRows(value, section)),
+    ...automationRows(item.automationSource ?? item, "item", item.type)];
 }
 export function exportExplicitItemFields(data,item) {
   const source = explicitItemSource(item);
   const type = item.type ?? source.type;
+  const exportingStoredSystem = Boolean(item?._source?.system || item?.system);
   for (const descriptor of fields.filter(f => f.types.includes(type))) {
     const value = readPath(source,descriptor.path);
-    if (value === undefined) continue;
+    if (value === undefined) {
+      // Optional native fields can be absent from source. Do not turn that
+      // omission into a display fallback such as "any", zero or an empty formula.
+      if (exportingStoredSystem) delete data[descriptor.section]?.[descriptor.label];
+      continue;
+    }
     data[descriptor.section] ??= {};
     data[descriptor.section][descriptor.label] = descriptor.kind === "prepared"
       ? ["unprepared","prepared","always"][preparedState(value)] : descriptor.kind === "attunement" ? value || "none" : descriptor.kind === "cover" ? ({0:"none",0.5:"half",0.75:"threequarters",1:"total"}[value] ?? value) : cloneExplicit(value);
