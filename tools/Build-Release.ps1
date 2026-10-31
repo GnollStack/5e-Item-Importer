@@ -52,6 +52,11 @@ $requiredRuntimeFiles = @(
     "scripts/debugApi.js",
     "scripts/diagnostics/runtimeSmokeTests.js"
 )
+# Developer-only fixture loaders are dropped from the selection and from staging; they fetch
+# files under tests/ that never ship, so they have no customer value.
+$excludedRuntimeFiles = @(
+    "scripts/diagnostics/stormglassFixture.js"
+)
 
 foreach ($entry in $releaseEntries + $requiredRuntimeFiles) {
     $source = Join-Path $moduleRoot $entry
@@ -68,7 +73,7 @@ if ($CheckOnly) {
         else { Get-ChildItem -LiteralPath $source -Recurse -File | ForEach-Object {
             $_.FullName.Substring($moduleRoot.Length + 1).Replace("\", "/")
         } }
-    } | Sort-Object -Unique)
+    } | Where-Object { $excludedRuntimeFiles -notcontains $_ } | Sort-Object -Unique)
     [pscustomobject]@{ Version = $manifest.version; Valid = $true; Built = $false; Files = $files; DocumentationFiles = $documentation.Count }
     return
 }
@@ -82,6 +87,10 @@ try {
         $destination = Join-Path $stagingModule $entry
         New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
         Copy-Item -LiteralPath (Join-Path $moduleRoot $entry) -Destination $destination -Recurse -Force
+    }
+    foreach ($excluded in $excludedRuntimeFiles) {
+        $stagedPath = Join-Path $stagingModule $excluded
+        if (Test-Path -LiteralPath $stagedPath) { Remove-Item -LiteralPath $stagedPath -Force }
     }
 
     New-Item -ItemType Directory -Path $outputPath -Force | Out-Null

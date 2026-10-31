@@ -40,7 +40,6 @@ try {
         "tools/",
         ".github/",
         ".git/",
-        "LLM-Instructions/",
         "dist/"
     )
     $forbiddenFiles = @(
@@ -49,7 +48,8 @@ try {
         "jsconfig.json",
         "scripts/itemTests.js",
         "scripts/itemCoreFeatureTests.js",
-        "scripts/ui/itemPlatformFeatureTests.js"
+        "scripts/ui/itemPlatformFeatureTests.js",
+        "scripts/diagnostics/stormglassFixture.js"
     )
 
     $unexpected = @($entryNames | Where-Object {

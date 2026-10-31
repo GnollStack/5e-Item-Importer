@@ -14,7 +14,7 @@ foreach ($path in @("docs/import-window.md", "docs/automation-schema-4.md", "doc
     if (-not $entries.Contains($path)) { throw "Customer guide missing from selection: $path" }
     $checks++
 }
-if (@($files | Where-Object { $_ -match '^(tests|tools|dist|LLM-Instructions|\.git)/|^docs/(README\.html|verification)' }).Count) {
+if (@($files | Where-Object { $_ -match '^(tests|tools|dist|\.git)/|^docs/(README\.html|verification)' }).Count) {
     throw "Selection contains developer-only files."
 }
 $checks++

@@ -59,7 +59,7 @@ For the current free-only publication, run the standalone Item Importer builder 
 ./tools/Test-ReleaseContract.ps1
 ```
 
-The standalone builder writes `dist/5e-item-importer.zip` and `dist/module.json`, validates its own release contract, and requires no sibling checkout. Production archives include the four customer guides and Markdown/YAML examples linked by the README and templates. They exclude listing HTML, historical verification captures, tests, tools, GitHub metadata, private LLM instructions, and `dist/`. The standalone `-CheckOnly` path returns the selected files without creating output; `Test-PackageContents.ps1` checks customer links and installed diagnostics assets. Verification also checks required runtime assets, safe ZIP paths, pinned GitHub download tags, matching standalone manifests, and the vetted js-yaml 4.3.2 bundle and MIT notice.
+The standalone builder writes `dist/5e-item-importer.zip` and `dist/module.json`, validates its own release contract, and requires no sibling checkout. Production archives include the four customer guides and Markdown/YAML examples linked by the README and templates. They exclude listing HTML, historical verification captures, tests, tools, GitHub metadata, private LLM instructions, `dist/`, and the developer fixture loader `scripts/diagnostics/stormglassFixture.js`, which only reads files under `tests/`. The standalone `-CheckOnly` path returns the selected files without creating output; `Test-PackageContents.ps1` checks customer links and installed diagnostics assets. Verification also checks required runtime assets, safe ZIP paths, pinned GitHub download tags, matching standalone manifests, and the vetted js-yaml 4.3.2 bundle and MIT notice.
 
 ## MIDI catalog selections and parity
 
