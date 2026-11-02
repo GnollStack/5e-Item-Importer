@@ -1,6 +1,6 @@
 # MIDI-QOL field discovery and YAML coverage
 
-The existing read-only catalog actions accept an optional layer selector. The default remains native Foundry/D&D5e discovery. Catalog format version 1, diagnostic gates and the MCP transport are unchanged. Schema 4 automation storage is a separate contract, documented in [the automation reference](automation-schema-4.md); discovery alone does not extend YAML support.
+The existing read-only catalog actions accept an optional layer selector. The default remains native Foundry/D&D5e discovery. Catalog format version 1 and the diagnostic gates are unchanged. Schema 4 automation storage is a separate contract, documented in [the automation reference](automation-schema-4.md); discovery alone does not extend YAML support.
 
 | Selection | Contents |
 | --- | --- |
@@ -9,7 +9,7 @@ The existing read-only catalog actions accept an optional layer selector. The de
 | layer: "extensions" | Active schema differences whose MIDI ownership is unproven. |
 | layer: "all" | All three layers, retaining separate identities and provenance. |
 
-Use the existing allowlisted call-module-debug-action interface with moduleId "5e-item-importer" or "5e-activity-importer". The active GM, module Debug Logging/Enable MCP Diagnostics and bridge Developer Tools gates still apply.
+Use the same diagnostics actions on "5e-item-importer" or "5e-activity-importer". The active GM, Debug Logging and Enable MCP Diagnostics gates still apply.
 
 ~~~json
 {

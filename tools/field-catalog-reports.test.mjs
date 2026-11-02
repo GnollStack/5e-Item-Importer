@@ -115,6 +115,13 @@ test("envelopes reject errors and noncatalog text rather than hiding them", () =
   assert.throws(() => unwrapCatalogPages({ mystery: pages()[0] }), /No native/);
 });
 
+test("the current debug-action shape unwraps, and a truncated one is refused", () => {
+  const result = { moduleId: "5e-item-importer", action: "getFieldCatalog", result: pages()[0], truncated: false, sizeChars: 100, limits: {} };
+  assert.equal(unwrapCatalogPages(result).length, 1);
+  assert.throws(() => unwrapCatalogPages({ ...result, truncated: true }), /truncated MCP result/);
+  assert.throws(() => unwrapCatalogPages({ content: [{ type: "text", text: JSON.stringify({ ...result, truncated: true }) }] }), /truncated MCP result/);
+});
+
 test("snapshot comparison separates environments, native fields, types, variants and coverage", () => {
   const before = assembleSnapshot(pages()), after = clone(before), catalog = after.catalogs[0];
   catalog.catalogId = "native-2";

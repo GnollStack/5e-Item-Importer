@@ -107,7 +107,7 @@ body:
     id: logs
     attributes:
       label: Console logs or diagnostics
-      description: Paste relevant console output, parser errors, MCP diagnostics, or validation output here.
+      description: Paste relevant console output, parser errors, diagnostics, or validation output here.
       render: text
 
   - type: textarea

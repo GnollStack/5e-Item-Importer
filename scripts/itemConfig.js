@@ -22,7 +22,7 @@ export function registerSettings() {
     // Debug Mode - Show detailed logging and parsing information
     game.settings.register(MODULE_ID, "debug", {
         name: "Debug Logging",
-        hint: "Advanced troubleshooting logs for parser and MCP diagnostics workflows. Leave this disabled unless you are intentionally debugging or reporting an issue.",
+        hint: "Advanced troubleshooting logs for parser and diagnostics workflows. Leave this disabled unless you are intentionally debugging or reporting an issue.",
         scope: "client",
         config: true,
         type: Boolean,
@@ -34,7 +34,7 @@ export function registerSettings() {
 
     game.settings.register(MODULE_ID, "enableMcpDiagnostics", {
         name: "Enable MCP Diagnostics",
-        hint: "Advanced GM-only diagnostics for Foundry MCP Bridge workflows, including confirmed test fixture automation. Leave this disabled during normal play unless you are intentionally debugging or testing this module.",
+        hint: "Advanced GM-only diagnostics, including confirmed test fixture automation. Leave this disabled during normal play unless you are intentionally debugging or testing this module.",
         scope: "world",
         config: true,
         type: Boolean,

@@ -37,7 +37,7 @@ The tools read versions from the manifests; there are no current-release version
 
 ## Foundry verification before publishing
 
-The local packaging command does not claim to run Foundry or combat automation. Use the gated MCP `runSmokeTests` action for runtime and full source suites and validate served assets for both modules. Verify these configurations in a test world:
+The local packaging command does not claim to run Foundry or combat automation. Use the gated `runSmokeTests` diagnostics action for runtime and full source suites and validate served assets for both modules. Verify these configurations in a test world:
 
 | Configuration | Required behavior |
 |---|---|
@@ -63,7 +63,7 @@ The standalone builder writes `dist/5e-item-importer.zip` and `dist/module.json`
 
 ## MIDI catalog selections and parity
 
-The same assemble/render/diff commands accept MIDI pages. Select layer:midi in the MCP query; --layer midi can project a complete all-layer snapshot offline. It cannot invent missing layers. Follow every nextCursor, retaining filters and catalog metadata.
+The same assemble/render/diff commands accept MIDI pages. Select layer:midi in the catalog query; --layer midi can project a complete all-layer snapshot offline. It cannot invent missing layers. Follow every nextCursor, retaining filters and catalog metadata.
 
 The parity check now covers eighteen shared files, including explicitYamlFields.js, activityEffectLinks.js, fieldCatalogMidi.js, fieldCatalogMidiRules.js, Test-MidiFieldCatalog.mjs and midiFieldCatalogTests.js. Provider-specific coverage stays independent. Run node --experimental-vm-modules tools/Test-MidiFieldCatalog.mjs alongside the native and report checks. See [the MIDI guide](../docs/midi-field-catalog.md).
 

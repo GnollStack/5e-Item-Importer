@@ -3,7 +3,7 @@
   "title": "5e Item Importer",
   "type": "module",
   "description": "Import D&D 5e Items from text or strict YAML, with previews and comparison tools. Works on its own; the optional premium 5e Activity Importer adds activities and Active Effects.",
-  "version": "14.2.0",
+  "version": "14.2.1",
   "authors": [
     {
       "name": "GnollStack",
@@ -76,5 +76,5 @@
     }
   ],
   "manifest": "https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.json",
-  "download": "https://github.com/GnollStack/5e-Item-Importer/releases/download/V14.2.0/5e-item-importer.zip"
+  "download": "https://github.com/GnollStack/5e-Item-Importer/releases/download/V14.2.1/5e-item-importer.zip"
 }

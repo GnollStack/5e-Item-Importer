@@ -2,7 +2,7 @@
 
 These comprehensive developer suites are tracked in the source repository but
 are intentionally excluded from production Foundry release archives. The
-installed module retains a compact read-only MCP smoke suite under
+installed module retains a compact read-only smoke suite under
 `scripts/diagnostics/`.
 
 From a Foundry browser console in a source checkout:
@@ -12,7 +12,7 @@ const { ItemImporterTests } = await import("/modules/5e-item-importer/tests/foun
 await ItemImporterTests.runStructured();
 ```
 
-With MCP diagnostics enabled in a source checkout, the same comprehensive suite
+With diagnostics enabled in a source checkout, the same comprehensive suite
 is available through the module diagnostics API:
 
 ```js
@@ -36,7 +36,7 @@ const { runItemPlatformFeatureTests } = await import("/modules/5e-item-importer/
 await runItemPlatformFeatureTests();
 ```
 
-Neither suite should create Foundry world documents. Use the module's gated MCP
+Neither suite should create Foundry world documents. Use the module's gated
 automation actions only when fixture mutation is explicitly intended.
 
 

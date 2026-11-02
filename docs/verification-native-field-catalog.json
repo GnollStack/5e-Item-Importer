@@ -40,7 +40,7 @@
         "passed": 14,
         "failed": 0
       },
-      "transport": "Actual call_module_debug_action MCP bridge",
+      "transport": "Actual diagnostics action calls",
       "worldSourcesUnchanged": true,
       "worldCountsUnchanged": true
     },

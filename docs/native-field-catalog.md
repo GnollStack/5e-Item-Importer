@@ -35,16 +35,16 @@ For example, the spell preparation dropdown has the reviewed choices `0/1/2`, wh
 
 Array elements use `[*]`; dynamic mapping keys use `{key}`. A variant is part of field identity. Open objects have no finite child schema: their presence is reported without inventing a list of all possible keys. Unresolved or context-dependent choices are never an authoritative empty set. Formula syntax validation does not prove that every `@variable` exists in a later roll.
 
-## Query through the existing MCP connection
+## Query the catalog
 
-Enable the existing GM diagnostics gates: active GM, the importer's Debug Logging setting, and Enable MCP Diagnostics. MCP calls also require the bridge's Developer Tools gate. The actions are under:
+Enable the existing GM diagnostics gates: active GM, the importer's Debug Logging setting, and Enable MCP Diagnostics. The actions are under:
 
 ```js
 game.modules.get("5e-item-importer").api.diagnostics.actions
 game.modules.get("5e-activity-importer").api.diagnostics.actions
 ```
 
-Use the existing `call_module_debug_action` tool; no new bridge wrapper or protocol is required.
+Call them from the browser console as a GM.
 
 | Action | Arguments and behavior |
 |---|---|
@@ -54,14 +54,10 @@ Use the existing `call_module_debug_action` tool; no new bridge wrapper or proto
 
 The `kind` values are `item`, `advancement`, `activity`, and `effect`, as applicable to the provider. `status` filters YAML coverage status, not sheet review status.
 
-Example MCP query:
+Example query:
 
-```json
-{
-  "moduleId": "5e-item-importer",
-  "action": "getFieldCatalog",
-  "args": {"kind": "item", "type": "spell", "query": "system.prepared"}
-}
+```js
+await game.modules.get("5e-item-importer").api.diagnostics.actions.getFieldCatalog({"kind": "item", "type": "spell", "query": "system.prepared"});
 ```
 
 For every page, retain the complete JSON response and follow `nextCursor` until it is null, preserving the filters. Cursors bind the query and catalog fingerprint. If configuration changes and a cursor is rejected, restart the capture; do not mix old and new pages. A filtered capture is complete only for that query.
@@ -101,7 +97,7 @@ node tools/Field-Catalog.mjs render snapshot.json --out reference.md
 node tools/Field-Catalog.mjs diff before.json after.json --out changes.json
 ```
 
-`assemble` accepts raw pages, arrays of pages, saved MCP result envelopes, and multiple input files. It checks page continuity, catalog/query consistency, field identities, and completion; missing, duplicated, mixed, or truncated captures fail rather than silently becoming partial references. Both providers can be assembled into one snapshot.
+`assemble` accepts raw pages, arrays of pages, saved result envelopes, and multiple input files. It checks page continuity, catalog/query consistency, field identities, and completion; missing, duplicated, mixed, or truncated captures fail rather than silently becoming partial references. Both providers can be assembled into one snapshot.
 
 `render` produces a Markdown reference containing native metadata, sheet notes, YAML coverage, provenance, and unresolved information. `diff` reports additions, removals, changed contracts/options, coverage changes, and relevant environment changes while avoiding translation/timestamp noise. A removed and newly added field is not automatically asserted to be a rename. Valid diff reports exit successfully even when differences exist; inspect the report.
 

@@ -72,6 +72,6 @@
     "Completeness covers current declared importer mappings; it does not establish support for every native field, every enum combination, or unreviewed sheet behavior.",
     "No new Item/Activity types, parser features, third-party automation or platform upgrades.",
     "Live tests ran with both importers and existing MIDI-QOL/DAE integrations active.",
-    "Existing native field catalog snapshots remain historical captures; current MCP queries reflect the corrected Tool proficiency mapping."
+    "Existing native field catalog snapshots remain historical captures; current catalog queries reflect the corrected Tool proficiency mapping."
   ]
 }

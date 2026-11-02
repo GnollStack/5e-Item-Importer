@@ -69,8 +69,8 @@ body:
   - type: textarea
     id: validation-output
     attributes:
-      label: Parser or MCP validation output
-      description: Paste Parse Results, console logs, MCP validation output, or screenshots of the parse preview if available.
+      label: Parser or validation output
+      description: Paste Parse Results, console logs, validation output, or screenshots of the parse preview if available.
       render: text
 
   - type: input

@@ -161,7 +161,7 @@ Tests:
 node --experimental-vm-modules tools/Test-ExplicitYaml.mjs
 ```
 
-In a source checkout, the existing MCP `runSmokeTests({suite:"full"})` runs read-only tests against live schemas and checks world counts. Controlled `runAutomation({suite:"explicit",runId:"yaml-v4",confirmMutation:true,cleanupBefore:true,cleanupAfter:true})` imports marked fixtures and cleans them in its existing finally block. Activity Importer must be active for paired attachment tests. No world upgrade/migration is part of these checks.
+In a source checkout, the existing diagnostics action `runSmokeTests({suite:"full"})` runs read-only tests against live schemas and checks world counts. Controlled `runAutomation({suite:"explicit",runId:"yaml-v4",confirmMutation:true,cleanupBefore:true,cleanupAfter:true})` imports marked fixtures and cleans them in its existing finally block. Activity Importer must be active for paired attachment tests. No world upgrade/migration is part of these checks.
 
 ### Pre-release verification (candidate 14.3.0, renumbered to 14.2.0)
 

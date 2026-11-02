@@ -34,6 +34,7 @@ export function unwrapCatalogPages(input) {
   if (!object(input)) throw new Error("Expected a catalog page or MCP result envelope.");
   if (input.isError === true) throw new Error("Cannot assemble an MCP error response.");
   if (input.kind === PAGE_KIND) return [input];
+  if (input.truncated === true) throw new Error("Cannot assemble a truncated MCP result; capture it again with a higher maxChars.");
   if (object(input.structuredContent)) {
     try { return unwrapCatalogPages(input.structuredContent); } catch (error) {
       if (!Array.isArray(input.content)) throw error;
