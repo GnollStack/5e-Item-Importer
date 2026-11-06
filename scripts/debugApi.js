@@ -704,7 +704,6 @@ export function createDiagnosticsApi({ parse, openWindow }) {
                         availableActions: [...ACTION_NAMES],
                         readOnlyActions: [...READ_ONLY_ACTIONS],
                         mutatingActions: [...MUTATING_ACTIONS],
-                        bridge: "call-module-debug-action",
                         fixturePrefix: FIXTURE_PREFIX,
                         fixtureFlag: FIXTURE_FLAG,
                         mutation: {
