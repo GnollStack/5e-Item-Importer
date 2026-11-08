@@ -13,7 +13,7 @@ function item() {
     value.pendingActivities = [{ key: "ACTIVITY_CHECK", name: "Schema 4 Check", rawData: structuredClone(rawData) }];
     return value;
 }
-function api(version = 4) {
+function api(version = 5) {
     return {
         schemaVersion: 2,
         capabilities: { serialization: { strictActivity: { schemaVersion: version }, strictEffect: { schemaVersion: version } } },
@@ -34,19 +34,19 @@ async function withCompanion(companion, callback) {
 }
 
 test("old, unknown, and future strict schemas cannot silently discard new attachment fields", async () => {
-    for (const version of [2, 3, null, 5]) {
+    for (const version of [2, 3, 4, null, 6]) {
         const companionApi = api(version);
         let parses = 0;
         companionApi.parseAll = () => { parses++; return [{ success: true, activityData: { check: { ability: "wis" } } }]; };
         await withCompanion({ active: true, api: companionApi }, async () => {
             const result = await item().collectActivityResults();
             assert.equal(result.results, null);
-            assert.match(result.blockingIssues[0], /schema 4 Activity and Effect support/);
+            assert.match(result.blockingIssues[0], /schema 5 Activity and Effect support/);
             assert.equal(parses, 0);
             assert.equal(getActivityCapabilities().fullSerialization, false);
             assert.equal(getActivityCapabilities().builder, false);
-            await assert.rejects(parseActivities("schema 4 source"), /schema 4/);
-            await assert.rejects(openActivityBuilder(), /schema 4/);
+            await assert.rejects(parseActivities("schema 4 source"), /schema 5/);
+            await assert.rejects(openActivityBuilder(), /schema 5/);
         });
     }
 });

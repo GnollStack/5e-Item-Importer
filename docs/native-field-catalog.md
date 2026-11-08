@@ -10,10 +10,10 @@ The reviewed runtime is **Foundry 14.369 / D&D5e 6.0.6**. The catalog records th
 
 | Provider | Native discovery | Current YAML support |
 |---|---|---|
-| `5e-item-importer` | All 13 current native Item types and nine advancement types, including their model variants | Existing seven Item roots; additional Item types and advancements are catalog-only |
-| `5e-activity-importer` | All 13 current native Activity types and base/condition/enchantment Active Effects | Existing eleven Activity roots and Effects; Order, Teleport and Condition effects are catalog-only |
+| `5e-item-importer` | All 13 current native Item types and nine advancement types, including their model variants | Eight Item roots (including `FEAT` for Features) and the six feat-valid advancement types through `FEAT.ADVANCEMENT`; additional Item types and the HitPoints, Size and Subclass advancements are catalog-only |
+| `5e-activity-importer` | All 13 current native Activity types and base/condition/enchantment Active Effects | Twelve Activity roots (including Teleport) and base/enchantment/condition Effects; Order is catalog-only |
 
-Each provider works without the other importer. Item activity/effect relationships point to the Activity catalog rather than duplicating its field coverage. Container placement and actor crew assignments remain deferred. Custom D&D 5e Counters and unreviewed third-party fields remain outside import support. Reviewed MIDI-QOL/DAE mappings are documented separately in [Automation storage in schema 4](automation-schema-4.md); catalog discovery alone adds no authoring capability.
+Each provider works without the other importer. Item activity/effect relationships point to the Activity catalog rather than duplicating its field coverage. Container placement is authored through `INVENTORY.Container` and nested `CONTAINER.CONTENTS`; actor crew assignments remain deferred. Custom D&D 5e Counters and unreviewed third-party fields remain outside import support. Reviewed MIDI-QOL/DAE mappings are documented separately in [Automation storage in schema 4](automation-schema-4.md); catalog discovery alone adds no authoring capability.
 
 D&D5e 6 discovery follows the mapped activity/advancement fields and the native `BaseEffectData` model. Activity behavior configuration is split into applyActiveEffect and difficultTerrain variants. ScaleValue exposes six variants, including usage and dice modifiers. Parent `persisted: false` state propagates to nested fields so computed ability lists and damage bonuses do not become import claims.
 

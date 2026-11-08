@@ -1,0 +1,124 @@
+SCHEMA_VERSION: 6
+CONTAINER:
+  ITEM:
+    Name: Stormheart Field Pack
+    Rarities: []
+  INVENTORY:
+    Quantity: 1
+    Identified: true
+    Equipped: false
+  COST_AND_WEIGHT:
+    Price Value: 5
+    Price Denomination: gp
+    Weight Value: 5
+    Weight Units: lb
+  PROPERTIES:
+    Magical: false
+    Weightless Contents: false
+  CAPACITY:
+    Item Count: n/a
+    Weight Capacity Value: 30
+    Weight Capacity Units: lb
+  DESCRIPTION:
+    Description: |
+      <p>A weatherproof canvas pack issued to storm wardens. Its contents are created inside it.</p>
+  CONTENTS:
+    - LOOT:
+        ITEM:
+          Name: Rations (1 day)
+          Rarities: []
+          Loot Type: gear
+        INVENTORY:
+          Quantity: 10
+          Identified: true
+        COST_AND_WEIGHT:
+          Price Value: 0.5
+          Price Denomination: gp
+          Weight Value: 2
+          Weight Units: lb
+        PROPERTIES:
+          Magical: false
+        DESCRIPTION:
+          Description: |
+            <p>Dry food for one day: jerky, dried fruit, hardtack and nuts.</p>
+    - WEAPON:
+        ITEM:
+          Name: Warden's Hatchet
+          Rarities: []
+          Weapon Type: simpleM
+          Base Weapon: handaxe
+        INVENTORY:
+          Quantity: 1
+          Identified: true
+        COST_AND_WEIGHT:
+          Price Value: 5
+          Price Denomination: gp
+          Weight Value: 2
+          Weight Units: lb
+        PROPERTIES:
+          Magical: false
+          Light: true
+          Thrown: true
+        RANGE:
+          Reach: 5
+          Range Normal: 20
+          Range Long: 60
+          Range Units: ft
+        DAMAGE:
+          DAMAGE_DATA:
+            Dice Count: 1
+            Die Denomination: 6
+            Bonus: ""
+            Damage Types:
+              - slashing
+            Modifiers: []
+            Custom Enabled: false
+            Custom Formula: ""
+            Scaling Mode: none
+            Scaling Dice Count: 0
+            Scaling Formula: ""
+        DESCRIPTION:
+          Description: |
+            <p>A sturdy hatchet for firewood, and for anything that comes out of the storm.</p>
+    - CONTAINER:
+        ITEM:
+          Name: Oilskin Pouch
+          Rarities: []
+        INVENTORY:
+          Quantity: 1
+          Identified: true
+          Equipped: false
+        COST_AND_WEIGHT:
+          Price Value: 0.5
+          Price Denomination: gp
+          Weight Value: 1
+          Weight Units: lb
+        PROPERTIES:
+          Magical: false
+          Weightless Contents: false
+        CAPACITY:
+          Item Count: n/a
+          Weight Capacity Value: 6
+          Weight Capacity Units: lb
+        DESCRIPTION:
+          Description: |
+            <p>A small waterproof pouch kept at the bottom of the pack.</p>
+        CONTENTS:
+          - LOOT:
+              ITEM:
+                Name: Flint and Steel
+                Rarities: []
+                Loot Type: gear
+              INVENTORY:
+                Quantity: 1
+                Identified: true
+              COST_AND_WEIGHT:
+                Price Value: 1
+                Price Denomination: gp
+                Weight Value: 1
+                Weight Units: lb
+              PROPERTIES:
+                Magical: false
+              DESCRIPTION:
+                Description: |
+                  <p>Kept dry so a fire can be started in any weather.</p>

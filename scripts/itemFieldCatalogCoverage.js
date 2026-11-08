@@ -1,4 +1,6 @@
 import { EXPLICIT_ITEM_FIELDS } from "./itemExplicitFields.js";
+import { isPhysicalItemType } from "./itemConfig.js";
+import { ADVANCEMENT_TYPE_ROOTS, SUPPORTED_ADVANCEMENT_TYPES, MULTI_LEVEL_ADVANCEMENT_TYPES } from "./itemAdvancement.js";
 
 /**
  * Reviewed YAML coverage annotations, separate from the discovered native contract.
@@ -6,10 +8,10 @@ import { EXPLICIT_ITEM_FIELDS } from "./itemExplicitFields.js";
  */
 const OWNER = "5e-item-importer";
 const VERIFIED_VERSION = "6.0.6";
-const SUPPORTED = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"];
-const PHYSICAL = SUPPORTED.filter(type => type !== "spell");
+const SUPPORTED = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell", "feat"];
+const PHYSICAL = SUPPORTED.filter(isPhysicalItemType);
 const EQUIPPABLE = PHYSICAL.filter(type => type !== "loot");
-const USABLE = ["weapon", "equipment", "consumable", "tool", "spell"];
+const USABLE = ["weapon", "equipment", "consumable", "tool", "spell", "feat"];
 const REFERENCE = "docs/explicit-yaml-v2.md";
 const PARSER = "scripts/strictItemParsers/yamlItemParser.js";
 const EXPLICIT_TESTS = "tests/unit/explicitYamlTests.js";
@@ -39,7 +41,8 @@ const KIND_REPRESENTATIONS = {
   string: "text", nullableText: "text or null", integer: "exact integer or documented nullable input",
   number: "exact finite number or documented nullable input", formula: "formula string or numeric shorthand",
   boolean: "boolean", prepared: "unprepared | prepared | always | 0 | 1 | 2 | legacy boolean",
-  method: "native method identifier", attunement: "none | required | optional", cover: "none | half | threequarters | total | number from 0 to 1"
+  method: "native method identifier", attunement: "none | required | optional", cover: "none | half | threequarters | total | number from 0 to 1",
+  identifierList: "list of identifier or type:identifier strings"
 };
 for (const descriptor of EXPLICIT_ITEM_FIELDS) {
   add(descriptor.types, descriptor.path, descriptor.section + "." + descriptor.label,
@@ -48,10 +51,82 @@ for (const descriptor of EXPLICIT_ITEM_FIELDS) {
       evidence: [{ file: EXPLICIT_TESTS, test: "<item type> identity, source, state and native controls", status: "referenced" }]
     });
 }
+/**
+ * Feature advancement (dnd5e advancement catalog kind). Native paths are relative to
+ * one advancement entry; YAML paths are relative to FEAT (ADVANCEMENT[].<ROOT>.<Label>).
+ */
+const ADVANCEMENT_PARSER = "scripts/strictItemParsers/yamlItemParser.js";
+function adv(type, path, yaml, representation = "native YAML scalar", options = {}) {
+  const root = ADVANCEMENT_TYPE_ROOTS[type];
+  const labels = (Array.isArray(yaml) ? yaml : [yaml]).map(label => "ADVANCEMENT[]." + root + "." + label);
+  const aliases = (options.aliases ?? []).map(label => "ADVANCEMENT[]." + root + "." + label);
+  mappings.push({ kind: "advancement", types: [type], path, yaml: labels, representation, ...options, aliases,
+    implementation: ADVANCEMENT_PARSER,
+    evidence: [{ file: EXPLICIT_TESTS, test: "feat identity, source, state and native controls", status: "referenced" }] });
+}
+const REFERENCE_ALIASES = ["Name", "Identifier", "Type"];
+const REFERENCE_CONVERSIONS = ["A unique Name or Identifier match in the world or compendia resolves automatically; ambiguous or missing references wait for a drop in the import window, and import is blocked until every reference resolves."];
+for (const type of SUPPORTED_ADVANCEMENT_TYPES) {
+  adv(type, "_id", "Advancement ID", "optional 16-character alphanumeric ID");
+  if (!MULTI_LEVEL_ADVANCEMENT_TYPES.includes(type)) adv(type, "level", "Level", "non-negative integer; 0 is any level", { conversions: ["Omitted on new entries lets dnd5e store its default level 0."] });
+  adv(type, "name", "Name", "text", { conversions: ["Omitted keeps the native undefined so the sheet shows the type title."] });
+  adv(type, "hint", "Hint", "HTML/text");
+  adv(type, "img", "Icon", "image path");
+  adv(type, "classRestriction", "Class Restriction", "primary | secondary | n/a");
+}
+adv("AbilityScoreImprovement", "configuration.points", "Points", "non-negative integer");
+adv("AbilityScoreImprovement", "configuration.cap", "Cap", "positive integer");
+adv("AbilityScoreImprovement", "configuration.max", "Max", "nullable positive integer");
+adv("AbilityScoreImprovement", "configuration.locked", "Locked", "list of ability identifiers");
+adv("AbilityScoreImprovement", "configuration.fixed.{key}", ["FIXED[].Ability", "FIXED[].Value"], "ability identifier and integer increase", { conversions: ["A compact { str: 1 } mapping is accepted as input; export writes the list form."] });
+adv("AbilityScoreImprovement", "configuration.recommendation", "RECOMMENDATION.UUID", "feat Item UUID (world or compendium)", { aliases: REFERENCE_ALIASES, conversions: REFERENCE_CONVERSIONS });
+adv("ItemGrant", "configuration.optional", "Optional", "boolean");
+adv("ItemGrant", "configuration.sorting", "Sorting", "a | m");
+adv("ItemGrant", "configuration.items[].uuid", "ITEMS[].UUID", "Item UUID (world or compendium, not embedded)", { aliases: REFERENCE_ALIASES, conversions: REFERENCE_CONVERSIONS });
+adv("ItemGrant", "configuration.items[].optional", "ITEMS[].Optional", "boolean");
+adv("ItemGrant", "configuration.items[].sort", "ITEMS[].Sort", "integer");
+adv("ItemChoice", "configuration.allowDrops", "Allow Drops", "boolean");
+adv("ItemChoice", "configuration.sorting", "Sorting", "a | m");
+adv("ItemChoice", "configuration.type", "Type", "nullable Item type identifier");
+adv("ItemChoice", "configuration.choices.{key}.count", ["CHOICES[].Level", "CHOICES[].Count"], "level key with a non-negative integer count", { conversions: ["A level-keyed mapping is accepted as input; export writes the list form."] });
+adv("ItemChoice", "configuration.choices.{key}.replacement", "CHOICES[].Replacement", "boolean");
+adv("ItemChoice", "configuration.pool[].uuid", "POOL[].UUID", "Item UUID (world or compendium, not embedded)", { aliases: REFERENCE_ALIASES, conversions: REFERENCE_CONVERSIONS });
+adv("ItemChoice", "configuration.pool[].sort", "POOL[].Sort", "integer");
+for (const [key, label] of [["level", "Level"], ["list", "List"], ["school", "School"], ["type", "Type"], ["subtype", "Subtype"]])
+  adv("ItemChoice", "configuration.restriction." + key, "RESTRICTION." + label, ["list", "school"].includes(key) ? "list of identifiers" : "text; n/a stores an empty string");
+for (const type of ["ItemGrant", "ItemChoice"]) {
+  adv(type, "configuration.spell.ability", "SPELL.Ability", "list of ability identifiers");
+  adv(type, "configuration.spell.method", "SPELL.Method", "atwill | innate | ritual | pact | spell | n/a");
+  adv(type, "configuration.spell.prepared", "SPELL.Prepared", "unprepared | prepared | always | 0 | 1 | 2");
+  adv(type, "configuration.spell.uses.max", "SPELL.Uses Max", "deterministic formula string");
+  adv(type, "configuration.spell.uses.per", "SPELL.Uses Per", "native recovery period identifier");
+  adv(type, "configuration.spell.uses.requireSlot", "SPELL.Require Slot", "boolean");
+}
+adv("ModifyItem", "configuration.changes[]._id", "CHANGES[].Effect ID", "16-character ID of an enchantment effect on this feature, or n/a");
+adv("ModifyItem", "configuration.changes[].uuid", "CHANGES[].EFFECT.UUID", "standalone ActiveEffect compendium UUID", { aliases: ["Name"], conversions: REFERENCE_CONVERSIONS });
+adv("ModifyItem", "configuration.changes[].identifiers", "CHANGES[].Identifiers", "list of identifier or type:identifier strings");
+adv("ScaleValue", "configuration.identifier", "Identifier", "identifier text");
+adv("ScaleValue", "configuration.type", "Type", "string | number | cr | dice | distance | usage");
+adv("ScaleValue", "configuration.distance.units", "Distance Units", "length unit identifier");
+adv("ScaleValue", "configuration.scale.{key}.value", ["SCALE[].Level", "SCALE[].Value"], "level key with the string, number, cr, distance or usage value", { conversions: ["A level-keyed mapping is accepted as input; export writes the list form."] });
+adv("ScaleValue", "configuration.scale.{key}.number", "SCALE[].Dice Count", "nullable non-negative integer (dice)");
+adv("ScaleValue", "configuration.scale.{key}.faces", "SCALE[].Die Denomination", "positive integer (dice)");
+adv("ScaleValue", "configuration.scale.{key}.modifiers", "SCALE[].Modifiers", "list of dice modifier strings (dice)");
+adv("ScaleValue", "configuration.scale.{key}.period", "SCALE[].Period", "native recovery period identifier (usage)");
+adv("Trait", "configuration.mode", "Mode", "default | expertise | forcedExpertise | upgrade | mastery");
+adv("Trait", "configuration.allowReplacements", "Allow Replacements", "boolean");
+adv("Trait", "configuration.grants", "Grants", "list of trait keys (<trait>:<category>[:<child>])");
+adv("Trait", "configuration.choices[].count", "CHOICES[].Count", "positive integer");
+adv("Trait", "configuration.choices[].pool", "CHOICES[].Pool", "list of trait keys");
+
 add(SUPPORTED, "name", "ITEM.Name", "required text");
 add(PHYSICAL, "system.quantity", "INVENTORY.Quantity", "exact non-negative integer", {
   conditions: ["Container imports use quantity 1; quantity is not a free container control."],
   conversions: ["Container quantity is fixed to 1 by the existing builder."]
+});
+add(PHYSICAL, "system.container", "INVENTORY.Container", "container reference: a container's name in the same batch, a container Item UUID, or n/a", {
+  conditions: ["Nested CONTAINER.CONTENTS entries are placed without this key. dnd5e keeps contents in the container's collection and folder, at most five containers deep; a UUID in another collection is rejected before import."],
+  conversions: ["A same-batch name binds at parse time; other names and UUIDs resolve against the destination collection (unique match) or wait for a drop in the import window. The builder never writes system.container from text; createItem5e sets it after the container exists."]
 });
 add(PHYSICAL, "system.rarities", "ITEM.Rarities", "list of native rarity identifiers", {
   aliases: ["ITEM.Rarity"], conversions: ["Legacy scalar Rarity becomes a one-entry list; an explicit empty list remains mundane. Equivalent aliases are accepted and conflicting values fail."]
@@ -76,6 +151,16 @@ add(["tool"], "system.bonus", "PROPERTIES.Tool Bonus", "formula string");
 add(["spell"], "system.level", "ITEM.Level", "integer from 0 to 9");
 add(["spell"], "system.ability", "ITEM.Ability", "native ability identifier or blank");
 addGroup(["spell"], "system.activation.", "ACTIVATION.", [["type", "Type", "native activation identifier"], ["value", "Value", "non-negative integer"], ["condition", "Condition", "text"]]);
+add(["feat"], "system.type.value", "ITEM.Feature Type", "native feature type identifier or blank", {
+  conversions: ["Unknown values are stored as-is with a warning; dnd5e labels them as a generic Feature."]
+});
+add(["feat"], "system.type.subtype", "ITEM.Feature Subtype", "native feature subtype identifier or blank", {
+  conditions: ["Subtypes exist for class, enchantment, feat, and supernaturalGift feature types; other types store the value without a label."]
+});
+add(["feat"], "system.properties", ["PROPERTIES.Magical", "PROPERTIES.Passive Trait"], "independent booleans mapped to Set membership", {
+  members: [{ id: "mgc", yaml: "PROPERTIES.Magical" }, { id: "trait", yaml: "PROPERTIES.Passive Trait" }],
+  conversions: ["True adds its native property identifier; explicit false removes only that property."]
+});
 addGroup(["container"], "system.capacity.", "CAPACITY.", [
   ["count", "Item Count", "nullable non-negative integer"],
   ["weight.value", "Weight Capacity Value", "nullable non-negative finite number"], ["weight.units", "Weight Capacity Units", "native unit identifier"],
@@ -208,9 +293,23 @@ function sheetFor(field, entries, current) {
   if (["weapon", "equipment"].includes(field.type) && /^system\.(crew|speed|hp|cover|armor)\b/.test(path)) {
     reviewed("systems/dnd5e/templates/items/details/details-" + field.type + ".hbs", ["Mountable/siege/vehicle and armor controls depend on item category; hidden stored values remain importable."]);
   }
+  if (field.type === "feat" && path.startsWith("system.type."))
+    reviewed("systems/dnd5e/templates/items/details/details-feat.hbs", ["The subtype selector appears only when the selected feature type defines subtypes; unknown values are stored and labeled as a generic Feature."]);
+  if (field.type === "feat" && path.startsWith("system.enchant."))
+    reviewed("systems/dnd5e/templates/items/details/details-feat.hbs", ["Enchantment limit controls appear only when the feature is an enchantment source (artificerInfusion or rune subtype)."]);
+  if (field.type === "feat" && path === "system.cover")
+    reviewed("systems/dnd5e/templates/items/details/details-feat.hbs", ["Cover is shown only for vehicle features (type.value vehicle)."]);
+  if (field.type === "feat" && path === "system.crewed")
+    reviewed("systems/dnd5e/templates/items/details/details-feat.hbs", ["dnd5e 6.0.6 has no sheet control for this field."], "Stored value is retained; no native control reads it.");
   return sheet;
 }
 function excludedReason(field, path) {
+  if (field.kind === "advancement") {
+    if (path === "type") return "Selected by the ADVANCEMENT entry's root key.";
+    if (/^flags(\.|\[|$)/.test(path)) return "Document-management, provenance or extension metadata; no new arbitrary flag/path import is declared.";
+    if (/^value(\.|\[|$)/.test(path)) return "Advancement value records a character's choices after the Item is added; new Items store an empty value.";
+    return null;
+  }
   if (field.kind !== "item") return null;
   if (["_id", "type"].includes(path)) return "Creation identity: Foundry allocates the Item ID and the YAML root selects its type.";
   if (/^(folder|ownership|_stats|flags)(\.|\[|$)/.test(path)) return "Document-management, provenance or extension metadata; no new arbitrary flag/path import is declared.";
@@ -224,25 +323,35 @@ function decorate(field, environment) {
   const path = pathKey(field.path);
   const version = environment?.systemVersion ?? "";
   const current = version === VERIFIED_VERSION && environment?.foundryVersion === "14.369";
-  const applicable = mappings.filter(entry => entry.types.includes(field.type) && samePath(path, entry.path));
+  const kind = field.kind === "advancement" ? "advancement" : "item";
+  const applicable = mappings.filter(entry => (entry.kind ?? "item") === kind && entry.types.includes(field.type) && samePath(path, entry.path));
   const coverage = { status: "needs-review", owner: OWNER, yamlLocations: [], aliases: [], acceptedRepresentations: [], conversions: [], stages: stages("needs-review"), evidence: [] };
   const excluded = excludedReason(field, path);
   if (excluded) Object.assign(coverage, { status: "excluded", stages: stages("excluded"), reason: excluded });
-  else if (field.kind === "advancement" || (field.kind === "item" && !SUPPORTED.includes(field.type))) {
+  else if (field.kind === "advancement" && !SUPPORTED_ADVANCEMENT_TYPES.includes(field.type)) {
+    Object.assign(coverage, { status: "unsupported", stages: stages("unsupported"), reason: "Catalog discovery only: this advancement type belongs to classes, subclasses or species, which have no supported Item YAML root." });
+  } else if (field.kind === "item" && !SUPPORTED.includes(field.type)) {
     Object.assign(coverage, { status: "unsupported", stages: stages("unsupported"), reason: "Catalog discovery only: this native type has no supported Item YAML root or advancement import mapping." });
-  } else if (field.kind !== "item") {
+  } else if (field.kind !== "item" && field.kind !== "advancement") {
     Object.assign(coverage, { status: "excluded", stages: stages("excluded"), reason: "This document kind belongs to the Activity Importer catalog.", owner: "5e-activity-importer" });
-  } else if (/^system\.(container|crew\.value)(\.|\[|$)/.test(path)) {
-    Object.assign(coverage, { status: "unsupported", stages: stages("unsupported"), reason: "Container placement and actor crew assignments remain deferred relationships." });
-  } else if (/^(system\.activities|effects)(\.|\[|$)/.test(path)) {
+  } else if (field.kind === "item" && /^system\.crew\.value(\.|\[|$)/.test(path)) {
+    Object.assign(coverage, { status: "unsupported", stages: stages("unsupported"), reason: "Actor crew assignments remain a deferred relationship." });
+  } else if (field.kind === "item" && /^(system\.activities|effects)(\.|\[|$)/.test(path)) {
     Object.assign(coverage, { status: "excluded", stages: stages("excluded"), owner: "5e-activity-importer",
       yamlLocations: [field.type.toUpperCase() + (path.startsWith("effects") ? ".effects[]" : ".Activities[]")],
       reason: "Cross-catalog relationship: attachment fields are mapped once by Activity Importer. Item Importer delegates through its optional companion API.",
       relatedCatalog: path.startsWith("effects") ? "effect" : "activity" });
-  } else if (/^system\.advancement(\.|\[|$)/.test(path)) {
-    Object.assign(coverage, { status: "unsupported", stages: stages("unsupported"), reason: "Native advancement variants are cataloged separately; advancement import remains unsupported.", relatedCatalog: "advancement" });
+  } else if (field.kind === "item" && /^system\.advancement(\.|\[|$)/.test(path)) {
+    if (field.type === "feat") Object.assign(coverage, {
+      status: current ? "declared" : "needs-review", stages: stages("declared"), yamlLocations: ["FEAT.ADVANCEMENT[]"], relatedCatalog: "advancement",
+      acceptedRepresentations: ["list of one-root entries (ABILITY_SCORE_IMPROVEMENT, GRANT_ITEMS, CHOOSE_ITEMS, MODIFY_ITEMS, SCALE_VALUE, TRAIT)"],
+      conversions: ["Entries are keyed by Advancement ID at build time; omitted IDs are allocated. Each type's configuration leaves are mapped in the advancement catalog."],
+      references: [REFERENCE, ADVANCEMENT_PARSER, "scripts/itemData.js", "scripts/itemYamlExporter.js", "scripts/itemAdvancement.js"],
+      reviewedSystemVersion: VERIFIED_VERSION, reviewedFoundryVersion: "14.369"
+    });
+    else Object.assign(coverage, { status: "unsupported", stages: stages("unsupported"), reason: "Advancement is authored on Feature Items only; this Item type has no supported YAML root for it.", relatedCatalog: "advancement" });
   } else if (applicable.length) {
-    const prefix = field.type.toUpperCase() + ".";
+    const prefix = kind === "advancement" ? "FEAT." : field.type.toUpperCase() + ".";
     Object.assign(coverage, {
       status: current ? "declared" : "needs-review",
       yamlLocations: uniq(applicable.flatMap(entry => entry.yaml).map(value => prefix + value)),
@@ -265,7 +374,7 @@ function decorate(field, environment) {
     if (!current) coverage.reason = "Mapping reviewed for Foundry 14.369 / dnd5e 6.0.6; compare the discovered contract before treating it as supported on this runtime.";
     if (field.type === "container" && path === "system.quantity") coverage.stages = { ...stages("declared"), build: "unsupported", export: "unsupported" };
   } else {
-    const children = mappings.some(entry => entry.types.includes(field.type) && (entry.path.startsWith(path + ".") || entry.path.startsWith(path + "[]")));
+    const children = mappings.some(entry => (entry.kind ?? "item") === kind && entry.types.includes(field.type) && (entry.path.startsWith(path + ".") || entry.path.startsWith(path + "[]")));
     if (children) Object.assign(coverage, { status: "excluded", stages: stages("excluded"), reason: "Structural container; coverage is recorded on its declared child fields, not counted again." });
     else coverage.reason = "No reviewed YAML or sheet mapping exists for this discovered native field.";
   }
@@ -281,19 +390,21 @@ export function decorateCatalogFields(fields, environment = {}) {
 /** Audit the reviewed map against the supplied native catalog, without changing it. */
 export function auditCoverageReferences(fields) {
   if (!Array.isArray(fields)) throw new TypeError("Catalog fields must be an array.");
-  const presentTypes = new Set(fields.filter(field => field.kind === "item").map(field => field.type));
+  const presentTypes = new Set(fields.filter(field => ["item", "advancement"].includes(field.kind)).map(field => field.kind + ":" + field.type));
   const missing = [];
   const checked = new Set();
   for (const entry of mappings) for (const type of entry.types) {
-    if (!presentTypes.has(type)) continue;
-    const id = type + ":" + entry.path;
+    const kind = entry.kind ?? "item";
+    if (!presentTypes.has(kind + ":" + type)) continue;
+    const id = kind + ":" + type + ":" + entry.path;
     if (checked.has(id)) continue;
     checked.add(id);
-    if (!fields.some(field => field.kind === "item" && field.type === type && samePath(pathKey(field.path), entry.path))) {
-      missing.push({kind:"item",type,path:entry.path,yamlLocations:entry.yaml.map(path => type.toUpperCase() + "." + path)});
+    if (!fields.some(field => field.kind === kind && field.type === type && samePath(pathKey(field.path), entry.path))) {
+      const prefix = kind === "advancement" ? "FEAT." : type.toUpperCase() + ".";
+      missing.push({kind,type,path:entry.path,yamlLocations:entry.yaml.map(path => prefix + path)});
     }
   }
   return {success:missing.length === 0,checked:checked.size,missing,
-    scope:"Mappings checked only for native Item types present in this catalog; no import support is inferred."};
+    scope:"Mappings checked only for native Item and advancement types present in this catalog; no import support is inferred."};
 }
 

@@ -30,8 +30,12 @@
 <td style="text-align:left">Use documented YAML templates for exact control over complex homebrew.</td>
 </tr>
 <tr>
+<td style="text-align:left"><strong><a href="#features-and-advancement">Features &amp; Advancement</a></strong></td>
+<td style="text-align:left">Import class features, feats, and monster traits, including the ability increases, spells, and proficiencies a feat grants.</td>
+</tr>
+<tr>
 <td style="text-align:left"><strong><a href="#batch-imports">Batch Imports</a></strong></td>
-<td style="text-align:left">Import a mixed collection of Items from one block.</td>
+<td style="text-align:left">Import a mixed collection of Items from one block, including bags packed with their contents.</td>
 </tr>
 <tr>
 <td style="text-align:left"><strong><a href="#lightweight-key-value-drafts">Lightweight Drafts</a></strong></td>
@@ -114,6 +118,7 @@ AC: [Number] (max Dex [Number])
 <li><strong>Tool:</strong> &quot;Tool&quot;, &quot;Kit&quot;, &quot;Instrument&quot;, &quot;Gaming Set&quot;</li>
 <li><strong>Container:</strong> &quot;Bag&quot;, &quot;Backpack&quot;, &quot;Box&quot;, &quot;Holds&quot;, &quot;Capacity&quot;</li>
 <li><strong>Loot:</strong> &quot;Gem&quot;, &quot;Art Object&quot;, &quot;Treasure&quot;, &quot;Material&quot;</li>
+<li><strong>Feature:</strong> a header line such as &quot;General Feat&quot;, &quot;3rd-level Fighter feature&quot;, &quot;Eldritch Invocation&quot; or &quot;Species Trait&quot;; a &quot;Prerequisite:&quot; line; or a stat-block marker on the name line such as &quot;(3/Day)&quot;, &quot;(Recharge 5-6)&quot;, &quot;Multiattack&quot; or &quot;Legendary Resistance&quot;. Features are detected from header signals only, never from item keywords in the body text.</li>
 </ul>
 <h6 id="3-weapons">3. Weapons</h6>
 <p>To ensure correct parsing of damage and properties:</p>
@@ -241,6 +246,11 @@ This lacquered case contains enchanted inks, folding rulers, waxed vellum, and a
 <td><a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/YAML%20Templates/Strict%20Tool%20Template.md">Strict Tool Template</a></td>
 <td><a href="https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Tool%20Template.md">Raw</a></td>
 </tr>
+<tr>
+<td>Feature</td>
+<td><a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/YAML%20Templates/Strict%20Feat%20Template.md">Strict Feat Template</a></td>
+<td><a href="https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Feat%20Template.md">Raw</a></td>
+</tr>
 </tbody>
 </table>
 <p>For import-ready examples, use the <a href="#validated-custom-yaml-examples">validated custom YAML examples</a>, the <a href="https://github.com/GnollStack/5e-Item-Importer#validated-mixed-batch-example">mixed-type batch example</a>, and the <a href="https://github.com/GnollStack/5e-Item-Importer#validated-same-type-batch-example">same-type batch example</a> above.</p>
@@ -253,14 +263,57 @@ This lacquered case contains enchanted inks, folding rulers, waxed vellum, and a
 </details>
 <hr />
 
+<h3 id="features-and-advancement">Features &amp; Advancement</h3>
+<p><em>Best for: class features, feats, monster traits, and species traits.</em></p>
+<p>Features import from all three formats. Paste a feature with its header line, such as &quot;General Feat (Prerequisite: Level 4+)&quot; or &quot;3rd-level Fighter feature&quot;; fill in the strict <code>FEAT</code> template; or write a lightweight <code>type: feat</code> draft. The importer keeps the feature type and subtype, requirements and prerequisites, limited uses with rest or combat recovery, and the full description.</p>
+<p>A feat can also carry its advancement, so dropping it on a character applies what it grants. Add an <code>ADVANCEMENT</code> list to the strict template:</p>
+<table>
+<thead>
+<tr>
+<th>Entry</th>
+<th>What it gives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ABILITY_SCORE_IMPROVEMENT</code></td>
+<td>Fixed increases, or points the player assigns among the abilities you leave unlocked</td>
+</tr>
+<tr>
+<td><code>GRANT_ITEMS</code></td>
+<td>Spells, feats, or equipment, with spellcasting settings for granted spells</td>
+</tr>
+<tr>
+<td><code>CHOOSE_ITEMS</code></td>
+<td>A pool of options the player picks from, optionally filtered by type, spell level, or school</td>
+</tr>
+<tr>
+<td><code>MODIFY_ITEMS</code></td>
+<td>An enchantment applied to the character's Items that match the listed identifiers</td>
+</tr>
+<tr>
+<td><code>SCALE_VALUE</code></td>
+<td>A value that grows with level, such as a die that becomes 2d6</td>
+</tr>
+<tr>
+<td><code>TRAIT</code></td>
+<td>Skill, save, language, armor, weapon, or tool proficiencies, expertise, or a choice among them</td>
+</tr>
+</tbody>
+</table>
+<p>Granted items and pool entries can be named instead of linked. When exactly one world or compendium document matches the name or identifier, it links on its own; otherwise the preview shows a drop zone with the candidates, and you pick one or drag the right document onto it. Import waits until every reference is linked. Exporting the feature writes its advancement back with each document's UUID and name.</p>
+<p>See the <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/templates/YAML%20Templates/Strict%20Feat%20Template.md">Strict Feat Template</a> for every field and <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/examples/full-native-feat.yaml">full-native-feat.yaml</a> for a feat that uses four kinds of advancement.</p>
+<hr />
+
 <h3 id="batch-imports">Batch Imports</h3>
-<p>Strict Format can import a mixed collection in one block. For several Items of the same type, separate YAML documents with <code>---</code>. Supported top-level keys are <code>SPELL</code>, <code>WEAPON</code>, <code>EQUIPMENT</code>, <code>CONSUMABLE</code>, <code>TOOL</code>, <code>LOOT</code>, and <code>CONTAINER</code>.</p>
+<p>Strict Format can import a mixed collection in one block. For several Items of the same type, separate YAML documents with <code>---</code>. Supported top-level keys are <code>SPELL</code>, <code>FEAT</code>, <code>WEAPON</code>, <code>EQUIPMENT</code>, <code>CONSUMABLE</code>, <code>TOOL</code>, <code>LOOT</code>, and <code>CONTAINER</code>.</p>
+<p>A <code>CONTAINER</code> can hold its contents: list complete Item documents under <code>CONTENTS</code> (nesting up to five containers deep) and they are created inside it, in the same collection and folder. A contained Item can also name its container with <code>INVENTORY.Container</code>: the name of a container in the same batch, the UUID of an existing container, or a container dragged onto the reference in the import window. The preview marks each content <strong>Inside</strong> its container; contents import after their container and are never created loose if it is deselected or fails. Exporting a world or Actor container writes its contents back under <code>CONTENTS</code>. See <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/examples/full-native-container.yaml">full-native-container.yaml</a>.</p>
 <hr />
 
 <h3 id="lightweight-key-value-drafts">Lightweight Key/Value Drafts</h3>
 <details>
 <summary><strong>View a lightweight draft example and supported fields</strong></summary>
-<p>For a quick single-Item draft, the same seven Item types can also be written as a flat key/value list. At minimum, provide <code>name</code> and <code>type</code>; the router supplies conservative valid defaults and then validates the generated document through the strict parser.</p>
+<p>For a quick single-Item draft, the same eight Item types can also be written as a flat key/value list. At minimum, provide <code>name</code> and <code>type</code>; the router supplies conservative valid defaults and then validates the generated document through the strict parser.</p>
 <pre><code class="language-yaml">name: Quick Spark
 type: spell
 level: 2
@@ -271,7 +324,7 @@ range: 60 feet
 duration: 1 minute
 description: A brief arc of blue-white light.
 </code></pre>
-<p>Type-specific lightweight fields include <code>weaponType</code>/<code>baseWeapon</code>, <code>equipmentType</code>/<code>baseEquipment</code>/<code>armorClass</code>, <code>consumableType</code>/<code>ammunitionType</code>/<code>poisonType</code>, <code>toolType</code>/<code>baseTool</code>, <code>lootType</code>, container capacity fields, and spell level/school/activation/component/range/duration fields.</p>
+<p>Type-specific lightweight fields include <code>weaponType</code>/<code>baseWeapon</code>, <code>equipmentType</code>/<code>baseEquipment</code>/<code>armorClass</code>, <code>consumableType</code>/<code>ammunitionType</code>/<code>poisonType</code>, <code>toolType</code>/<code>baseTool</code>, <code>lootType</code>, container capacity fields, spell level/school/activation/component/range/duration fields, and feature <code>featureType</code>/<code>featureSubtype</code>/<code>requirements</code>/<code>prerequisiteLevel</code>/<code>repeatable</code> fields (<code>type: feat</code> with <code>featureType: general feat</code>, <code>invocation</code>, <code>species trait</code>, and similar readable values).</p>
 <p>Readable aliases such as <code>armor</code>/<code>armour</code>, <code>potion</code>, <code>scroll</code>, <code>martial melee</code>, <code>thieves tools</code>, <code>trade goods</code>, and full spell-school names are accepted. Mismatched fields, conflicting representations, malformed values, and unknown properties are reported instead of being silently replaced. Use the full strict templates when you need advanced configuration.</p>
 </details>
 <hr />
@@ -279,6 +332,7 @@ description: A brief arc of blue-white light.
 <h3 id="import-workflow">Import Workflow</h3>
 <p>Paste text, choose a template, or drop an Item, Actor, Journal passage, or local text/YAML file into the importer. After parsing, review the preview and choose a World Items folder, an owned Actor, or a writable Item compendium as the destination.</p>
 <p>When a matching Item already exists, choose whether to create another copy, update it, merge conservatively, or skip it. Update and merge show the exact target and any field conflicts before writing. Ambiguous matches are stopped for review.</p>
+<p>Document references (a feature's granted items and choice pools, or an Item's container) are listed under <strong>References</strong> in the preview. A unique name or identifier match resolves on its own; anything missing or ambiguous gets a drop zone with candidates, and <strong>Import</strong> waits until every reference is resolved. A container with nested contents previews as a batch and places its children inside it.</p>
 <p>Templates and presets share one picker; <strong>Manage</strong> opens preset controls. Full mechanical previews are the default. <strong>View options</strong> offers Compact previews and shows the optional generated YAML editor and Import History. The editor lets you inspect and edit parsed values and defaults from natural-language input.</p>
 <p><strong>Import options</strong> starts collapsed. <strong>Import options &gt; Restore defaults</strong> resets window preferences while preserving your work; <strong>View options &gt; Reset layout</strong> changes display preferences only. See the <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/import-window.md">import-window guide</a> for these controls.</p>
 <p>Batch imports can be filtered, cancelled before the next write, and retried without recreating successful entries. History offers report download and Undo for eligible imports in the current session.</p>
@@ -289,8 +343,8 @@ description: A brief arc of blue-white light.
 <p>With both modules enabled:</p>
 <ul>
 <li><strong>One menu:</strong> <strong>Import Item</strong> joins Activity Importer's <strong>Add Activity / Effect</strong> dropdown in the Items Directory. Turn off <strong>Merge with Activity Importer Dropdown</strong> in the settings to keep a separate button.</li>
-<li><strong>Mechanics in strict YAML:</strong> add <code>Activities</code> and <code>effects</code> arrays to a strict template. Each template has an optional activities and effects section showing the format, and <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/examples/full-native-weapon.yaml"><code>docs/examples/full-native-weapon.yaml</code></a> is a complete example.</li>
-<li><strong>Build them in the window:</strong> <strong>Add activities or effects</strong> opens Activity Importer's builder for the parsed Item. <strong>Resolve document references</strong> links the spells and Actors that Cast, Summon, and Transform need.</li>
+<li><strong>Mechanics in strict YAML:</strong> add <code>Activities</code> and <code>effects</code> arrays to a strict template. Each template has an optional activities and effects section showing the format, <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/examples/full-native-weapon.yaml"><code>docs/examples/full-native-weapon.yaml</code></a> is a complete native example, and <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/examples/full-midi-weapon.yaml"><code>docs/examples/full-midi-weapon.yaml</code></a> and <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/examples/full-midi-feat.yaml"><code>docs/examples/full-midi-feat.yaml</code></a> are complete MIDI-QOL examples for a weapon and a feature.</li>
+<li><strong>Build them in the window:</strong> <strong>Add activities or effects</strong> opens Activity Importer's builder for the parsed Item. <strong>Resolve document references</strong> links the spells and Actors that Cast, Summon, and Transform need; the Item's own references (granted items, choice pools, containers) resolve without the companion.</li>
 <li><strong>Checked first:</strong> Activity Importer checks activities, effects, and their references before import. Previews do not run commands or evaluate conditions.</li>
 <li><strong>Full Item YAML:</strong> right-click an Item and choose <strong>Copy Full Item YAML</strong> or <strong>Download Full Item YAML</strong> to export it with its activities and effects, ready to re-import or share.</li>
 </ul>
@@ -299,7 +353,7 @@ description: A brief arc of blue-white light.
 <div style="text-align: center;">
 <p><a href="https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/activity-Importer-5e/gifs/Import-Full-Item.gif"><img src="https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/activity-Importer-5e/gifs/Import-Full-Item.gif" alt="Importing Rimeheart as a complete spear with activities and effects" style="max-width: 100%; height: auto;" width="1280" height="536" loading="lazy" decoding="async" /></a></p>
 </div>
-<p>Activity Importer is available to <a href="https://www.patreon.com/cw/GnollStack">Bazaar Patrons</a> through Foundry Premium Content and works with 5e Item Importer 14.2.0 or later.</p>
+<p>Activity Importer is available to <a href="https://www.patreon.com/cw/GnollStack">Bazaar Patrons</a> through Foundry Premium Content and works with 5e Item Importer 14.3.0 or later.</p>
 <hr />
 
 <h3 id="more-details">More Details</h3>
@@ -391,7 +445,7 @@ If using Strict Format: Use the YAML block form <code>Description: |</code> and 
 </div>
 <p><strong>Foundry VTT:</strong> v14 only, build 14.367 or later; verified on <strong>14.369</strong>. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.</p>
 <p><strong>Game system:</strong> <strong>dnd5e</strong> 6.0.6 minimum; verified on <strong>6.0.6</strong>.</p>
-<p><strong>Optional modules:</strong> <strong>5e Activity Importer</strong> adds activities and effects to imported Items; Item Importer works fully without it. <strong>Token Name Lookup</strong> can make <code>[[lookup @name]]</code> text prefer token names.</p>
+<p><strong>Optional modules:</strong> <strong>5e Activity Importer</strong> 14.3.0 or later adds activities and effects to imported Items; Item Importer works fully without it, and an older companion shows an update message for attachments while Items still import. <strong>Token Name Lookup</strong> can make <code>[[lookup @name]]</code> text prefer token names.</p>
 <hr />
 <div style="text-align: center;">
 <h2 id="developer-api">Developer API</h2>
@@ -412,18 +466,19 @@ await api.copyExport(item);
 await api.downloadExport(item);
 </code></pre>
 <p>API undo is intentionally explicit: <code>api.history.undo(sessionId, { confirmed: true })</code>. The legacy <code>api.import(text, folderId)</code> signature remains supported.</p>
+<p><code>api.import()</code> creates one Item. A <code>CONTAINER</code> with nested <code>CONTENTS</code> returns an error that points to the import window's batch flow, and an Item with an unresolved reference (a granted item, choice pool entry, or container) returns the missing references as issues without creating anything.</p>
 <details>
 <summary><strong>Advanced: Schema versions, exports, and integration contracts</strong></summary>
-<p>Schema 4 adds reviewed typed automation storage and retains <code>ITEM.Rarities</code> as a list, <code>DAMAGE_DATA.Modifiers</code> as dice modifier strings, and spell <code>DURATION.Expiry</code>. Legacy <code>ITEM.Rarity</code> and supported YAML versions 0, 1, 2 and 3 remain accepted; an explicit empty Rarities list means mundane.</p>
+<p>Schema 6 adds feature advancement (<code>FEAT.ADVANCEMENT</code>), container contents (<code>CONTAINER.CONTENTS</code> and <code>INVENTORY.Container</code>) and document references that resolve by UUID, name or identifier, or by dragging a document onto the reference in the import window. Schema 5 added the <code>FEAT</code> root for Features and the combat recovery periods <code>initiative</code>, <code>turnStart</code>, <code>turnEnd</code> and <code>turn</code>. Schema 4 added reviewed typed automation storage (a separate contract that stays at 4) and retains <code>ITEM.Rarities</code> as a list, <code>DAMAGE_DATA.Modifiers</code> as dice modifier strings, and spell <code>DURATION.Expiry</code>. Legacy <code>ITEM.Rarity</code> and supported YAML versions 0, 1, 2, 3, 4 and 5 remain accepted; an explicit empty Rarities list means mundane.</p>
 <p>New strict YAML documents begin with visible schema metadata:</p>
-<pre><code class="language-yaml">SCHEMA_VERSION: 4
+<pre><code class="language-yaml">SCHEMA_VERSION: 6
 WEAPON:
   ITEM:
     Name: &quot;Example Weapon&quot;
 </code></pre>
 <p>The parser reports migration provenance and carries it through mixed and multi-document batches. Documents declaring a schema version newer than the installed importer supports are rejected instead of being partially imported. <code>Uses Max</code>, magic bonuses, tool bonuses, and recharge thresholds preserve compatible dnd5e formula strings; legacy <code>Uses Current</code> cannot be converted against a formula maximum and fails with an instruction to provide <code>Uses Spent</code>.</p>
-<p>The strict exporter supports Weapon, Equipment, Consumable, Tool, Loot, Container, and Spell Items. <strong>Core Item export</strong> is always available, excludes Activities and Active Effects, and is the default for <code>api.export()</code>, <code>api.exportBatch()</code>, copy, download, and Item drops when the companion serializers are unavailable. <strong>Full Item export</strong> is an explicit companion workflow exposed by <code>api.exportFull()</code>, <code>api.exportFullBatch()</code>, <code>{ mode: &quot;full&quot; }</code>, and the Full Item YAML context actions shown when Activity Importer exposes both synchronous serializers. Batch export uses <code>---</code> document separators so repeated Item types remain lossless.</p>
-<p>For full export, every live dnd5e Activity and Active Effect is serialized from its current document state through Activity Importer's <code>api.serializeActivity()</code> and <code>api.serializeEffect()</code> services, so later edits supersede stored provenance. If the companion is unavailable, the current state cannot be represented, an unreviewed third-party field is present, or the serializer cannot prove a lossless mapping, full export stops with an explicit error. Activity-specific effect application metadata is matched separately from the effect body. With the paired schema 4 serializers, multiple Activities can reference one local Active Effect: export writes one Item-level effect definition and keeps each Activity's <code>Effect ID</code> reference and application settings. Standalone <code>Effect UUID</code> references remain external links. Older or custom serializers that inline the same shared effect without reference support fail clearly; duplicate authored effect definitions are rejected during import. A linked effect is omitted from the standalone <code>effects</code> section only when its exact serialized body is embedded in its owning Activity. Low-level export options continue to accept <code>includeActivities</code> and <code>includeEffects</code>; each alias takes precedence over the older aggregate attachment options when both are supplied.</p>
+<p>The strict exporter supports Weapon, Equipment, Consumable, Tool, Loot, Container, Spell, and Feature Items. <strong>Core Item export</strong> is always available, excludes Activities and Active Effects, and is the default for <code>api.export()</code>, <code>api.exportBatch()</code>, copy, download, and Item drops when the companion serializers are unavailable. <strong>Full Item export</strong> is an explicit companion workflow exposed by <code>api.exportFull()</code>, <code>api.exportFullBatch()</code>, <code>{ mode: &quot;full&quot; }</code>, and the Full Item YAML context actions shown when Activity Importer exposes both synchronous serializers. Batch export uses <code>---</code> document separators so repeated Item types remain lossless.</p>
+<p>For full export, every live dnd5e Activity and Active Effect is serialized from its current document state through Activity Importer's <code>api.serializeActivity()</code> and <code>api.serializeEffect()</code> services, so later edits supersede stored provenance. If the companion is unavailable, the current state cannot be represented, an unreviewed third-party field is present, or the serializer cannot prove a lossless mapping, full export stops with an explicit error. Activity-specific effect application metadata is matched separately from the effect body. With the paired schema 5 serializers, multiple Activities can reference one local Active Effect: export writes one Item-level effect definition and keeps each Activity's <code>Effect ID</code> reference and application settings. Standalone <code>Effect UUID</code> references remain external links. Older or custom serializers that inline the same shared effect without reference support fail clearly; duplicate authored effect definitions are rejected during import. A linked effect is omitted from the standalone <code>effects</code> section only when its exact serialized body is embedded in its owning Activity. Low-level export options continue to accept <code>includeActivities</code> and <code>includeEffects</code>; each alias takes precedence over the older aggregate attachment options when both are supplied.</p>
 <p>Custom properties use this strict shape:</p>
 <pre><code class="language-yaml">CUSTOM_PROPERTIES:
   Registered:
@@ -446,7 +501,7 @@ const result = importer?.parse(text, {
 <details>
 <summary><strong>How the natural-language parser works</strong></summary>
 <ol>
-<li><strong>Extraction:</strong> The parser scans the text using Regex to find Stats (Name, Type, Cost, Weight, Damage, Properties, AC, etc.).</li>
+<li><strong>Extraction:</strong> The parser scans the text using Regex to find Stats (Name, Type, Cost, Weight, Damage, Properties, AC, etc.). Feature header signals (a feat/feature/trait header line, a <code>Prerequisite:</code> line, or stat-block markers such as <code>(3/Day)</code> and <code>Recharge 5-6</code>) are checked first and route the text to a <code>FEAT</code> document with its requirements, uses and recovery.</li>
 <li><strong>Stripping:</strong> It removes lines that look like Stats to isolate the <strong>Description</strong>.</li>
 <li><strong>Conversion:</strong> It builds a YAML document matching the strict template format.</li>
 <li><strong>Final Pass:</strong> It runs the generated YAML through the <code>YamlItemParser</code> for validation and item creation.</li>

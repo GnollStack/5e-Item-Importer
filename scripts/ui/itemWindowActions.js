@@ -8,6 +8,15 @@ import { ItemUtils } from "../itemUtils.js";
 import { MODULE_NAME, YAML_ITEM_KEYS } from "../itemConfig.js";
 import { parseAllItemsYaml } from "../strictItemParsers/strictParserDispatcher.js";
 import {
+    resolveItemReferences,
+    applyDroppedReference,
+    chooseReferenceCandidate,
+    clearReference,
+    applyReference,
+    hasUnresolvedReferences,
+    summarizeReferences
+} from "../itemReferenceResolver.js";
+import {
     isStrictYamlFormat,
     isYamlMultiItem,
     normalizeItemInput,
@@ -248,13 +257,20 @@ function refreshItemUuidState(item, helper) {
     }
 }
 
+/** Import is blocked by unresolved companion UUIDs or by pending document references. */
+function isImportBlocked(item, helper) {
+    const unresolvedUuids = refreshItemUuidState(item, helper);
+    if (item && typeof item === "object") item._hasUnresolvedReferences = hasUnresolvedReferences(item);
+    return unresolvedUuids || !!item?._hasUnresolvedReferences;
+}
+
 function updateSingleImportEligibility(window, item, helper) {
     const importBtn = window.element.querySelector("[data-action='import']");
     if (!importBtn) return;
-    const unresolved = refreshItemUuidState(item, helper);
-    importBtn.disabled = unresolved;
-    if (unresolved) {
-        importBtn.title = "Resolve all inline activity UUIDs before importing.";
+    const blocked = isImportBlocked(item, helper);
+    importBtn.disabled = blocked;
+    if (blocked) {
+        importBtn.title = "Resolve all inline activity UUIDs and document references before importing.";
     } else {
         importBtn.removeAttribute("title");
     }
@@ -264,10 +280,124 @@ function removeUnresolvedBatchSelections(window, helper) {
     const successes = window.currentParseResult?.successes || [];
     const unresolvedIndices = new Set();
     successes.forEach((result, index) => {
-        if (refreshItemUuidState(result.item, helper)) unresolvedIndices.add(index);
+        if (isImportBlocked(result.item, helper)) unresolvedIndices.add(index);
     });
     for (const index of unresolvedIndices) window.selectedBatchItems.delete(index);
     return unresolvedIndices;
+}
+
+function currentParsedItems(window) {
+    const parseState = window.currentParseResult;
+    return parseState?.successes
+        ? parseState.successes.map(result => result.item).filter(Boolean)
+        : parseState?.item ? [parseState.item] : [];
+}
+
+/** Resolve document references (advancement grants, container placement) for freshly parsed items. */
+async function resolveReferencesForItems(window, items) {
+    const withReferences = items.filter(item => item?.references?.length);
+    if (!withReferences.length) return;
+    const destination = window._getDestination?.() ?? null;
+    for (const item of withReferences) {
+        try {
+            await resolveItemReferences(item, { destination });
+        } catch (error) {
+            ItemUtils.warn(`Could not resolve document references for "${item.name}": ${error?.message || error}`);
+        }
+    }
+}
+
+function findReferenceByZone(window, zone) {
+    const itemIndex = zone.dataset.itemIndex;
+    const result = itemIndex === undefined || itemIndex === ""
+        ? window.currentParseResult
+        : window.currentParseResult?.successes?.[Number.parseInt(itemIndex, 10)];
+    const item = result?.item;
+    const reference = item?.references?.find(entry => entry.id === zone.dataset.referenceId);
+    return item && reference ? { item, reference } : null;
+}
+
+async function afterReferenceChange({ item, reference }) {
+    applyReference(item, reference);
+    item._hasUnresolvedReferences = hasUnresolvedReferences(item);
+    await reRenderItemActivities.call(this, _uuidHelper);
+}
+
+async function handleReferenceDrop(zone, event) {
+    const found = findReferenceByZone(this, zone);
+    if (!found) return;
+    let dragData = null;
+    try {
+        dragData = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
+    } catch {
+        dragData = null;
+    }
+    const documentName = dragData?.type ?? found.reference.query?.documentName ?? "Item";
+    const uuid = dragData?.uuid
+        ?? (dragData?.pack && dragData?.id ? `Compendium.${dragData.pack}.${documentName}.${dragData.id}` : null);
+    if (!uuid) {
+        ui.notifications.warn(localize("II.Notifications.ReferenceDropUnsupported", "Drop a document from the sidebar or a compendium onto the reference."));
+        return;
+    }
+    const outcome = await applyDroppedReference(found.reference, uuid, this._getDestination?.() ?? null);
+    if (!outcome.accepted) {
+        ui.notifications.warn(outcome.reason);
+        return;
+    }
+    await afterReferenceChange.call(this, found);
+}
+
+/**
+ * Bind the Item Importer's own reference drop zones (advancement grants, container
+ * placement). These are separate from the companion's activity UUID zones.
+ * @this {ItemWindow}
+ */
+function setupItemReferenceDropZones() {
+    const output = this.element?.querySelector("#ii-parse-output");
+    if (!output) return;
+    for (const zone of output.querySelectorAll(".ii-ref-dropzone")) {
+        if (zone.dataset.iiRefBound === "true") continue;
+        zone.dataset.iiRefBound = "true";
+        zone.addEventListener("dragover", event => {
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = "link";
+            zone.classList.add("drag-over");
+        });
+        zone.addEventListener("dragleave", event => {
+            if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
+        });
+        zone.addEventListener("drop", async event => {
+            event.preventDefault();
+            event.stopPropagation();
+            zone.classList.remove("drag-over");
+            await handleReferenceDrop.call(this, zone, event);
+        });
+        zone.querySelector(".ii-ref-candidates")?.addEventListener("change", async event => {
+            const found = findReferenceByZone(this, zone);
+            if (!found || !event.target.value) return;
+            if (chooseReferenceCandidate(found.reference, event.target.value)) await afterReferenceChange.call(this, found);
+        });
+        zone.querySelector(".ii-ref-clear")?.addEventListener("click", async event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const found = findReferenceByZone(this, zone);
+            if (!found) return;
+            clearReference(found.reference);
+            await afterReferenceChange.call(this, found);
+        });
+    }
+}
+
+/**
+ * Re-run automatic reference resolution after the destination changed. User
+ * decisions (drops, chosen candidates) are kept.
+ * @this {ItemWindow}
+ */
+export async function refreshReferenceResolution() {
+    const items = currentParsedItems(this);
+    if (!items.some(item => item?.references?.length)) return;
+    await resolveReferencesForItems(this, items);
+    await reRenderItemActivities.call(this, _uuidHelper);
 }
 
 /**
@@ -366,6 +496,7 @@ async function reRenderItemActivities(helper) {
     this._setupCollapsibleSections();
     if (this.currentParseResult?.successes) this._updateBatchSelection();
     setupItemUuidDropZones.call(this, helper);
+    setupItemReferenceDropZones.call(this);
 }
 
 /**
@@ -428,6 +559,7 @@ export async function parse() {
         if (helper && result.item.pendingActivities?.length > 0) {
             preParseItemActivities(result.item, helper);
         }
+        await resolveReferencesForItems(this, [result.item]);
 
         if (!isCurrentParse(this, input, text, generation)) return;
         await decorateWorkflowPreview(this, text, result);
@@ -450,6 +582,7 @@ export async function parse() {
         if (helper && result.item._parsedActivityResults) {
             setupItemUuidDropZones.call(this, helper);
         }
+        setupItemReferenceDropZones.call(this);
 
         ItemUtils.log("Parse successful", result);
     } catch (error) {
@@ -523,6 +656,7 @@ export async function handleBatchParse(text, generation = this.parseGeneration) 
         }
     }
 
+    await resolveReferencesForItems(this, results.successes.map(result => result.item));
     if (!isCurrentParse(this, input, text, generation)) return;
     for (const result of results.successes) {
         await decorateWorkflowPreview(this, result._batchSourceText, result, { includeIconCandidates: false });
@@ -534,7 +668,7 @@ export async function handleBatchParse(text, generation = this.parseGeneration) 
     this.currentParseResult = results;
     this.selectedBatchItems = new Set(
         results.successes
-            .map((result, index) => refreshItemUuidState(result.item, helper) ? null : index)
+            .map((result, index) => isImportBlocked(result.item, helper) ? null : index)
             .filter(index => index !== null)
     );
 
@@ -552,6 +686,7 @@ export async function handleBatchParse(text, generation = this.parseGeneration) 
     if (helper) {
         setupItemUuidDropZones.call(this, helper);
     }
+    setupItemReferenceDropZones.call(this);
     this._updateBatchSelection();
 }
 
@@ -598,6 +733,7 @@ async function handleYamlBatchParse(text, generation = this.parseGeneration) {
         }
     }
 
+    await resolveReferencesForItems(this, results.successes.map(result => result.item));
     if (!isCurrentParse(this, input, text, generation)) return;
     for (const result of results.successes) {
         await decorateWorkflowPreview(this, result._batchSourceText || text, result, { includeIconCandidates: false });
@@ -609,7 +745,7 @@ async function handleYamlBatchParse(text, generation = this.parseGeneration) {
     this.currentParseResult = results;
     this.selectedBatchItems = new Set(
         results.successes
-            .map((result, index) => refreshItemUuidState(result.item, helper) ? null : index)
+            .map((result, index) => isImportBlocked(result.item, helper) ? null : index)
             .filter(index => index !== null)
     );
 
@@ -627,6 +763,7 @@ async function handleYamlBatchParse(text, generation = this.parseGeneration) {
     if (helper) {
         setupItemUuidDropZones.call(this, helper);
     }
+    setupItemReferenceDropZones.call(this);
     this._updateBatchSelection();
 }
 
@@ -979,7 +1116,7 @@ export function selectAllBatch() {
 
     this.selectedBatchItems = new Set(
         this.currentParseResult.successes
-            .map((result, index) => result.item?._hasUnresolvedUuids ? null : index)
+            .map((result, index) => (result.item?._hasUnresolvedUuids || result.item?._hasUnresolvedReferences) ? null : index)
             .filter(index => index !== null)
     );
 
@@ -1004,7 +1141,8 @@ export function selectNoneBatch() {
 export function toggleBatchItem(event, targetOrOptions = {}) {
     const { index } = targetOrOptions?.dataset ?? targetOrOptions;
     const idx = parseInt(index);
-    if (this.currentParseResult?.successes?.[idx]?.item?._hasUnresolvedUuids) {
+    const blockedItem = this.currentParseResult?.successes?.[idx]?.item;
+    if (blockedItem?._hasUnresolvedUuids || blockedItem?._hasUnresolvedReferences) {
         this.selectedBatchItems.delete(idx);
         this._updateBatchSelection();
         return;
@@ -1259,28 +1397,28 @@ export async function openInlineActivityBuilder() {
 }
 
 export async function resolveInlineReferences() {
-    const parseState = this.currentParseResult;
-    const items = parseState?.successes
-        ? parseState.successes.map(result => result.item)
-        : parseState?.item ? [parseState.item] : [];
+    const items = currentParsedItems(this);
     const parseResults = items.flatMap(item => item?._parsedActivityResults || []);
-    if (!parseResults.length) {
-        ui.notifications.info("No parsed inline Activity references need resolution.");
+    const referenceItems = items.filter(item => item?.references?.length);
+    if (!parseResults.length && !referenceItems.length) {
+        ui.notifications.info("No parsed inline Activity references or document references need resolution.");
         return;
     }
     try {
-        const report = await resolveActivityReferences(parseResults, { apply: true });
-        if (_uuidHelper) await reRenderItemActivities.call(this, _uuidHelper);
+        const report = parseResults.length ? await resolveActivityReferences(parseResults, { apply: true }) : null;
+        await resolveReferencesForItems(this, referenceItems);
+        await reRenderItemActivities.call(this, _uuidHelper);
         const count = value => Array.isArray(value)
             ? value.length
             : Number.isFinite(Number(value)) ? Number(value) : 0;
+        const summary = summarizeReferences(referenceItems);
         ui.notifications.info(localize(
             "II.Notifications.ReferencesResolved",
             "Resolved {resolved} exact reference(s); {unresolved} remain unresolved and {ambiguous} are ambiguous.",
             {
-                resolved: count(report?.resolved),
-                unresolved: count(report?.unresolved),
-                ambiguous: count(report?.ambiguous)
+                resolved: count(report?.resolved) + summary.resolved,
+                unresolved: count(report?.unresolved) + summary.unresolved + summary.invalid,
+                ambiguous: count(report?.ambiguous) + summary.ambiguous
             }
         ));
     } catch (error) {

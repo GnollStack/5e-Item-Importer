@@ -40,7 +40,7 @@ Neither suite should create Foundry world documents. Use the module's gated
 automation actions only when fixture mutation is explicitly intended.
 
 
-## Explicit YAML schema 4 regression checks
+## Explicit YAML schema 6 regression checks
 
 Run `node --experimental-vm-modules tools/Test-ExplicitYaml.mjs` for read-only parser/serializer regressions and full-template checks. Native validation also runs in the existing full Foundry suite. The fixed creation tests use the existing `runAutomation` action with `{suite:"explicit",confirmMutation:true,cleanupBefore:true,cleanupAfter:true}` and remove their marked fixtures in finally. See the [coverage checklist](../docs/explicit-yaml-v2.md) for individual fields and exclusions.
 
@@ -95,7 +95,7 @@ Source-reviewed gameplay rules, declared mappings, named parser tests and candid
 
 ## Schema 4 automation and recipe checks
 
-`tools/Test-ExplicitYaml.mjs` includes `tests/unit/automationTests.js`: reviewed typed fields, inactive/null/empty states, strict rejection, reference preflight and recipe staging. Run the Node regression suite with `node --experimental-vm-modules --test tools/*.test.mjs` (or enumerate the files in PowerShell). Native model persistence and recipe gameplay require the separate gated live fixtures; read-only parser/catalog success is not gameplay proof.
+`tools/Test-ExplicitYaml.mjs` includes `tests/unit/automationTests.js`: reviewed typed fields, inactive/null/empty states, strict rejection, reference preflight and recipe staging. It also runs `tests/unit/itemReferenceResolverTests.js`, which checks the companion-free document reference resolver (advancement grants, container placement) against a stubbed world: unique and ambiguous name matches, identifier and slug matches, UUID validation, drop overrides, destination-scoped container searches and the import preflight. Run the Node regression suite with `node --experimental-vm-modules --test tools/*.test.mjs` (or enumerate the files in PowerShell). Native model persistence and recipe gameplay require the separate gated live fixtures; read-only parser/catalog success is not gameplay proof.
 
 ## Template authoring checks
 

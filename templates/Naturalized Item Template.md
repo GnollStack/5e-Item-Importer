@@ -33,6 +33,7 @@ Include specific keywords in the first 3 lines to trigger type detection:
 *   **Tool:** "Tool", "Kit", "Instrument", "Gaming Set"
 *   **Container:** "Bag", "Backpack", "Box", "Holds", "Capacity"
 *   **Loot:** "Gem", "Art Object", "Treasure", "Material"
+*   **Feature:** a header line such as "General Feat", "3rd-level Fighter feature", "Eldritch Invocation" or "Species Trait"; a "Prerequisite:" line; or a stat-block marker on the name line such as "(3/Day)", "(Recharge 5-6)", "Multiattack" or "Legendary Resistance". Features are detected from these header signals only, so item keywords in the body text never turn an item into a feature and vice versa.
 
 ### **3. Weapons**
 To ensure correct parsing of damage and properties:
@@ -101,6 +102,20 @@ Cost: 25 gp, Weight: 1 lb.
 
 This set of tools includes a small file, a set of lock picks, a small mirror mounted on a metal handle, a set of narrow-bladed scissors, and a pair of pliers. Proficiency with these tools lets you add your proficiency bonus to any ability checks you make to disarm traps or open locks.
 ```
+
+## **EXAMPLE: FEATURE (Best Result)**
+
+### Input
+```text
+Second Wind
+1st-level Fighter feature
+
+You have a limited well of stamina that you can draw on to protect yourself from harm. On your turn, you can use a bonus action to regain hit points equal to 1d10 + your fighter level.
+
+Once you use this feature, you must finish a short or long rest before you can use it again.
+```
+
+The header line sets the feature type (class) and requirement ("Fighter 1"). "Once you use this feature ... short or long rest" becomes one use recovering on a short rest. "(3/Day)" on the name line maps to daily uses, "(Recharge 5-6)" to a recharge roll, and "a number of times equal to your proficiency bonus" to a `@prof` maximum. A "Prerequisite:" line is stored as the feature's requirements, and a stated level becomes the prerequisite level. Features never receive rarity, price, weight or attunement.
 
 ---
 

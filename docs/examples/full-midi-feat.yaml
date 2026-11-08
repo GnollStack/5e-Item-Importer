@@ -1,0 +1,197 @@
+SCHEMA_VERSION: 6
+FEAT:
+  SOURCE:
+    Custom: Homebrew - MIDI catalog test feature
+    Rules: "2024"
+  ITEM:
+    Name: Stormheart Legacy
+    Identifier: stormheart-legacy
+    Feature Type: race
+    Feature Subtype: n/a
+    Requirements: Stormheart lineage
+  PREREQUISITES:
+    Level: n/a
+    Items: []
+    Repeatable: false
+  PROPERTIES:
+    Magical: false
+    Passive Trait: false
+  USAGE:
+    Uses Spent: 0
+    Uses Max: "@prof"
+  RECOVERY:
+    - Period: lr
+      Type: recoverAll
+  DESCRIPTION:
+    Description: |
+      <p><strong>Species Feature (Stormheart lineage)</strong></p>
+      <p>Thunder rolls in your blood. You have resistance to thunder damage, and you
+      have advantage on Constitution saving throws against being deafened.</p>
+      <p><strong>Storm Pool.</strong> You can use the following options a combined
+      number of times equal to your proficiency bonus, and you regain all expended
+      uses when you finish a long rest.</p>
+      <p><strong>Thunder Breath (1 use).</strong> As an action, you exhale a 15-foot
+      cone of thunder. Each creature in the cone must make a
+      [[/save con format=long]] against a DC of 8 + your proficiency bonus + your
+      Constitution modifier. A creature takes [[/damage 2d8 thunder average]] on a
+      failed save, or half as much damage on a successful one. A creature that
+      fails the save is also &Reference[deafened] until the end of its next turn.</p>
+      <p><strong>Stormheart Vigor (1 use).</strong> As a bonus action, you draw on
+      the storm within and gain [[/heal 1d10 + @prof temp]] temporary hit points.</p>
+  CHAT_FLAVOR:
+    Chat Description: |
+      [[lookup @name]]{The creature} calls on the storm in their blood.
+  effects:
+    - DETAILS:
+        Name: Stormheart Resilience
+        Effect Type: base
+        Effect Suspended: false
+        Apply Effect to Actor: true
+        Status Conditions: []
+      EFFECT_DESCRIPTION:
+        Effect Description: >-
+          <p>Resistance to thunder damage and advantage on Constitution saving throws
+          while this feature is active.</p>
+      DURATION:
+        Value: null
+        Units: seconds
+      CHANGES:
+        - Attribute Key: system.traits.dr.value
+          Change Type: add
+          Change Phase: initial
+          Value: thunder
+          Priority: 20
+        - Attribute Key: flags.midi-qol.advantage.ability.save.con
+          Change Type: override
+          Change Phase: initial
+          Value: 1
+          Priority: 20
+  Activities:
+    - ACTIVITY_SAVE:
+        ACTIVITY:
+          Name: Thunder Breath
+        CHAT_FLAVOR:
+          Chat Description: >-
+            <p>[[lookup @name]]{The creature} exhales a cone of rolling thunder.</p>
+        BEHAVIOR:
+          Measured Template Prompt: true
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: action
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Concentration: false
+        CONSUMPTION:
+          - Consumption Type: itemUses
+            Amount: "1"
+            Scaling Mode: none
+        RANGE:
+          Override Range: true
+          Range Units: self
+        TARGETS:
+          Override Target: true
+          Target Type: creature
+          Choose Targets: false
+          Template Type: cone
+          Template Count: "1"
+          Template Measurement: 15
+          Template Unit: ft
+        SAVE_DETAILS:
+          Challenge Ability: con
+          DC Calculation: con
+        SAVE_DAMAGE:
+          Damage on Save: half
+          DAMAGE_PARTS:
+            - DAMAGE_DATA:
+                Dice Count: 2
+                Die Denomination: 8
+                Bonus: ""
+                Damage Types:
+                  - thunder
+                Modifiers: []
+                Custom Enabled: false
+                Custom Formula: ""
+                Scaling Mode: none
+                Scaling Dice Count: 0
+                Scaling Formula: ""
+        MIDI SAVE FIELDS:
+          Friendly Save: default
+          Magic Effect: false
+        APPLIED_EFFECTS:
+          - DETAILS:
+              Name: Thunder Breath - Deafened
+              Effect Type: base
+              Effect Suspended: false
+              Apply Effect to Actor: false
+              Status Conditions:
+                - deafened
+            EFFECT_DESCRIPTION:
+              Effect Description: >-
+                <p>Deafened by Thunder Breath until the end of the creature's next turn.</p>
+            DURATION:
+              Value: 1
+              Units: rounds
+              Effect Expiry: turnEnd
+            APPLICATION:
+              Save On Save: false
+            CHANGES: []
+        MIDI CONDITIONS:
+          Identifier: thunder-breath
+          Display Activity Name: true
+          Magic Damage: false
+          Auto Consume: false
+          Force Consume Dialog: always
+          Target Confirmation: always
+          AoE Target Type: any
+          Target on Template Draw: alwaysIgnoreDefeated
+          Use Other Activity: none
+          Trigger Activity: none
+          Apply Convenient Effects: none
+    - ACTIVITY_HEAL:
+        ACTIVITY:
+          Name: Stormheart Vigor
+        CHAT_FLAVOR:
+          Chat Description: >-
+            <p>Stormlight shields [[lookup @name]]{the creature}, granting temporary hit
+            points.</p>
+        ACTIVATION:
+          Override Activation: true
+          Activation Type: bonus
+        DURATION:
+          Override Duration: true
+          Duration Time: inst
+          Concentration: false
+        CONSUMPTION:
+          - Consumption Type: itemUses
+            Amount: "1"
+            Scaling Mode: none
+        RANGE:
+          Override Range: true
+          Range Units: self
+        TARGETS:
+          Override Target: true
+          Target Type: self
+          Target Amount: 1
+          Choose Targets: false
+        HEALING:
+          DAMAGE_DATA:
+            Dice Count: 1
+            Die Denomination: 10
+            Bonus: "@prof"
+            Damage Types:
+              - temphp
+            Modifiers: []
+            Custom Enabled: false
+            Custom Formula: ""
+            Scaling Mode: none
+            Scaling Dice Count: 0
+            Scaling Formula: ""
+        MIDI CONDITIONS:
+          Identifier: stormheart-vigor
+          Display Activity Name: true
+          Auto Consume: false
+          Force Consume Dialog: always
+          Target Confirmation: never
+          Trigger Activity: none
+          Apply Convenient Effects: none

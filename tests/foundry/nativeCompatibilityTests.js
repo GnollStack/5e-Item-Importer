@@ -5,8 +5,9 @@ import { itemToStrictYamlDocument } from "../../scripts/itemYamlExporter.js";
 import { ItemData } from "../../scripts/itemData.js";
 import { cloneExplicit, readPath } from "../../scripts/explicitYamlFields.js";
 import { buildAppliedEffectProfiles } from "../../scripts/activityEffectLinks.js";
+import { isPhysicalItemType } from "../../scripts/itemConfig.js";
 
-const TYPES = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"];
+const TYPES = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell", "feat"];
 const DAMAGE = { number: 2, denomination: 6, bonus: "@mod", types: ["fire", "cold"], modifiers: ["min3", "min3", "r1"],
   custom: { enabled: false, formula: "3 + @mod" }, scaling: { mode: "whole", number: 0, formula: "@prof" } };
 function stable(value) {
@@ -25,7 +26,7 @@ function differences(left, right, path = "system") {
 function seed(type) {
   const system = { description: { value: "<p>Complete stored description</p>", chat: "Stored chat" },
     identifier: "native-" + type, source: { book: "Native fixture", page: "12a", custom: "Source fidelity", license: "Private", rules: "2024", revision: 1.5 } };
-  if (type !== "spell") Object.assign(system, { rarities: type === "loot" ? [] : ["rare", "veryRare"],
+  if (isPhysicalItemType(type)) Object.assign(system, { rarities: type === "loot" ? [] : ["rare", "veryRare"],
     unidentified: { name: "Unknown item", description: "<p>Stored unidentified text</p>" }, identified: false,
     quantity: 1, weight: { value: 0.5, units: "lb" }, price: { value: 0.25, denomination: "gp" } });
   if (type === "weapon") Object.assign(system, { type: { value: "simpleM", baseItem: "club" },
@@ -39,6 +40,17 @@ function seed(type) {
     range: { value: "30 + @mod", units: "ft", special: "Stored range" },
     duration: { value: "1 + @mod", units: "minute", expiry: "turnEnd", special: "Stored duration" },
     materials: { value: "Inactive material", consumed: false, cost: 0.5, supply: 1.25 } });
+  if (type === "feat") Object.assign(system, { type: { value: "class", subtype: "fightingStyle" }, requirements: "Fighter 1",
+    prerequisites: { level: 4, items: ["fighter", "feat:alert"], repeatable: true }, properties: ["mgc", "trait"],
+    enchant: { max: "1 + @prof", period: "lr" }, cover: 0.5, crewed: true,
+    advancement: {
+      NativeAsi0000001: { _id: "NativeAsi0000001", type: "AbilityScoreImprovement", level: 0, configuration: { points: 1, cap: 2, fixed: { con: 1 }, locked: ["str"], recommendation: "Compendium.dnd5e.feats24.Item.phbfeaAlert00000" } },
+      NativeGrant00001: { _id: "NativeGrant00001", type: "ItemGrant", level: 4, name: "Storm Spells", hint: "<p>Always prepared.</p>", configuration: { items: [{ uuid: "Compendium.dnd5e.spells24.Item.phbsplThunderwav", optional: false, sort: 0 }], optional: false, sorting: "m", spell: { ability: ["cha"], method: "spell", prepared: 2, uses: { max: "1", per: "lr", requireSlot: false } } } },
+      NativeChoice0001: { _id: "NativeChoice0001", type: "ItemChoice", configuration: { allowDrops: true, choices: { 0: { count: 1, replacement: false } }, pool: [{ uuid: "Compendium.dnd5e.spells24.Item.phbsplAlarm00000", sort: 0 }], restriction: { level: "available", list: ["class:wizard"], school: ["evo"], subtype: "", type: "" }, sorting: "a", spell: null, type: "spell" } },
+      NativeModify0001: { _id: "NativeModify0001", type: "ModifyItem", level: 0, configuration: { changes: [{ _id: "NativeEnchant001", uuid: null, identifiers: ["weapon:longsword"] }] } },
+      NativeScale00001: { _id: "NativeScale00001", type: "ScaleValue", configuration: { identifier: "storm-dice", type: "dice", distance: { units: "" }, scale: { 4: { number: 1, faces: 6, modifiers: [] }, 12: { number: 2, faces: 6, modifiers: ["min2"] } } } },
+      NativeTrait00001: { _id: "NativeTrait00001", type: "Trait", level: 0, configuration: { allowReplacements: false, choices: [{ count: 1, pool: ["skills:*"] }], grants: ["skills:ath", "weapon:mar"], mode: "default" } }
+    } });
   return { name: "Native " + type, type, img: "icons/svg/book.svg", system };
 }
 async function parse(document) {
@@ -56,6 +68,18 @@ export async function runNativeCompatibilityTests() {
   };
   const snapshot = () => JSON.stringify([game.items.map(item => item._source), game.actors.map(actor => actor._source)]);
   const before = snapshot();
+  await check("contained items export their container as a same-collection UUID reference", async () => {
+    const loot = seed("loot");
+    loot.system.container = "Container0000001";
+    const document = new CONFIG.Item.documentClass(loot, { strict: true });
+    const exported = itemToStrictYamlDocument(document, { includeActivities: false, includeEffects: false });
+    if (exported.LOOT.INVENTORY.Container !== "Item.Container0000001") throw new Error("Container label: " + JSON.stringify(exported.LOOT.INVENTORY));
+    const parsed = new YamlItemParser().parse(yaml.dump(exported));
+    if (!parsed.success || parsed.item.containerRef?.kind !== "reference" || parsed.item.containerRef.uuid !== "Item.Container0000001") throw new Error("Container reference lost: " + JSON.stringify(parsed.item?.containerRef) + parsed.errors.join("; "));
+    await parsed.item.buildFoundryData({ deterministicIcons: true });
+    if (parsed.item.itemData.system.container !== undefined) throw new Error("The builder wrote system.container from text.");
+    return { container: exported.LOOT.INVENTORY.Container };
+  });
   for (const type of TYPES) await check(type + " complete native system survives export/import", async () => {
     const document = new CONFIG.Item.documentClass(seed(type), { strict: true });
     const original = document.toObject();
@@ -65,7 +89,7 @@ export async function runNativeCompatibilityTests() {
     const changed = differences(original.system, rebuilt.toObject().system);
     if (changed.length) throw new Error("Native round trip changed " + changed.map(path=>path+": "+JSON.stringify(readPath(original,path))+" -> "+JSON.stringify(readPath(rebuilt.toObject(),path))).join(", "));
     if (rebuilt.toObject().name !== original.name) throw new Error("Prepared unidentified name replaced stored name.");
-    if (type !== "spell") {
+    if (isPhysicalItemType(type)) {
       for (const rarities of [[], ["legendary"], ["rare", "veryRare"]]) {
         const input = cloneExplicit(exported); input[type.toUpperCase()].ITEM.Rarities = rarities;
         const update = await parse(input);

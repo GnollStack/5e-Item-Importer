@@ -45,6 +45,7 @@ async function api(file) {
 const explicit=await api("tests/unit/explicitYamlTests.js");
 const reports=[await explicit[itemModule?"runExplicitItemYamlTests":"runExplicitActivityYamlTests"]()];
 if(itemModule)reports.push(await (await api("tests/unit/itemCoreFeatureTests.js")).runItemCoreFeatureTests({log:false}));
+if(itemModule)reports.push(await (await api("tests/unit/itemReferenceResolverTests.js")).runItemReferenceResolverTests());
 reports.push(await (await api("tests/unit/automationTests.js")).runAutomationContractTests({itemModule}));
 const yaml=(await api("scripts/vendor/js-yaml.mjs")).default;
 const diagnostics=itemModule?null:await api("scripts/activityDiagnostics.js");

@@ -4,7 +4,7 @@ const root = new URL("../", import.meta.url);
 const manifest = JSON.parse(await fs.readFile(new URL("module.json", root), "utf8"));
 const item = manifest.id === "5e-item-importer";
 const rows = new Map();
-const kinds = item ? [["item", ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"]]]
+const kinds = item ? [["item", ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell", "feat"]]]
     : [["activity", ["attack", "save", "damage", "heal", "utility", "check", "cast", "enchant", "summon", "transform", "forward"]], ["effect", ["base", "enchantment"]]];
 for (const [kind, types] of kinds) for (const type of types) for (const entry of automationFieldEntries(kind, type)) {
     const key = kind + ":" + entry.yamlPath;

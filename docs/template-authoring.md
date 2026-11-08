@@ -1,6 +1,6 @@
 # Explicit template authoring
 
-Use this guide with the selected full reference templates. Item YAML schema 4, Activity/Effect serialization schema 4, feature envelopes and catalog format versions are separate contracts. Current field documentation targets D&D5e 6.0.6 / Foundry 14.369; reviewed MIDI/DAE authored storage targets 14.6.0. Check current versions and coverage when that environment changes.
+Use this guide with the selected full reference templates. Item YAML schema 6, Activity/Effect serialization schema 5, feature envelopes and catalog format versions are separate contracts. Current field documentation targets D&D5e 6.0.6 / Foundry 14.369; reviewed MIDI/DAE authored storage targets MIDI-QOL 14.6.8 and DAE 14.6.6. Check current versions and coverage when that environment changes.
 
 For the actual window workflow, optional panels and reset controls, use the [import-window guide](import-window.md). The main source field remains the place to paste or edit your input.
 

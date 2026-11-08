@@ -5,7 +5,7 @@
  * stay read-only; mutating fixture automation is separately gated.
  */
 
-import { MODULE_ID, MODULE_NAME, MODULE_TITLE, getPacks } from "./itemConfig.js";
+import { MODULE_ID, MODULE_NAME, MODULE_TITLE, getPacks, isPhysicalItemType } from "./itemConfig.js";
 import { ItemUtils } from "./itemUtils.js";
 import { createFieldCatalogService } from "./fieldCatalogService.js";
 import { discoverNativeCatalog } from "./itemFieldCatalogNative.js";
@@ -104,6 +104,8 @@ const MODULE_ASSETS = Object.freeze([
     "scripts/diagnostics/runtimeSmokeTests.js",
     "scripts/parserRouting.js",
     "scripts/itemData.js",
+    "scripts/itemAdvancement.js",
+    "scripts/itemReferenceResolver.js",
     "scripts/itemUtils.js",
     "templates/itemWindow.hbs",
     "lang/en.json",
@@ -398,7 +400,7 @@ function summarizeParseResult(result) {
         item: item ? {
             name: item.name,
             type: item.type,
-            ...(item.type === "spell" ? {} : { rarity: item.rarity }),
+            ...(isPhysicalItemType(item.type) ? { rarity: item.rarity } : {}),
             pendingActivities: item.pendingActivities?.length ?? 0,
             data: itemJson
         } : null

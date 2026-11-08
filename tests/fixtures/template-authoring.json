@@ -126,6 +126,114 @@
     ]
   },
   {
+    "id": "core-feat",
+    "file": "docs/examples/core-feat.yaml",
+    "template": "templates/YAML Templates/Strict Feat Template.md",
+    "type": "feat",
+    "midi": false,
+    "intent": "A free/core class feature import. Preserve the complete description; it does not automatically create source-specific activities or effects.",
+    "prerequisite": "5e Item Importer. Activity Importer is not required for this example.",
+    "expectedNames": [
+      "Second Wind"
+    ],
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "feat"
+      }
+    ]
+  },
+  {
+    "id": "full-native-feat",
+    "file": "docs/examples/full-native-feat.yaml",
+    "type": "feat",
+    "midi": false,
+    "intent": "Stormheart Adept: a General Feat with native advancement. A fixed +1 Constitution, two always-prepared spells granted by name with one free casting per long rest, Athletics proficiency and a storm die that scales from 1d6 to 2d6 at level 12.",
+    "prerequisite": "5e Item Importer only. The granted spells resolve by name against the installed compendia at import time; with both 2014 and 2024 SRD packs installed each spell is ambiguous and needs a pick in the import window.",
+    "expectedNames": [
+      "Stormheart Adept"
+    ],
+    "facts": [
+      {
+        "path": "0.built.system.advancement.stormheartAsi001.type",
+        "value": "AbilityScoreImprovement"
+      },
+      {
+        "path": "0.built.system.advancement.stormheartAsi001.configuration.fixed.con",
+        "value": 1
+      },
+      {
+        "path": "0.built.system.advancement.stormheartGrant1.configuration.spell.prepared",
+        "value": 2
+      },
+      {
+        "path": "0.built.system.advancement.stormheartGrant1.configuration.items.1.uuid",
+        "value": null
+      },
+      {
+        "path": "0.built.system.advancement.stormheartTrait1.configuration.grants.0",
+        "value": "skills:ath"
+      },
+      {
+        "path": "0.built.system.advancement.stormheartScale1.configuration.scale.12.number",
+        "value": 2
+      },
+      {
+        "path": "0.item.references.length",
+        "value": 2
+      }
+    ]
+  },
+  {
+    "id": "full-native-container",
+    "file": "docs/examples/full-native-container.yaml",
+    "type": "container",
+    "midi": false,
+    "intent": "Stormheart Field Pack: a container whose CONTENTS create ten days of rations, a hatchet and an oilskin pouch inside it, with flint and steel nested inside the pouch.",
+    "prerequisite": "5e Item Importer only. Paste into the import window (the batch flow); the container is created first and each content is placed inside it in the same collection and folder.",
+    "expectedNames": [
+      "Stormheart Field Pack",
+      "Rations (1 day)",
+      "Warden's Hatchet",
+      "Oilskin Pouch",
+      "Flint and Steel"
+    ],
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "container"
+      },
+      {
+        "path": "0.item.containerRef",
+        "value": null
+      },
+      {
+        "path": "1.item.containerRef.kind",
+        "value": "batch"
+      },
+      {
+        "path": "1.item.containerRef.parentOrder",
+        "value": 0
+      },
+      {
+        "path": "1.item.quantity",
+        "value": 10
+      },
+      {
+        "path": "3.item.containerRef.depth",
+        "value": 1
+      },
+      {
+        "path": "4.item.containerRef.parentOrder",
+        "value": 3
+      },
+      {
+        "path": "4.item.containerRef.depth",
+        "value": 2
+      }
+    ]
+  },
+  {
     "id": "full-native-weapon",
     "file": "docs/examples/full-native-weapon.yaml",
     "type": "weapon",
@@ -184,6 +292,40 @@
       {
         "path": "0.built.system.uses.max",
         "value": 6
+      }
+    ]
+  },
+  {
+    "id": "full-midi-feat",
+    "file": "docs/examples/full-midi-feat.yaml",
+    "type": "feat",
+    "midi": true,
+    "intent": "Stormheart Legacy: a species feature with a proficiency-bonus use pool shared by a MIDI cone save that applies a deafened effect and a temporary hit point heal, plus a passive resistance effect carrying a MIDI advantage flag.",
+    "prerequisite": "Both importers and MIDI-QOL. Check module automation settings, template targeting and the deafened effect's turn-end expiry; the catalog has not tested this combat sequence.",
+    "expectedNames": [
+      "Stormheart Legacy"
+    ],
+    "attachments": 3,
+    "facts": [
+      {
+        "path": "0.built.type",
+        "value": "feat"
+      },
+      {
+        "path": "0.built.system.type.value",
+        "value": "race"
+      },
+      {
+        "path": "0.built.system.requirements",
+        "value": "Stormheart lineage"
+      },
+      {
+        "path": "0.built.system.uses.max",
+        "value": "@prof"
+      },
+      {
+        "path": "0.built.system.uses.recovery.0.period",
+        "value": "lr"
       }
     ]
   }

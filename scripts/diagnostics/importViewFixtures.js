@@ -122,7 +122,7 @@ export async function runImportViewFixtures({ Window, Actions, moduleId, prefix,
             await Actions.parse.call(app);
             check("Activity and Effect batches retain separate cards", app.parseState === "valid" && output.querySelectorAll(".ai-batch-item").length === 2);
         } else {
-            input.value = "SCHEMA_VERSION: 4\nLOOT:\n  ITEM:\n    Name: View Fixture Ruby\n    Loot Type: gem\n---\nSCHEMA_VERSION: 4\nLOOT:\n  ITEM:\n    Name: View Fixture Sapphire\n    Loot Type: gem";
+            input.value = "SCHEMA_VERSION: 6\nLOOT:\n  ITEM:\n    Name: View Fixture Ruby\n    Loot Type: gem\n---\nSCHEMA_VERSION: 6\nLOOT:\n  ITEM:\n    Name: View Fixture Sapphire\n    Loot Type: gem";
             await Actions.parse.call(app);
             check("Batch selectors and per-item import modes stay visible in Compact", app.selectedBatchItems.size === 2 && [...output.querySelectorAll(".ii-entry-mode")].length === 2 && [...output.querySelectorAll(".ii-entry-mode")].every(select => select.getClientRects().length));
             check("Builder hides for batches", !root.querySelector('[data-action="openActivityBuilder"]') || root.querySelector('[data-action="openActivityBuilder"]').hidden);
@@ -144,7 +144,7 @@ export async function runImportViewFixtures({ Window, Actions, moduleId, prefix,
             check("Use and preview applies secondary edits to the main source", input.value.includes("Moonlit Lantern Edited") && app.currentParseResult.item.name === "Moonlit Lantern Edited");
             input.value = text;
             const olderParse = Actions.parse.call(app);
-            input.value = "SCHEMA_VERSION: 4\nLOOT:\n  ITEM:\n    Name: Newest Preview\n    Loot Type: gem";
+            input.value = "SCHEMA_VERSION: 6\nLOOT:\n  ITEM:\n    Name: Newest Preview\n    Loot Type: gem";
             await Actions.parse.call(app);
             await olderParse;
             check("A slower previous parse cannot overwrite generated YAML", app.currentParseResult.item.name === "Newest Preview" && app.normalizedText.includes("Newest Preview"));

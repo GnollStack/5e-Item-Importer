@@ -36,13 +36,16 @@ export async function runFieldCatalogChecks(moduleId) {
     if (item) {
       assert(first.types.filter(type => type.kind === "item").length === 13);
       assert(first.types.filter(type => type.kind === "advancement").length === 9);
-      assert(first.types.filter(type => type.kind === "item" && type.importSupport === "supported").length === 7);
+      assert(first.types.filter(type => type.kind === "item" && type.importSupport === "supported").length === 8);
+      // Feature Items author the six feat-valid advancement types; HitPoints, Size and Subclass stay catalog-only.
+      assert(first.types.filter(type => type.kind === "advancement" && type.importSupport === "supported").map(type => type.type).sort().join(",")
+        === "AbilityScoreImprovement,ItemChoice,ItemGrant,ModifyItem,ScaleValue,Trait");
     } else {
       assert(first.types.filter(type => type.kind === "activity").length === 13);
       assert(first.types.filter(type => type.kind === "effect").map(type => type.type).sort().join(",") === "base,condition,enchantment");
       assert(first.types.find(type => type.kind === "activity" && type.type === "order")?.importSupport === "catalog-only");
-      assert(first.types.find(type => type.kind === "activity" && type.type === "teleport")?.importSupport === "catalog-only");
-      assert(first.types.find(type => type.kind === "effect" && type.type === "condition")?.importSupport === "catalog-only");
+      assert(first.types.find(type => type.kind === "activity" && type.type === "teleport")?.importSupport === "supported");
+      assert(first.types.find(type => type.kind === "effect" && type.type === "condition")?.importSupport === "supported");
     }
   });
   await check("native discovery does not promote module extensions to import support", () => {

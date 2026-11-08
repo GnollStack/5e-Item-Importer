@@ -1,4 +1,4 @@
-SCHEMA_VERSION: 4
+SCHEMA_VERSION: 6
 WEAPON:
   ITEM:
     Name: Sentinel's Edge

@@ -8,7 +8,7 @@ const requirement = (path, options = {}) => ({
   representations: [], aliases: [], stages: { template: "declared" }, ...options
 });
 const item = (body, requirements, extra = "") => checkTemplate({
-  markdown: fence("SCHEMA_VERSION: 4\nWEAPON:\n" + body) + extra, requirements, yaml, itemModule: true, type: "weapon"
+  markdown: fence("SCHEMA_VERSION: 6\nWEAPON:\n" + body) + extra, requirements, yaml, itemModule: true, type: "weapon"
 });
 const activity = (body, requirements, type = "attack") => checkTemplate({
   markdown: fence("ACTIVITY_" + type.toUpperCase() + ":\n" + body), requirements, yaml, itemModule: false, type
@@ -19,7 +19,9 @@ test("declared requirements use coverage audit and merged decorators without imp
   const api = {
     auditCoverageReferences(fields) {
       sentinelCalls++;
-      assert.equal(fields.length, 7);
+      // Eight Item types plus the six feat-valid advancement types (FEAT.ADVANCEMENT).
+      assert.equal(fields.length, 14);
+      assert.equal(fields.filter(field => field.kind === "advancement").length, 6);
       return { missing: [{ kind: "item", type: "weapon", path: "system.damage" }] };
     },
     decorateCatalogFields(fields, environment) {

@@ -129,6 +129,7 @@
       "WorldDestinationPermission": "You do not have permission to create World Items.",
       "PresetStorageLimit": "Saved presets exceed the {max} character storage limit.",
       "ActivityExportUnsupported": "Cannot export Activity {name} as strict YAML because {reason}. Export stopped to prevent data loss.",
+      "AdvancementExportUnsupported": "Cannot export advancement {name} as strict YAML because {reason}. Export stopped to prevent data loss.",
       "EffectExportUnsupported": "Cannot export Active Effect {name} as strict YAML because {reason}. Export stopped to prevent data loss.",
       "SharedActivityEffectUnsupported": "Cannot export Activities {firstName} and {secondName} because the available serializer embedded shared Active Effect {effectId} more than once. Use a compatible schema 3 Activity Importer that supports shared effect references. Export stopped to prevent data loss."
     },
@@ -144,6 +145,7 @@
       "DropUnsupported": "That drop does not contain a supported Item, Actor, or text file.",
       "ActorDropUnavailable": "That Actor is not available as a writable import destination.",
       "ReferencesResolved": "Resolved {resolved} exact reference(s); {unresolved} remain unresolved and {ambiguous} are ambiguous.",
+      "ReferenceDropUnsupported": "Drop a document from the sidebar or a compendium onto the reference.",
       "SuggestionRemoved": "Removed the suggested automation from this import preview.",
       "BuilderBatchUnsupported": "Open Activity Builder only when exactly one Item is parsed.",
       "CoreExportCopied": "Copied core Item YAML. Activities and Active Effects were excluded.",

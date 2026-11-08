@@ -152,6 +152,33 @@ export class ItemRegex {
     static duration = /(?:duration|lasts?)\s*:?\s*(?<duration>instantaneous|concentration,?\s*up to\s+\d+\s+\w+|\d+\s+(?:rounds?|minutes?|hours?|days?))/i;
 
     // ==========================================
+    // Feature Detection (dnd5e feat Items)
+    // ==========================================
+    // These are header-level or stat-block signals. Body words such as "weapon"
+    // or "recharge" never gate feature detection on their own.
+
+    // "Prerequisite: Proficiency with heavy armor" on its own line
+    static prerequisiteLine = /^prerequisites?\s*:\s*(?<text>.+)$/i;
+    // "(Prerequisite: 4th level)" inside a header line
+    static prerequisiteParenthetical = /\(\s*prerequisites?\s*:\s*(?<text>[^)]+)\)/i;
+    // "Level 4+" or "4th level" inside prerequisite text
+    static prerequisiteLevel = /\blevel\s+(?<level>\d+)\+?|\b(?<ordinal>\d+)(?:st|nd|rd|th)[- ]level\b/i;
+    // 2024 class feature header: "Level 5: Extra Attack"
+    static levelHeader2024 = /^level\s+(?<level>\d+)\s*:\s*(?<title>.+)$/i;
+    // Monster stat-block markers
+    static multiattack = /^multiattack\b/i;
+    static legendaryMarker = /^legendary\s+(?:resistance|actions?)\b/i;
+    // Single-line stat-block trait: "Fire Breath (Recharge 5-6). The dragon exhales..."
+    static inlineFeatureLine = /^(?<name>[^.(]+?)(?:\s*\((?<paren>[^)]*)\))?\.\s+(?<body>.+)$/;
+    // Uses and recovery wording
+    static usesPerDay = /\b(?<count>\d+)\s*\/\s*day\b/i;
+    static rechargeThreshold = /\brecharge\s+(?<threshold>[2-6])\s*[-–—]\s*6\b/i;
+    static rechargeAfterRest = /\brecharges?\s+after\s+a\s+(?<rest>short|long)(?:\s+or\s+long)?\s+rest\b/i;
+    static profBonusTimes = /\ba number of times equal to your proficiency bonus\b[^.]*?\b(?<rest>short|long)(?:\s+or\s+long)?\s+rest\b/i;
+    static timesPerRest = /\b(?<count>once|twice|three times|\d+\s+times)\b[^.]{0,80}?\b(?<rest>short|long)(?:\s+or\s+long)?\s+rest\b/i;
+    static untilRest = /\b(?:can['’]?t|cannot)\s+(?:do so|use (?:this|it|this feature) again)\s+until\s+you\s+finish\s+a\s+(?<rest>short|long)(?:\s+or\s+long)?\s+rest\b/i;
+
+    // ==========================================
     // Attack Bonus & Save DC
     // ==========================================
 

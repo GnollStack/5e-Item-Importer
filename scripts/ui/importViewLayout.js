@@ -15,7 +15,7 @@ export function normalizeViewPreferences(value = {}) {
 
 const sections = ".ai-section, .ii-section";
 const headers = ".ai-section-header, .ii-section-header";
-const attention = ".ai-section-issues, .ii-section-issues, .ai-parse-warning, .ii-parse-warning, .ai-parse-error, .ii-parse-error, .severity-warning, .severity-error, .ai-uuid-dropzone, .ii-batch-uuid-item, .ii-batch-grid, .ii-suggested-automation";
+const attention = ".ai-section-issues, .ii-section-issues, .ai-parse-warning, .ii-parse-warning, .ai-parse-error, .ii-parse-error, .severity-warning, .severity-error, .ai-uuid-dropzone, .ii-ref-pending, .ii-batch-uuid-item, .ii-batch-grid, .ii-suggested-automation";
 const requiresAttention = section => section.matches(attention) || Boolean(section.querySelector(attention));
 
 /** Shared by both distributions, including the standalone Item Importer. */
@@ -189,7 +189,7 @@ export class ImportViewLayout {
         const mode = this.preferences.preview;
         output.dataset.previewDetail = mode;
         const resolver = this.root.querySelector('[data-action="resolveReferences"]');
-        if (resolver) resolver.hidden = !output.querySelector(".ai-uuid-dropzone");
+        if (resolver) resolver.hidden = !output.querySelector(".ai-uuid-dropzone, .ii-ref-pending");
         for (const header of output.querySelectorAll(headers)) {
             const section = header.closest(sections);
             if (!section) continue;

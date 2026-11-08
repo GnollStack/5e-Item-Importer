@@ -1,4 +1,4 @@
-SCHEMA_VERSION: 4
+SCHEMA_VERSION: 6
 WEAPON:
   SOURCE:
     Custom: Homebrew - MIDI catalog test item

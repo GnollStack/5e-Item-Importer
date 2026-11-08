@@ -30,7 +30,8 @@ const ITEM_TYPE_FIELDS = {
     "containerCapacity", "containerProperties", "currencyContents", "attunement"
   ]),
   loot: new Set(["lootType", "lootProperties"]),
-  spell: new Set([])
+  spell: new Set([]),
+  feat: new Set(["featureType", "featureSubtype", "requirements", "prerequisiteLevel", "featureUses"])
 };
 
 const KNOWN_TYPE_FIELDS = new Set(

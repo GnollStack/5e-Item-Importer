@@ -82,7 +82,16 @@ const LIGHT_KEYS = {
     weightvalue: "weightValue",
     weightunits: "weightUnits",
     description: "description",
-    magicbonus: "magicBonus"
+    magicbonus: "magicBonus",
+    featuretype: "featureType",
+    featurecategory: "featureType",
+    featuresubtype: "featureSubtype",
+    requirements: "requirements",
+    requirement: "requirements",
+    prerequisite: "requirements",
+    prerequisites: "requirements",
+    prerequisitelevel: "prerequisiteLevel",
+    repeatable: "repeatable"
 };
 
 const SUPPORTED_LIGHT_KEYS = [
@@ -143,7 +152,12 @@ const SUPPORTED_LIGHT_KEYS = [
     "weightValue",
     "weightUnits",
     "description",
-    "magicBonus"
+    "magicBonus",
+    "featureType",
+    "featureSubtype",
+    "requirements",
+    "prerequisiteLevel",
+    "repeatable"
 ];
 
 const TYPE_TO_TOP_KEY = {
@@ -157,7 +171,49 @@ const TYPE_TO_TOP_KEY = {
     tool: "TOOL",
     loot: "LOOT",
     container: "CONTAINER",
-    spell: "SPELL"
+    spell: "SPELL",
+    feat: "FEAT",
+    feature: "FEAT"
+};
+
+// Lightweight `featureType:` values. Keys are normalizeIdentifier() output;
+// a value may select both a dnd5e feature type and one of its subtypes.
+const FEATURE_TYPE_ALIASES = {
+    background: { type: "background" }, backgroundfeature: { type: "background" },
+    class: { type: "class" }, classfeature: { type: "class" }, subclassfeature: { type: "class" },
+    monster: { type: "monster" }, monsterfeature: { type: "monster" }, monstertrait: { type: "monster" },
+    monsteraction: { type: "monster" },
+    race: { type: "race" }, racial: { type: "race" }, racialtrait: { type: "race" },
+    species: { type: "race" }, speciestrait: { type: "race" }, speciesfeature: { type: "race" },
+    lineage: { type: "race" },
+    enchantment: { type: "enchantment" },
+    feat: { type: "feat" },
+    generalfeat: { type: "feat", subtype: "general" }, originfeat: { type: "feat", subtype: "origin" },
+    epicboon: { type: "feat", subtype: "epicBoon" }, epicboonfeat: { type: "feat", subtype: "epicBoon" },
+    fightingstylefeat: { type: "feat", subtype: "fightingStyle" },
+    fightingstyle: { type: "class", subtype: "fightingStyle" },
+    invocation: { type: "class", subtype: "eldritchInvocation" },
+    eldritchinvocation: { type: "class", subtype: "eldritchInvocation" },
+    metamagic: { type: "class", subtype: "metamagic" },
+    maneuver: { type: "class", subtype: "maneuver" },
+    arcaneshot: { type: "class", subtype: "arcaneShot" },
+    channeldivinity: { type: "class", subtype: "channelDivinity" },
+    infusion: { type: "class", subtype: "artificerInfusion" },
+    artificerinfusion: { type: "class", subtype: "artificerInfusion" },
+    elementaldiscipline: { type: "class", subtype: "elementalDiscipline" },
+    psionicpower: { type: "class", subtype: "psionicPower" },
+    pactboon: { type: "class", subtype: "pact" },
+    huntersprey: { type: "class", subtype: "huntersPrey" },
+    defensivetactic: { type: "class", subtype: "defensiveTactic" },
+    superiorhuntersdefense: { type: "class", subtype: "superiorHuntersDefense" },
+    rune: { type: "class", subtype: "rune" },
+    ki: { type: "class", subtype: "ki" },
+    multiattack: { type: "class", subtype: "multiattack" },
+    pietytrait: { type: "pietyTrait" }, piety: { type: "pietyTrait" },
+    supernaturalgift: { type: "supernaturalGift" },
+    blessing: { type: "supernaturalGift", subtype: "blessing" },
+    charm: { type: "supernaturalGift", subtype: "charm" },
+    vehicle: { type: "vehicle" }, vehiclefeature: { type: "vehicle" }
 };
 
 const WEAPON_TYPE_ALIASES = {
@@ -334,10 +390,15 @@ const PROPERTY_KEYS = {
     thrown: "Thrown",
     twohanded: "Two-Handed",
     "two-handed": "Two-Handed",
-    versatile: "Versatile"
+    versatile: "Versatile",
+    passivetrait: "Passive Trait",
+    trait: "Passive Trait"
 };
+const FEAT_ONLY_PROPERTIES = new Set(["Passive Trait"]);
 
 const LIGHT_BASE_FIELDS = new Set(["name", "type", "description"]);
+// Top-level keys whose dnd5e data model has no inventory, price/weight, or rarity fields.
+const NON_PHYSICAL_TOP_KEYS = new Set(["SPELL", "FEAT"]);
 const LIGHT_PHYSICAL_FIELDS = new Set([
     "rarity", "price", "priceValue", "priceDenomination",
     "weight", "weightValue", "weightUnits"
@@ -366,15 +427,21 @@ const LIGHT_TYPE_FIELDS = Object.freeze({
         "activationValue", "preparationMethod", "prepared", "components", "vocal",
         "somatic", "material", "range", "rangeValue", "rangeUnits", "duration",
         "durationValue", "durationUnits", "concentration"
+    ]),
+    // spellLevel is accepted so `level:` can mean the prerequisite level when `type: feat` is explicit.
+    FEAT: new Set([
+        "featureType", "featureSubtype", "requirements", "prerequisiteLevel",
+        "repeatable", "spellLevel", "properties"
     ])
 });
 const LIGHT_PROPERTY_FIELDS = Object.freeze({
-    WEAPON: new Set(Object.values(PROPERTY_KEYS)),
+    WEAPON: new Set(Object.values(PROPERTY_KEYS).filter(property => !FEAT_ONLY_PROPERTIES.has(property))),
     EQUIPMENT: new Set(["Adamantine", "Focus", "Magical"]),
     CONSUMABLE: new Set(["Magical"]),
     TOOL: new Set(["Magical"]),
     LOOT: new Set(["Magical"]),
-    CONTAINER: new Set(["Magical"])
+    CONTAINER: new Set(["Magical"]),
+    FEAT: new Set(["Magical", "Passive Trait"])
 });
 const LIGHT_BOOLEAN_VALUES = new Set([
     "true", "yes", "y", "1", "on", "false", "no", "n", "0", "off"
@@ -397,7 +464,7 @@ function validateLightYamlFields(fields) {
     const topKey = TYPE_TO_TOP_KEY[inferredType] || "LOOT";
     const allowed = new Set([
         ...LIGHT_BASE_FIELDS,
-        ...(topKey === "SPELL" ? [] : LIGHT_PHYSICAL_FIELDS),
+        ...(NON_PHYSICAL_TOP_KEYS.has(topKey) ? [] : LIGHT_PHYSICAL_FIELDS),
         ...(LIGHT_TYPE_FIELDS[topKey] || [])
     ]);
 
@@ -441,13 +508,16 @@ function validateLightYamlFields(fields) {
     if (fields.toolAbility !== undefined && fields.ability !== undefined) {
         errors.push('Lightweight fields "toolAbility" and "ability" are aliases in a tool; provide only one.');
     }
+    if (topKey === "FEAT" && fields.prerequisiteLevel !== undefined && fields.spellLevel !== undefined) {
+        errors.push('Lightweight fields "level" and "prerequisiteLevel" are aliases in a feature; provide only one.');
+    }
 
     const numericField = (key, label = key) => {
         if (fields[key] !== undefined && !Number.isFinite(Number(fields[key]))) {
             errors.push(`Lightweight field "${label}" must be a finite number; received "${fields[key]}".`);
         }
     };
-    for (const key of ["priceValue", "weightValue", "magicBonus"]) numericField(key);
+    for (const key of ["priceValue", "weightValue", "magicBonus", "prerequisiteLevel"]) numericField(key);
     if (fields.price !== undefined
         && !/^-?\d+(?:\.\d+)?\s*(?:pp|gp|ep|sp|cp)?$/i.test(String(fields.price).trim())) {
         errors.push(`Lightweight field "price" must be a number with an optional pp/gp/ep/sp/cp denomination; received "${fields.price}".`);
@@ -465,7 +535,7 @@ function validateLightYamlFields(fields) {
         errors.push(`Lightweight field "damage" must contain a simple dice formula and optional damage type; received "${fields.damage}".`);
     }
 
-    for (const key of ["weightlessContents", "prepared", "vocal", "somatic", "material", "concentration"]) {
+    for (const key of ["weightlessContents", "prepared", "vocal", "somatic", "material", "concentration", "repeatable"]) {
         if (fields[key] !== undefined && !LIGHT_BOOLEAN_VALUES.has(String(fields[key]).trim().toLowerCase())) {
             errors.push(`Lightweight field "${key}" must be true or false; received "${fields[key]}".`);
         }
@@ -538,7 +608,12 @@ export function isYamlMultiItem(text) {
         `^(?:${YAML_ITEM_KEYS.join("|")}):`,
         "gm"
     );
-    return (stripped.match(topLevelItemPattern) || []).length > 1;
+    if ((stripped.match(topLevelItemPattern) || []).length > 1) return true;
+
+    // A CONTAINER whose CONTENTS list has entries imports as several Items (the
+    // container and each content), so it takes the batch path.
+    return /^CONTAINER:/m.test(stripped)
+        && /^ {2}CONTENTS:[ \t]*(?:#[^\r\n]*)?(?:\r?\n[ \t]+-|[ \t]*\[[ \t]*[^\]\s])/m.test(stripped);
 }
 
 function normalizeLightKey(key) {
@@ -594,7 +669,7 @@ function parseLightYaml(text) {
     const explicitType = normalizeIdentifier(fields.type);
     if (explicitType && !TYPE_TO_TOP_KEY[explicitType]) {
         errors.push(
-            `Unsupported lightweight Item type "${fields.type}". Supported types: weapon, equipment, consumable, tool, loot, container, spell.`
+            `Unsupported lightweight Item type "${fields.type}". Supported types: weapon, equipment, consumable, tool, loot, container, spell, feat.`
         );
     }
     if (errors.length === 0) errors.push(...validateLightYamlFields(fields));
@@ -745,6 +820,7 @@ function inferType(fields) {
     if (fields.toolType || fields.baseTool || fields.toolBonus || fields.toolProficiency) return "tool";
     if (fields.lootType) return "loot";
     if (fields.itemCapacity || fields.weightCapacity || fields.volumeCapacity || fields.weightlessContents) return "container";
+    if (["featureType", "featureSubtype", "requirements", "prerequisiteLevel", "repeatable"].some(key => fields[key] !== undefined)) return "feat";
     if (fields.spellLevel || fields.spellSchool || fields.activationType || fields.components) return "spell";
     return explicit || "loot";
 }
@@ -769,7 +845,7 @@ function buildLightYamlStrictTemplate(fields) {
         }
     };
 
-    if (topKey !== "SPELL") {
+    if (!NON_PHYSICAL_TOP_KEYS.has(topKey)) {
         data.ITEM.Rarities = [fields.rarity || "common"];
         data.INVENTORY = {
             Quantity: 1,
@@ -988,6 +1064,25 @@ function buildLightYamlStrictTemplate(fields) {
             Value: duration.value,
             Units: duration.units,
             Concentration: parseLightBoolean(fields.concentration)
+        };
+    } else if (topKey === "FEAT") {
+        const rawType = fields.featureType === undefined ? "" : String(fields.featureType).trim();
+        const resolved = rawType === ""
+            ? { type: null, subtype: null }
+            : FEATURE_TYPE_ALIASES[normalizeIdentifier(rawType)] ?? { type: rawType, subtype: null };
+        const rawSubtype = fields.featureSubtype === undefined ? "" : String(fields.featureSubtype).trim();
+        const requirements = fields.requirements === undefined ? "" : String(fields.requirements).trim();
+        data.ITEM["Feature Type"] = resolved.type ?? "n/a";
+        data.ITEM["Feature Subtype"] = rawSubtype || resolved.subtype || "n/a";
+        data.ITEM.Requirements = requirements || "n/a";
+        data.PREREQUISITES = { Repeatable: parseLightBoolean(fields.repeatable) };
+        const level = fields.prerequisiteLevel ?? fields.spellLevel;
+        if (level !== undefined && String(level).trim() !== "") {
+            data.PREREQUISITES.Level = numberOrInput(level, "n/a");
+        }
+        data.PROPERTIES = {
+            Magical: !!requestedProperties.Magical,
+            "Passive Trait": !!requestedProperties["Passive Trait"]
         };
     }
 

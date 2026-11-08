@@ -12,11 +12,13 @@ import { automationDependencyIssues, validateAutomationReferences } from './auto
 import { automationUpdateDeletions } from './automationFields.js';
 import { getActivitySchemaCompatibility } from './activityCompanionCapabilities.js';
 import { ItemUtils } from "./itemUtils.js";
+import { validateItemReferences } from "./itemReferenceResolver.js";
 import {
   MODULE_NAME,
   ItemTypes,
   CurrencyRates,
   BaseToolToType,
+  isPhysicalItemType,
 } from "./itemConfig.js";
 import {
   getRandomWeaponIcon,
@@ -28,6 +30,14 @@ import {
   getRandomSpellIcon
 } from "./iconSemantics.js";
 import { AutoAnimationsHandler } from "./integrations/autoAnimations.js";
+
+/** A 16-character alphanumeric document ID; Foundry's generator when it is available. */
+function randomDocumentId() {
+  const native = globalThis.foundry?.utils?.randomID;
+  if (typeof native === "function") return native();
+  const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  return Array.from({ length: 16 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+}
 
 export class ItemData {
   constructor(name) {
@@ -126,6 +136,11 @@ export class ItemData {
     this.itemCapacity = null; // Item count capacity
     this.weightlessContents = false; // Weightless contents property
 
+    // Feat (Feature) Properties
+    this.featureType = null; // dnd5e featureTypes key (class, feat, monster, race, ...)
+    this.featureSubtype = null; // Subtype key for feature types that define them
+    this.passiveTrait = false; // dnd5e "trait" property (Passive Trait)
+
     // Spell Properties
     this.spellLevel = 0;
     this.spellSchool = null;
@@ -162,6 +177,22 @@ export class ItemData {
 
     // Inline activities/effects (from Activities: section in YAML)
     this.pendingActivities = []; // Array of { key, name, rawData }
+
+    // Linked documents that must resolve before import (advancement grants,
+    // container placement). Records come from createReference() in
+    // scripts/itemReferenceResolver.js; import fails closed while any is pending.
+    this.references = [];
+    this._hasUnresolvedReferences = false;
+
+    // Feature advancement (dnd5e system.advancement): native-shaped entries from
+    // the strict FEAT.ADVANCEMENT list. Keyed by _id at build time.
+    this.advancement = [];
+
+    // Container placement (dnd5e system.container). One of:
+    //   { kind: "batch", parentOrder, parentName, depth }   nested CONTENTS or a same-batch name
+    //   { kind: "reference", value, uuid }                  existing container, resolved before import
+    // The builder never writes system.container from text; createItem5e() sets it.
+    this.containerRef = null;
 
     // Allowlisted extension data. This is persisted under this module's flags,
     // never into arbitrary dnd5e system paths.
@@ -227,6 +258,7 @@ export class ItemData {
           tool: "systems/dnd5e/icons/svg/items/tool.svg",
           loot: "systems/dnd5e/icons/svg/items/loot.svg",
           spell: "systems/dnd5e/icons/svg/items/spell.svg",
+          feat: "systems/dnd5e/icons/svg/items/feature.svg",
         }[this.type] ?? "icons/svg/item-bag.svg",
       system: {
         description: {
@@ -251,9 +283,9 @@ export class ItemData {
       },
     };
 
-    // dnd5e SpellData has description/activity fields, but not the physical,
-    // identification, rarity, or attunement templates used by inventory items.
-    if (this.type === "spell") {
+    // dnd5e SpellData and FeatData have description/activity fields, but not the
+    // physical, identification, rarity, or attunement templates used by inventory items.
+    if (!isPhysicalItemType(this.type)) {
       delete this.#dnd5e.system.unidentified;
       delete this.#dnd5e.system.quantity;
       delete this.#dnd5e.system.weight;
@@ -286,9 +318,12 @@ export class ItemData {
       case "spell":
         await this.buildSpellData();
         break;
+      case "feat":
+        await this.buildFeatData();
+        break;
     }
 
-    // Equipped state (weapon, equipment, consumable, tool only — not loot/container/spell)
+    // Equipped state (weapon, equipment, consumable, tool only — not loot/container/spell/feat)
     const equippableTypes = ["weapon", "equipment", "consumable", "tool", "container"];
     if (equippableTypes.includes(this.type) && this.equipped) {
       this.setProperty("system.equipped", true);
@@ -1328,6 +1363,55 @@ export class ItemData {
   }
 
   /**
+   * Build feat (Feature) data.
+   * dnd5e FeatData owns type/subtype, properties, uses, and activities here.
+   * Requirements, prerequisites, enchantment limits, and vehicle cover/crewed
+   * arrive through the explicit field descriptors (applyExplicitSource).
+   */
+  async buildFeatData() {
+    ItemUtils.log("Building feat data");
+
+    this.setProperty("system.type.value", this.featureType || "");
+    this.setProperty("system.type.subtype", this.featureSubtype || "");
+
+    const props = this.getProperty("system.properties");
+    const finalSet = props instanceof Set ? props : new Set();
+    if (this.isMagical) finalSet.add("mgc");
+    if (this.passiveTrait) finalSet.add("trait");
+    if (finalSet.size) this.setProperty("system.properties", finalSet);
+
+    // Uses and recovery (dnd5e creates no default activity for a feat)
+    this.#applyUsesData("Feat");
+
+    // Advancement: dnd5e keys system.advancement by _id and requires the key to
+    // match. Reference UUIDs were written into each configuration by the
+    // reference resolver before this build; new Items start with an empty value.
+    if (Array.isArray(this.advancement) && this.advancement.length > 0) {
+      const advancement = {};
+      for (const entry of this.advancement) {
+        const id = entry._id || randomDocumentId();
+        const record = {
+          _id: id,
+          type: entry.type,
+          configuration: ItemUtils.deepClone(entry.configuration ?? {}),
+          value: {}
+        };
+        if (entry.level !== undefined) record.level = entry.level;
+        for (const key of ["name", "hint", "img", "classRestriction"]) {
+          if (entry[key] !== undefined) record[key] = entry[key];
+        }
+        advancement[id] = record;
+      }
+      this.setProperty("system.advancement", advancement);
+    }
+
+    ItemUtils.log("Feat data build complete", {
+      featureType: this.featureType, featureSubtype: this.featureSubtype,
+      advancement: this.advancement?.length ?? 0
+    });
+  }
+
+  /**
    * Get cost in the appropriate display denomination
    * @returns {number} Cost value in the display denomination
    */
@@ -1367,6 +1451,52 @@ export class ItemData {
 
     // Round to 2 decimal places
     return Math.round(goldValue * 100) / 100;
+  }
+
+  /** dnd5e PhysicalItemTemplate.MAX_DEPTH: contents may be nested at most this deep. */
+  static CONTAINER_MAX_DEPTH = 5;
+
+  /**
+   * Where this item goes inside a container, if anywhere.
+   * `options.containerId` comes from the batch workflow after the parent was created;
+   * otherwise `containerRef` must already hold a resolved UUID.
+   * @returns {Promise<{containerId: string|null, folderId: string|null, issues: string[]}>}
+   */
+  async resolveContainerPlacement(options = {}, destination = {}) {
+    const none = { containerId: null, folderId: null, issues: [] };
+    if (options.containerId) return { containerId: options.containerId, folderId: options.containerFolderId ?? null, issues: [] };
+    const ref = this.containerRef;
+    if (!ref) return none;
+    if (ref.kind === "batch") {
+      return { ...none, issues: [`"${this.name}" is nested in the container "${ref.parentName}", which was not imported in this batch. Import the container first or move the item out of its CONTENTS.`] };
+    }
+    if (!ref.uuid) {
+      return { ...none, issues: [`"${this.name}" names the container "${ref.value}", which is not resolved yet. Drop the container onto its reference or fix the name.`] };
+    }
+    let container = null;
+    try { container = await globalThis.fromUuid?.(ref.uuid); } catch { container = null; }
+    if (!container || container.documentName !== "Item" || container.type !== "container") {
+      return { ...none, issues: [`Container reference "${ref.uuid}" does not resolve to a container Item.`] };
+    }
+    const depth = await ItemData.containerDepth(container);
+    if (depth >= ItemData.CONTAINER_MAX_DEPTH) {
+      return { ...none, issues: [`"${container.name}" is already nested ${depth} containers deep; dnd5e allows at most ${ItemData.CONTAINER_MAX_DEPTH}.`] };
+    }
+    return { containerId: container.id, folderId: container.folder?.id ?? container.folder ?? null, issues: [] };
+  }
+
+  /** Number of containers above an Item (dnd5e `container` getter may return a Promise for packs). */
+  static async containerDepth(item) {
+    let depth = 0;
+    let current = item;
+    while (current?.system?.container && depth <= ItemData.CONTAINER_MAX_DEPTH + 1) {
+      let parent = null;
+      try { parent = await current.container; } catch { parent = null; }
+      if (!parent) break;
+      depth += 1;
+      current = parent;
+    }
+    return depth;
   }
 
   static async createDocumentAtDestination(itemData, destination = {}) {
@@ -1638,6 +1768,21 @@ export class ItemData {
     }
 
     try {
+      // Linked documents (advancement grants, container placement) must resolve
+      // before the build reads their UUIDs. Fail closed, like Cast spell links.
+      const referenceIssues = await validateItemReferences(this, {
+        destination: options.destination ?? { kind: "world", folderId }
+      });
+      if (referenceIssues.length > 0) {
+        ItemUtils.error("Item reference validation failed", referenceIssues);
+        return {
+          success: false,
+          item: null,
+          issues: referenceIssues,
+          activityResults: null,
+        };
+      }
+
       // Build Foundry data structure
       await this.buildFoundryData(options);
 
@@ -1659,6 +1804,21 @@ export class ItemData {
       const destination = options.destination ?? { kind: "world", folderId };
       if ((destination.kind ?? "world") === "world" && (destination.folderId || folderId)) {
         itemData.folder = destination.folderId || folderId;
+      }
+
+      // Container placement: a parent imported earlier in this batch, or an existing
+      // container resolved before the build. dnd5e keeps contents in the same
+      // collection as their container, in the container's folder, at most
+      // MAX_DEPTH deep. Fail closed; never import a nested item at the top level.
+      const placement = await this.resolveContainerPlacement(options, destination);
+      if (placement.issues.length > 0) {
+        ItemUtils.error("Container placement failed", placement.issues);
+        return { success: false, item: null, issues: placement.issues, activityResults: null };
+      }
+      if (placement.containerId) {
+        itemData.system ??= {};
+        itemData.system.container = placement.containerId;
+        if ((destination.kind ?? "world") === "world") itemData.folder = placement.folderId ?? null;
       }
       if (operation === "create" && options.importSessionId) {
         ItemUtils.setProperty(itemData, `flags.${MODULE_NAME}.importSessionId`, options.importSessionId);
@@ -1873,6 +2033,7 @@ export class ItemData {
     summon: "systems/dnd5e/icons/svg/activity/summon.svg",
     transform: "systems/dnd5e/icons/svg/activity/transform.svg",
     forward: "systems/dnd5e/icons/svg/activity/forward.svg",
+    teleport: "systems/dnd5e/icons/svg/activity/teleport.svg",
   };
 
   static EFFECT_DEFAULT_ICON = "icons/svg/combat.svg";
@@ -2971,9 +3132,11 @@ export class ItemData {
         attunementRequirement: this.attunementRequirement,
         magicBonus: this.magicBonus,
       },
+      references: (this.references ?? []).map(({ id, kind, path, label, status, uuid }) => ({ id, kind, path, label, status, uuid })),
+      containerRef: this.containerRef,
       foundryData: this.#dnd5e,
     };
-    if (this.type === "spell") {
+    if (!isPhysicalItemType(this.type)) {
       delete json.rarity;
       delete json.rarities;
       delete json.cost;

@@ -149,6 +149,14 @@ export class ItemUtils {
             "icons/sundries",
             "icons/commodities",
             "systems/dnd5e/icons/loot"
+        ],
+        feat: [
+            "icons/skills/melee",
+            "icons/skills/ranged",
+            "icons/skills/movement",
+            "icons/skills/social",
+            "icons/skills/targeting",
+            "icons/creatures/abilities"
         ]
     };
 

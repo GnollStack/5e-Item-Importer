@@ -1,0 +1,80 @@
+SCHEMA_VERSION: 6
+FEAT:
+  SOURCE:
+    Custom: Homebrew - native advancement example
+    Rules: "2024"
+  ITEM:
+    Name: Stormheart Adept
+    Identifier: stormheart-adept
+    Feature Type: feat
+    Feature Subtype: general
+    Requirements: Level 4+
+  PREREQUISITES:
+    Level: 4
+    Items: []
+    Repeatable: false
+  PROPERTIES:
+    Magical: false
+    Passive Trait: false
+  USAGE:
+    Uses Spent: 0
+    Uses Max: n/a
+  RECOVERY: []
+  ADVANCEMENT:
+    - ABILITY_SCORE_IMPROVEMENT:
+        Advancement ID: stormheartAsi001
+        Level: 0
+        Points: 0
+        FIXED:
+          - Ability: con
+            Value: 1
+    - GRANT_ITEMS:
+        Advancement ID: stormheartGrant1
+        Level: 0
+        Name: Storm Spells
+        Optional: false
+        Sorting: m
+        ITEMS:
+          - Name: Thunderwave
+            Type: spell
+          - Name: Gust of Wind
+            Type: spell
+        SPELL:
+          Ability: [cha]
+          Method: spell
+          Prepared: always
+          Uses Max: "1"
+          Uses Per: lr
+          Require Slot: false
+    - TRAIT:
+        Advancement ID: stormheartTrait1
+        Level: 0
+        Mode: default
+        Allow Replacements: false
+        Grants: ["skills:ath"]
+        CHOICES: []
+    - SCALE_VALUE:
+        Advancement ID: stormheartScale1
+        Identifier: storm-dice
+        Type: dice
+        SCALE:
+          - Level: 4
+            Dice Count: 1
+            Die Denomination: 6
+          - Level: 12
+            Dice Count: 2
+            Die Denomination: 6
+  DESCRIPTION:
+    Description: |
+      <p><strong>General Feat (Prerequisite: Level 4+)</strong></p>
+      <p>You gain the following benefits.</p>
+      <p><strong>Ability Score Increase.</strong> Increase your Constitution score by 1, to a maximum of 20.</p>
+      <p><strong>Storm Spells.</strong> You always have the Thunderwave and Gust of Wind spells prepared. You can
+      cast each of them once without expending a spell slot, and you regain the ability to do so when you finish
+      a Long Rest. Charisma is your spellcasting ability for these spells.</p>
+      <p><strong>Weathered.</strong> You gain proficiency in the Athletics skill.</p>
+      <p><strong>Storm Dice.</strong> You have a storm die, a d6. Once per turn when you hit with an attack roll,
+      you can roll the die and add the result as thunder damage. At level 12 you roll two dice instead.</p>
+  CHAT_FLAVOR:
+    Chat Description: |
+      n/a

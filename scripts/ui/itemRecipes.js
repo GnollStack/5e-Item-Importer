@@ -1,7 +1,7 @@
 import yaml from "../vendor/js-yaml.mjs";
 import { getActivitySchemaCompatibility } from "../activityCompanionCapabilities.js";
 
-const item = (name, extra = {}) => ({ SCHEMA_VERSION: 4, EQUIPMENT: {
+const item = (name, extra = {}) => ({ SCHEMA_VERSION: 6, EQUIPMENT: {
     ITEM: { Name: name, "Equipment Type": "wondrous", Rarities: ["uncommon", "rare"] }, ...extra } });
 const core = [
     { id: "recipe-rarities", label: "Native: multiple rarities", description: "An Item with two native rarity categories.",

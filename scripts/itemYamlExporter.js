@@ -7,6 +7,8 @@ import {
   ITEM_YAML_SCHEMA_VERSION
 } from "./strictItemParsers/itemSchemaVersion.js";
 import { normalizeCustomProperties } from "./itemCustomProperties.js";
+import { isPhysicalItemType } from "./itemConfig.js";
+import { ADVANCEMENT_TYPE_ROOTS, PREPARED_LABELS, advancementEntries } from "./itemAdvancement.js";
 
 const TYPE_TO_ROOT = {
   weapon: "WEAPON",
@@ -15,7 +17,8 @@ const TYPE_TO_ROOT = {
   tool: "TOOL",
   loot: "LOOT",
   container: "CONTAINER",
-  spell: "SPELL"
+  spell: "SPELL",
+  feat: "FEAT"
 };
 const WEAPON_PROPERTIES = {
   Adamantine: "ada", Ammunition: "amm", Finesse: "fin", Firearm: "fir",
@@ -137,7 +140,8 @@ function damageType(damage) {
 
 function commonSections(item, itemSection, type) {
   const data = { ITEM: itemSection };
-  if (type !== "spell") {
+  const physical = isPhysicalItemType(type);
+  if (physical) {
     data.INVENTORY = {
       Quantity: type === "container" ? 1 : integer(read(item, "quantity", "system.quantity"), 1),
       Identified: bool(firstDefined(read(item, "identified", "system.identified"), true)),
@@ -153,7 +157,7 @@ function commonSections(item, itemSection, type) {
   data.DESCRIPTION = {
     Description: String(read(item, "description", "system.description.value") ?? "")
   };
-  if (type !== "spell") {
+  if (physical) {
     data.UNIDENTIFIED_DESCRIPTION = {
       "Unidentified Name": na(read(item, "unidentifiedName", "system.unidentified.name")),
       "Unidentified Description": na(read(item, "unidentifiedDescription", "system.unidentified.description"))
@@ -536,6 +540,208 @@ function buildSpell(item) {
   return data;
 }
 
+function buildFeat(item) {
+  const properties = propertySet(item);
+  const data = commonSections(item, {
+    Name: String(item?.name ?? "Unnamed Feature"),
+    "Feature Type": na(read(item, "featureType", "system.type.value")),
+    "Feature Subtype": na(read(item, "featureSubtype", "system.type.subtype"))
+  }, "feat");
+  // Requirements, PREREQUISITES, ENCHANTMENT, and VEHICLE_PROPERTIES are
+  // written by exportExplicitItemFields() from the explicit descriptors.
+  data.PROPERTIES = {
+    Magical: magical(item, properties),
+    "Passive Trait": bool(firstDefined(item?.passiveTrait, properties.has("trait")))
+  };
+  const uses = usageSections(item);
+  data.USAGE = uses.usage;
+  data.RECOVERY = uses.recovery;
+  const advancement = exportAdvancement(item);
+  if (advancement) data.ADVANCEMENT = advancement;
+  return data;
+}
+
+// ==========================================
+// Advancement (feat)
+// ==========================================
+
+function listOf(value) {
+  if (value instanceof Set) return [...value];
+  return Array.isArray(value) ? [...value] : [];
+}
+
+/** Synchronous name lookup for an exported UUID; omitted outside Foundry or when unresolvable. */
+function documentNameFor(uuid) {
+  if (typeof uuid !== "string" || !uuid) return undefined;
+  try {
+    const name = globalThis.fromUuidSync?.(uuid)?.name;
+    return typeof name === "string" && name ? name : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function referenceEntry(uuid) {
+  const entry = { UUID: na(uuid) };
+  const name = documentNameFor(uuid);
+  if (name) entry.Name = name;
+  return entry;
+}
+
+function exportSpellConfiguration(spell) {
+  const section = {};
+  if (spell.ability !== undefined) section.Ability = listOf(spell.ability);
+  if (spell.method !== undefined) section.Method = na(spell.method);
+  if (spell.prepared !== undefined) section.Prepared = PREPARED_LABELS[spell.prepared] ?? spell.prepared;
+  const uses = isObject(spell.uses) ? spell.uses : null;
+  if (uses) {
+    if (uses.max !== undefined) section["Uses Max"] = uses.max ?? "";
+    if (uses.per !== undefined) section["Uses Per"] = na(uses.per);
+    if (uses.requireSlot !== undefined) section["Require Slot"] = bool(uses.requireSlot);
+  }
+  return section;
+}
+
+/**
+ * Native `system.advancement` (or a parsed ItemData advancement list) as the strict
+ * ADVANCEMENT list. Unknown or unsupported advancement types stop the export.
+ */
+function exportAdvancement(item) {
+  const entries = advancementEntries(read(item, "advancement", "system.advancement"));
+  if (!entries.length) return undefined;
+  return entries.map(exportAdvancementEntry);
+}
+
+function exportAdvancementEntry(entry) {
+  const type = String(entry?.type ?? "");
+  const root = ADVANCEMENT_TYPE_ROOTS[type];
+  if (!root) throw localizedAdvancementExportError(entry, `the native advancement type "${type || "unknown"}" has no strict YAML mapping`);
+  const body = {};
+  if (entry._id) body["Advancement ID"] = entry._id;
+  if (Number.isInteger(entry.level)) body.Level = entry.level;
+  if (entry.name) body.Name = entry.name;
+  if (entry.hint) body.Hint = entry.hint;
+  if (entry.img) body.Icon = entry.img;
+  if (entry.classRestriction) body["Class Restriction"] = entry.classRestriction;
+  const c = isObject(entry.configuration) ? entry.configuration : {};
+  switch (type) {
+    case "AbilityScoreImprovement": {
+      if (c.points !== undefined) body.Points = c.points;
+      if (c.cap !== undefined) body.Cap = c.cap;
+      if (c.max !== undefined) body.Max = na(c.max);
+      if (c.locked !== undefined) body.Locked = listOf(c.locked);
+      if (isObject(c.fixed)) body.FIXED = Object.entries(c.fixed).map(([ability, value]) => ({ Ability: ability, Value: value }));
+      if (c.recommendation) body.RECOMMENDATION = referenceEntry(c.recommendation);
+      break;
+    }
+    case "ItemGrant": {
+      if (c.optional !== undefined) body.Optional = bool(c.optional);
+      if (c.sorting !== undefined) body.Sorting = c.sorting;
+      body.ITEMS = listOf(c.items).map(granted => {
+        const record = referenceEntry(granted?.uuid);
+        if (granted?.optional !== undefined) record.Optional = bool(granted.optional);
+        if (granted?.sort !== undefined) record.Sort = granted.sort;
+        return record;
+      });
+      if (isObject(c.spell)) body.SPELL = exportSpellConfiguration(c.spell);
+      break;
+    }
+    case "ItemChoice": {
+      if (c.allowDrops !== undefined) body["Allow Drops"] = bool(c.allowDrops);
+      if (c.sorting !== undefined) body.Sorting = c.sorting;
+      if (c.type !== undefined) body.Type = na(c.type);
+      if (isObject(c.choices)) {
+        body.CHOICES = Object.entries(c.choices).sort(([a], [b]) => Number(a) - Number(b)).map(([level, choice]) => {
+          const record = { Level: Number(level) };
+          if (choice?.count !== undefined) record.Count = choice.count;
+          if (choice?.replacement !== undefined) record.Replacement = bool(choice.replacement);
+          return record;
+        });
+      }
+      body.POOL = listOf(c.pool).map(pooled => {
+        const record = referenceEntry(pooled?.uuid);
+        if (pooled?.sort !== undefined) record.Sort = pooled.sort;
+        return record;
+      });
+      if (isObject(c.restriction)) {
+        const restriction = {};
+        if (c.restriction.level !== undefined) restriction.Level = na(c.restriction.level);
+        if (c.restriction.list !== undefined) restriction.List = listOf(c.restriction.list);
+        if (c.restriction.school !== undefined) restriction.School = listOf(c.restriction.school);
+        if (c.restriction.type !== undefined) restriction.Type = na(c.restriction.type);
+        if (c.restriction.subtype !== undefined) restriction.Subtype = na(c.restriction.subtype);
+        body.RESTRICTION = restriction;
+      }
+      if (isObject(c.spell)) body.SPELL = exportSpellConfiguration(c.spell);
+      break;
+    }
+    case "ModifyItem": {
+      body.CHANGES = listOf(c.changes).map(change => {
+        const record = {};
+        if (change?._id !== undefined) record["Effect ID"] = na(change._id);
+        if (change?.uuid) record.EFFECT = referenceEntry(change.uuid);
+        if (change?.identifiers !== undefined) record.Identifiers = listOf(change.identifiers);
+        return record;
+      });
+      break;
+    }
+    case "ScaleValue": {
+      if (c.identifier !== undefined) body.Identifier = c.identifier;
+      if (c.type !== undefined) body.Type = c.type;
+      if (c.distance?.units !== undefined) body["Distance Units"] = na(c.distance.units);
+      if (isObject(c.scale)) {
+        body.SCALE = Object.entries(c.scale).sort(([a], [b]) => Number(a) - Number(b)).map(([level, step]) => {
+          const record = { Level: Number(level) };
+          if (c.type === "dice") {
+            if (step?.number !== undefined) record["Dice Count"] = step.number;
+            if (step?.faces !== undefined) record["Die Denomination"] = step.faces;
+            if (step?.modifiers !== undefined) record.Modifiers = listOf(step.modifiers);
+          } else if (c.type === "usage") {
+            if (step?.value !== undefined) record.Value = step.value;
+            if (step?.period !== undefined) record.Period = na(step.period);
+          } else if (step?.value !== undefined) {
+            record.Value = step.value;
+          }
+          return record;
+        });
+      }
+      break;
+    }
+    case "Trait": {
+      if (c.mode !== undefined) body.Mode = c.mode;
+      if (c.allowReplacements !== undefined) body["Allow Replacements"] = bool(c.allowReplacements);
+      if (c.grants !== undefined) body.Grants = listOf(c.grants);
+      if (c.choices !== undefined) {
+        body.CHOICES = listOf(c.choices).map(choice => {
+          const record = {};
+          if (choice?.count !== undefined) record.Count = choice.count;
+          if (choice?.pool !== undefined) record.Pool = listOf(choice.pool);
+          return record;
+        });
+      }
+      break;
+    }
+  }
+  return { [root]: body };
+}
+
+function localizedAdvancementExportError(entry, reason) {
+  const name = String(entry?.name || entry?.type || "Unnamed Advancement");
+  const fallback = `Cannot export advancement "${name}" as strict YAML because ${reason}. Export stopped to prevent data loss.`;
+  let message = fallback;
+  try {
+    if (typeof globalThis.game?.i18n?.format === "function") {
+      message = game.i18n.format("II.Errors.AdvancementExportUnsupported", { name, reason });
+    }
+  } catch {
+    message = fallback;
+  }
+  const error = new Error(message);
+  error.code = "ITEM_EXPORT_UNSUPPORTED_ADVANCEMENT";
+  error.advancementId = entry?._id ?? null;
+  return error;
+}
+
 function representFoundryEffect(effect) {
   const source = typeof effect?.toObject === "function" ? effect.toObject() : effect;
   if (!source?.name) return null;
@@ -579,7 +785,7 @@ function strictActivityPayload(value) {
     }
   }
   if (!isObject(source)) return null;
-  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2, 3, 4].includes(source.schemaVersion)) return null;
+  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2, 3, 4, 5].includes(source.schemaVersion)) return null;
   const candidates = [
     source,
     source.strictYaml,
@@ -711,7 +917,7 @@ function strictEffectPayload(value) {
     }
   }
   if (!isObject(source)) return null;
-  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2, 3, 4].includes(source.schemaVersion)) return null;
+  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2, 3, 4, 5].includes(source.schemaVersion)) return null;
   const candidates = [
     source,
     source.strictYaml,
@@ -789,7 +995,7 @@ function localizedEffectExportError(effect, reason) {
 function sharedActivityEffectExportError(effectId, firstActivity, secondActivity) {
   const firstName = String(firstActivity?.name ?? firstActivity?.type ?? "Unnamed Activity");
   const secondName = String(secondActivity?.name ?? secondActivity?.type ?? "Unnamed Activity");
-  const fallback = `Cannot export Activities "${firstName}" and "${secondName}" because the available serializer embedded shared Active Effect "${effectId}" more than once. Use a compatible schema 4 Activity Importer that supports shared effect references. Export stopped to prevent data loss.`;
+  const fallback = `Cannot export Activities "${firstName}" and "${secondName}" because the available serializer embedded shared Active Effect "${effectId}" more than once. Use a compatible schema 5 Activity Importer that supports shared effect references. Export stopped to prevent data loss.`;
   let message = fallback;
   try {
     if (typeof globalThis.game?.i18n?.format === "function") {
@@ -1013,7 +1219,7 @@ export function itemToStrictYamlDocument(item, options = {}) {
   if (!rootKey) throw new TypeError(`Unsupported Item type "${item.type ?? ""}"`);
   const builders = {
     weapon: buildWeapon, equipment: buildEquipment, consumable: buildConsumable,
-    tool: buildTool, loot: buildLoot, container: buildContainer, spell: buildSpell
+    tool: buildTool, loot: buildLoot, container: buildContainer, spell: buildSpell, feat: buildFeat
   };
   // Prepared sheet values may replace stored formulas or disabled controls.
   const data = builders[type](item._source ?? item);
@@ -1022,10 +1228,56 @@ export function itemToStrictYamlDocument(item, options = {}) {
   const automation = exportAutomation(item.automationSource ?? item, "item", type);
   if (Object.keys(automation).length) data.AUTOMATION = automation;
   addAttachments(data, item, options);
+  if (isPhysicalItemType(type) && data.INVENTORY && !options.insideContents) {
+    const container = containerLabel(item, options);
+    if (container !== undefined) data.INVENTORY.Container = container;
+  }
+  if (type === "container" && options.includeContents) {
+    const contents = containerContents(item);
+    if (contents.length) {
+      data.CONTENTS = contents.map(child => {
+        const document = itemToStrictYamlDocument(child, { ...options, insideContents: true });
+        delete document[ITEM_YAML_SCHEMA_KEY];
+        return document;
+      });
+    }
+  }
   return {
     [ITEM_YAML_SCHEMA_KEY]: ITEM_YAML_SCHEMA_VERSION,
     [rootKey]: data
   };
+}
+
+/**
+ * INVENTORY.Container for an exported Item: the parent's name when it is part of the
+ * same batch export, otherwise its UUID (parsed data keeps whatever it was given).
+ */
+function containerLabel(item, options) {
+  const ref = item?.containerRef;
+  if (ref && typeof ref === "object") {
+    if (ref.kind === "batch") return ref.parentName;
+    return ref.uuid ?? ref.value ?? undefined;
+  }
+  const id = item?._source?.system?.container ?? item?.system?.container;
+  if (!id) return undefined;
+  const named = options.containerNames?.get?.(id);
+  if (named) return named;
+  // The container lives in this Item's own collection (dnd5e resolves contents there).
+  if (item?.parent?.uuid) return `${item.parent.uuid}.Item.${id}`;
+  if (item?.pack) return `Compendium.${item.pack}.Item.${id}`;
+  return `Item.${id}`;
+}
+
+/** Synchronous contents of a world or Actor container; compendium contents are asynchronous and cannot be nested. */
+function containerContents(item) {
+  const contents = item?.system?.contents;
+  if (!contents) return [];
+  if (contents instanceof Promise) {
+    const error = new Error(`Cannot export the contents of "${item.name}" inline: compendium container contents load asynchronously. Export the pack's Items as a batch instead; contained Items keep INVENTORY.Container references.`);
+    error.code = "ITEM_EXPORT_PACK_CONTENTS";
+    throw error;
+  }
+  return Array.from(contents);
 }
 
 export function exportStrictItemYaml(item, options = {}) {
@@ -1041,5 +1293,11 @@ export function exportStrictItemYaml(item, options = {}) {
 /** Export batches as YAML documents so duplicate Item types remain lossless. */
 export function exportStrictItemYamlBatch(items, options = {}) {
   if (!Array.isArray(items)) throw new TypeError("items must be an array");
-  return items.map((item) => exportStrictItemYaml(item, options)).join("\n---\n");
+  // Contained Items whose container is in the same batch reference it by name, so the
+  // batch re-imports as a nested set anywhere; others keep the container's UUID.
+  const containerNames = new Map(items
+    .filter(item => item?.type === "container")
+    .map(item => [item.id ?? item._id, item.name]));
+  const batchOptions = { ...options, containerNames };
+  return items.map((item) => exportStrictItemYaml(item, batchOptions)).join("\n---\n");
 }

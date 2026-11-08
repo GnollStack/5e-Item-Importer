@@ -3,7 +3,7 @@ import yaml from "../../scripts/vendor/js-yaml.mjs";
 import { ItemUtils } from "../../scripts/itemUtils.js";
 import { ItemData } from "../../scripts/itemData.js";
 import { YamlItemParser } from "../../scripts/strictItemParsers/yamlItemParser.js";
-import { itemToStrictYamlDocument } from "../../scripts/itemYamlExporter.js";
+import { itemToStrictYamlDocument, exportStrictItemYamlBatch } from "../../scripts/itemYamlExporter.js";
 import { cloneExplicit, readPath, parseDamageData, damageDataToYaml } from "../../scripts/explicitYamlFields.js";
 import { extractExpectedItemProps, extractActualItemProps } from "../../scripts/ui/itemComparisonExtractor.js";
 import { compareProperties } from "../../scripts/ui/itemComparisonEngine.js";
@@ -109,6 +109,20 @@ export async function runExplicitItemYamlTests() {
     materials:{value:"inactive material",consumed:false,cost:0.5,supply:1.25},
     target:{affects:{type:"creature",count:"1 + @mod",choice:false,special:"Stored target"},template:{type:"cone",size:"10 + @mod",count:"1 + @mod",width:"2 + @mod",height:"3 + @mod",units:"ft",contiguous:false,stationary:true}}
   }};
+  const feat = {name:"Explicit Feat",type:"feat",img:"icons/svg/book.svg",system:{
+    type:{value:"class",subtype:"fightingStyle"},requirements:"Fighter 1",
+    prerequisites:{level:4,items:["fighter","feat:alert"],repeatable:true},
+    properties:["mgc","trait"],enchant:{max:"1 + @prof",period:"lr"},cover:0.5,crewed:true,
+    uses:{spent:1,max:"@prof",recovery:[{period:"lr",type:"recoverAll"}]},
+    advancement:{
+      ExplicitAsi00001:{_id:"ExplicitAsi00001",type:"AbilityScoreImprovement",level:0,configuration:{points:1,cap:2,fixed:{con:1},locked:["str"],recommendation:"Compendium.dnd5e.feats24.Item.phbfeaAlert00000"},value:{}},
+      ExplicitGrant001:{_id:"ExplicitGrant001",type:"ItemGrant",level:4,name:"Storm Spells",hint:"<p>Always prepared.</p>",configuration:{items:[{uuid:"Compendium.dnd5e.spells24.Item.phbsplThunderwav",optional:false,sort:0},{uuid:"Compendium.dnd5e.spells24.Item.phbsplGustofWind",optional:true,sort:100000}],optional:false,sorting:"m",spell:{ability:["cha"],method:"spell",prepared:2,uses:{max:"1",per:"lr",requireSlot:false}}},value:{}},
+      ExplicitChoice01:{_id:"ExplicitChoice01",type:"ItemChoice",configuration:{allowDrops:true,choices:{"0":{count:1,replacement:false},"8":{count:1,replacement:true}},pool:[{uuid:"Compendium.dnd5e.spells24.Item.phbsplAlarm00000",sort:0}],restriction:{level:"available",list:["class:wizard"],school:["evo"],subtype:"",type:""},sorting:"a",spell:{ability:["int"],method:"ritual",prepared:0,uses:{max:"",per:"",requireSlot:false}},type:"spell"},value:{}},
+      ExplicitModify01:{_id:"ExplicitModify01",type:"ModifyItem",level:0,classRestriction:"primary",configuration:{changes:[{_id:"ExplicitEnchant1",identifiers:["weapon:longsword"]},{uuid:"Compendium.world.effects.ActiveEffect.explicitEffect01",identifiers:[]}]},value:{}},
+      ExplicitScale001:{_id:"ExplicitScale001",type:"ScaleValue",configuration:{identifier:"storm-dice",type:"dice",distance:{units:"ft"},scale:{"4":{number:1,faces:6,modifiers:[]},"12":{number:2,faces:6,modifiers:["min2"]}}},value:{}},
+      ExplicitTrait001:{_id:"ExplicitTrait001",type:"Trait",level:0,img:"icons/svg/aura.svg",configuration:{allowReplacements:false,choices:[{count:1,pool:["skills:*"]}],grants:["skills:ath","weapon:mar"],mode:"default"},value:{}}
+    }
+  }};
   for (const [input,expected] of [[false,0],[true,1],[0,0],[1,1],[2,2],["unprepared",0],["prepared",1],["always",2]]) {
     await test("Preparation " + JSON.stringify(input),async () => {
       const doc = itemToStrictYamlDocument(spell);
@@ -127,9 +141,9 @@ export async function runExplicitItemYamlTests() {
     }
     requireValue(!new Set(second.item.itemData.system.properties).has("material"),"Inactive materials enabled their component.");
   });
-  for (const type of ["weapon","equipment","consumable","tool","loot","container","spell"]) {
+  for (const type of ["weapon","equipment","consumable","tool","loot","container","spell","feat"]) {
     await test(type + " identity, source, state and native controls",async () => {
-      const source = type === "spell" ? cloneExplicit(spell) : {name:"Explicit " + type,type,system:{properties:[],quantity:1,identified:false,equipped:true,attunement:"",attuned:true,weight:{value:0.5,units:"lb"},price:{value:0.25,denomination:"gp"}}};
+      const source = type === "spell" ? cloneExplicit(spell) : type === "feat" ? cloneExplicit(feat) : {name:"Explicit " + type,type,system:{properties:[],quantity:1,identified:false,equipped:true,attunement:"",attuned:true,weight:{value:0.5,units:"lb"},price:{value:0.25,denomination:"gp"}}};
       Object.assign(source,{img:"icons/svg/book.svg",sort:0});
       Object.assign(source.system,{identifier:"explicit-" + type,source:{book:"Private",page:"12a",custom:"Custom source",license:"Private",rules:"2024",revision:1.5}});
       if (type === "weapon") Object.assign(source.system,{type:{value:"siege",baseItem:""},range:{value:20.5,long:60.25,reach:5.5,units:"ft"},damage:{base:cloneExplicit(DAMAGE),versatile:cloneExplicit(DAMAGE)},crew:{max:3},speed:{value:0,units:"m",conditions:"Stored speed"}});
@@ -139,13 +153,19 @@ export async function runExplicitItemYamlTests() {
       if (type === "loot") source.system.type = {value:"gear",subtype:"private-subtype"};
       const first = await build(itemToStrictYamlDocument(source));
       const second = await build(itemToStrictYamlDocument(first.item));
-      for (const path of ["img","sort","system.identifier","system.source",...(!["loot","spell"].includes(type) ? ["system.attuned","system.equipped"] : []),
+      for (const path of ["img","sort","system.identifier","system.source",...(!["loot","spell","feat"].includes(type) ? ["system.attuned","system.equipped"] : []),
         ...(["weapon","equipment"].includes(type) ? ["system.crew.max","system.speed"] : []),
         ...(["weapon","consumable"].includes(type) ? ["system.damage"] : []),
         ...(type === "weapon" ? ["system.range"] : []),
-        ...(type === "loot" ? ["system.type.subtype"] : [])])
+        ...(type === "loot" ? ["system.type.subtype"] : []),
+        ...(type === "feat" ? ["system.type","system.requirements","system.prerequisites","system.enchant","system.cover","system.crewed","system.uses.spent","system.uses.max","system.advancement"] : [])])
         requireValue(same(readPath(source,path),readPath(second.item.itemData,path)),type + " lost " + path + ": " + JSON.stringify(readPath(second.item.itemData,path)));
       if (type === "tool") requireValue(new Set(second.item.itemData.system.properties).has("foc") && second.item.itemData.system.proficient === 0.5,"Tool focus/proficiency lost.");
+      if (type === "feat") {
+        requireValue(same([...source.system.properties].sort(),[...second.item.itemData.system.properties].sort()),"Feat properties lost: " + JSON.stringify(second.item.itemData.system.properties));
+        requireValue(second.item.itemData.system.uses.recovery?.[0]?.period === "lr" && second.item.itemData.system.uses.recovery?.[0]?.type === "recoverAll","Feat recovery lost.");
+        requireValue(second.item.itemData.system.quantity === undefined && second.item.itemData.system.rarities === undefined && second.item.itemData.system.attunement === undefined,"Feat gained physical fields.");
+      }
       const expected = extractExpectedItemProps(first);
       const actual = extractActualItemProps({...second.item.itemData,_source:second.item.itemData});
       requireValue(expected.some(row => row.section === "SOURCE" && row.label === "Revision" && row.value === "1.5"),"Preview missing source revision.");
@@ -222,7 +242,7 @@ export async function runExplicitItemYamlTests() {
     const sourceSpell=cloneExplicit(spell);sourceSpell.system.school="";
     requireValue((await build(itemToStrictYamlDocument(sourceSpell))).item.itemData.system.school==="","Blank spell school was lost.");
   });
-  for(const version of [1,2,3,4,5]) await test("Companion strict descriptor version " + version,async () => {
+  for(const version of [1,2,3,4,5,6]) await test("Companion strict descriptor version " + version,async () => {
     const source={name:"Descriptor fixture",type:"weapon",system:{type:{value:"simpleM",baseItem:"club"},properties:[],activities:[{
       _id:"DescriptorAct001",name:"Utility",type:"utility",effects:[],toObject(){return {_id:this._id,name:this.name,type:this.type};}
     }]},effects:[{_id:"DescriptorEff001",name:"Effect",toObject(){return {_id:this._id,name:this.name};}}]};
@@ -231,19 +251,110 @@ export async function runExplicitItemYamlTests() {
       serializeEffect:()=>({schemaVersion:version,kind:"strict-effect",rawData:{EFFECT:{DETAILS:{Name:"Effect"}}}})
     };
     let exported,error;try{exported=itemToStrictYamlDocument(source,{activityImporterApi});}catch(e){error=e;}
-    if(version===5) requireValue(error?.code==="ITEM_EXPORT_UNSUPPORTED_ACTIVITY","Future descriptor did not fail clearly.");
+    if(version===6) requireValue(error?.code==="ITEM_EXPORT_UNSUPPORTED_ACTIVITY","Future descriptor did not fail clearly.");
     else requireValue(exported.WEAPON.Activities.length===1&&exported.WEAPON.effects.length===1,"Supported companion descriptor rejected.");
   });
-  for (const version of [0,1,2,3,4]) await test("Accept Item YAML schema " + version,async () => {
+  for (const version of [0,1,2,3,4,5,6]) await test("Accept Item YAML schema " + version,async () => {
     const doc = itemToStrictYamlDocument(spell); doc.SCHEMA_VERSION = version;
-    requireValue((await build(doc)).item.yamlSchemaVersion === 4,"Compatibility version failed.");
+    requireValue((await build(doc)).item.yamlSchemaVersion === 6,"Compatibility version failed.");
+  });
+  await test("Feat unknown type and subtype warn and are stored",async () => {
+    const parsed=await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Odd Feature","Feature Type":"homebrew","Feature Subtype":"custom"}}});
+    requireValue(parsed.item.itemData.system.type.value==="homebrew"&&parsed.item.itemData.system.type.subtype==="custom","Unknown feature type or subtype was not stored.");
+    requireValue(parsed.warnings.some(w=>w.includes('Unknown Feature Type "homebrew"')),"Unknown feature type did not warn.");
+    const mismatch=await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Odd Subtype","Feature Type":"Class","Feature Subtype":"origin"}}});
+    requireValue(mismatch.item.itemData.system.type.value==="class","Feature type was not canonicalised.");
+    requireValue(mismatch.warnings.some(w=>w.includes('Unknown Feature Subtype "origin"')),"Subtype mismatch did not warn.");
+    const periodWarning=await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Odd Period"},ENCHANTMENT:{Max:"1",Period:"weekly"}}});
+    requireValue(periodWarning.item.itemData.system.enchant.period==="weekly"&&periodWarning.warnings.some(w=>w.includes("ENCHANTMENT.Period")),"Unknown enchant period was rejected or silent.");
+  });
+  await test("Feat ignores physical sections with FeatData warnings",async () => {
+    const parsed=await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Physical Feature",Rarities:["rare"]},INVENTORY:{Quantity:3},COST_AND_WEIGHT:{"Price Value":5},UNIDENTIFIED_DESCRIPTION:{"Unidentified Name":"Hidden"},ATTUNEMENT:{Attunement:"required"}}});
+    requireValue(parsed.item.itemData.system.quantity===undefined&&parsed.item.itemData.system.rarities===undefined&&parsed.item.itemData.system.attunement===undefined,"Physical fields leaked into FeatData.");
+    requireValue(parsed.warnings.filter(w=>w.includes("current dnd5e FeatData")).length===5,"Expected five FeatData warnings: "+parsed.warnings.join(" | "));
+  });
+  await test("Feat advancement registers references, validates entries and reports its summary",async () => {
+    const parse = advancement => new YamlItemParser().parse(yaml.dump({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Adv"},ADVANCEMENT:advancement}}));
+    requireValue(!parse([{HIT_POINTS:{}}]).success,"Unsupported root accepted.");
+    requireValue(!parse([{TRAIT:{Grants:["skill:ath"]}}]).success,"Bad trait key accepted.");
+    requireValue(!parse([{GRANT_ITEMS:{ITEMS:[{Optional:true}]}}]).success,"Grant without a reference accepted.");
+    requireValue(!parse([{SCALE_VALUE:{Type:"dice",SCALE:[{Level:1,"Die Denomination":6}]}}]).success,"Scale value without an identifier accepted.");
+    requireValue(!parse([{GRANT_ITEMS:{Level:-1}}]).success,"Negative level accepted.");
+    requireValue(!parse([{ABILITY_SCORE_IMPROVEMENT:{"Class Restriction":"tertiary"}}]).success,"Unknown class restriction accepted.");
+    requireValue(!parse([{MODIFY_ITEMS:{CHANGES:[{Identifiers:["weapon:longsword"]}]}}]).success,"Modify change without an effect accepted.");
+    requireValue(!parse({GRANT_ITEMS:{}}).success,"Non-list ADVANCEMENT accepted.");
+    requireValue(!parse([{GRANT_ITEMS:{},TRAIT:{}}]).success,"Two roots in one entry accepted.");
+    const warned = parse([{TRAIT:{Grants:["weapon:martial"]}},{SCALE_VALUE:{Level:3,Identifier:"x",Type:"number",SCALE:[{Level:1,Value:2}]}}]);
+    requireValue(warned.success && warned.warnings.some(w => w.includes("weapon:mar")) && warned.warnings.some(w => w.includes("Level is ignored")),"Advancement warnings missing: " + warned.warnings.join(" | "));
+    requireValue(warned.item.advancement[1].level === undefined && warned.item.advancement[1].configuration.scale["1"].value === 2,"Multi-level entry kept a level or lost its scale.");
+    const named = parse([{GRANT_ITEMS:{ITEMS:[{Name:"Shield",Type:"spell"},{UUID:"Compendium.dnd5e.spells24.Item.phbsplAlarm00000"}]}}]);
+    requireValue(named.success,"Named reference parse failed: " + named.errors.join("; "));
+    const references = named.item.references;
+    requireValue(references.length === 2 && references[0].query.name === "Shield" && references[0].query.itemTypes.join() === "spell" && references[0].status === "pending","Name reference not registered: " + JSON.stringify(references.map(r => r.query)));
+    requireValue(references[1].query.uuid === "Compendium.dnd5e.spells24.Item.phbsplAlarm00000" && references[1].path === "advancement[0].configuration.items[1].uuid","UUID reference lost its path.");
+    const built = await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Adv"},ADVANCEMENT:[{GRANT_ITEMS:{ITEMS:[{Name:"Shield",Type:"spell"},{UUID:"Compendium.dnd5e.spells24.Item.phbsplAlarm00000"}]}}]}});
+    const entries = Object.values(built.item.itemData.system.advancement);
+    requireValue(entries.length === 1 && entries[0].type === "ItemGrant" && entries[0].configuration.items[0].uuid === null && entries[0].configuration.items[1].uuid === "Compendium.dnd5e.spells24.Item.phbsplAlarm00000" && /^[A-Za-z0-9]{16}$/.test(entries[0]._id) && entries[0]._id === Object.keys(built.item.itemData.system.advancement)[0],"Built advancement lost ids or UUIDs: " + JSON.stringify(entries));
+    requireValue(extractExpectedItemProps(built).some(row => row.section === "Advancement" && row.label.startsWith("Grant Items")),"Preview omits advancement.");
+    const compact = await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Adv"},ADVANCEMENT:[{ABILITY_SCORE_IMPROVEMENT:{FIXED:{str:1,dex:2}}},{CHOOSE_ITEMS:{CHOICES:{"0":{Count:1}},Type:"feat"}}]}});
+    const [asi, choice] = Object.values(compact.item.itemData.system.advancement);
+    requireValue(same(asi.configuration.fixed,{str:1,dex:2}) && same(choice.configuration.choices,{"0":{count:1}}) && choice.configuration.type === "feat","Compact mapping forms were not accepted.");
+    let exportError;
+    try { itemToStrictYamlDocument({name:"Odd",type:"feat",system:{advancement:{odd0000000000001:{_id:"odd0000000000001",type:"HitPoints",configuration:{},value:{}}}}}); } catch (error) { exportError = error; }
+    requireValue(exportError?.code === "ITEM_EXPORT_UNSUPPORTED_ADVANCEMENT","Unsupported native advancement type was exported silently.");
+  });
+  await test("Container CONTENTS flatten into a batch with placement, limits and name binding",async () => {
+    const parser = () => new YamlItemParser();
+    const child = (name, extra = {}) => ({LOOT:{ITEM:{Name:name,Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Identified:true},...extra}});
+    const nested = {SCHEMA_VERSION:6,CONTAINER:{ITEM:{Name:"Pack",Rarities:[]},CONTENTS:[child("Rations"),{CONTAINER:{ITEM:{Name:"Pouch",Rarities:[]},CONTENTS:[child("Flint")]}}]}};
+    const results = parser().parseAll(yaml.dump(nested));
+    requireValue(results.length === 4 && results.every(r => r.success),"Nested contents did not flatten: " + results.flatMap(r => r.errors).join("; "));
+    requireValue(results[0].item.type === "container" && results[0].item.containerRef === null,"Parent gained a container reference.");
+    requireValue(same(results[1].item.containerRef,{kind:"batch",parentOrder:0,parentName:"Pack",depth:1}),"Child placement wrong: " + JSON.stringify(results[1].item.containerRef));
+    requireValue(results[3].item.containerRef.parentOrder === 2 && results[3].item.containerRef.depth === 2,"Grandchild placement wrong.");
+    requireValue(/INVENTORY:[\s\S]*Container: Pack/.test(results[1].sourceText),"Retry text lacks the container name.");
+    requireValue(itemToStrictYamlDocument(results[1].item).LOOT.INVENTORY.Container === "Pack","Export lost the batch container name.");
+    const single = parser().parse(yaml.dump(nested));
+    requireValue(!single.success && single.errors.some(e => e.includes("batch flow")),"parse() accepted nested contents.");
+    const byName = parser().parseAll([{CONTAINER:{ITEM:{Name:"Sack",Rarities:[]}}},{LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"sack"}}}].map(d => yaml.dump({SCHEMA_VERSION:6,...d})).join("\n---\n"));
+    requireValue(byName[1].success && byName[1].item.containerRef.kind === "batch" && byName[1].item.containerRef.parentOrder === 0 && byName[1].item.references.length === 0,"Batch name binding failed: " + JSON.stringify(byName[1].item?.containerRef) + byName[1].errors.join("; "));
+    const external = parser().parse(yaml.dump({SCHEMA_VERSION:6,LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"Item.worldBag00000001"}}}));
+    requireValue(external.success && external.item.containerRef.kind === "reference" && external.item.containerRef.uuid === "Item.worldBag00000001" && external.item.references[0].kind === "container" && external.item.references[0].query.uuid === "Item.worldBag00000001" && external.item.references[0].path === "containerRef.uuid","UUID container reference not registered.");
+    const named = parser().parse(yaml.dump({SCHEMA_VERSION:6,LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"Old Sack"}}}));
+    requireValue(named.success && named.item.containerRef.kind === "reference" && named.item.references[0].query.name === "Old Sack" && named.item.references[0].query.itemTypes.join() === "container","Name container reference not registered.");
+    requireValue(itemToStrictYamlDocument(external.item).LOOT.INVENTORY.Container === "Item.worldBag00000001","Export lost the container UUID.");
+    const conflict = parser().parseAll(yaml.dump({SCHEMA_VERSION:6,CONTAINER:{ITEM:{Name:"Pack",Rarities:[]},CONTENTS:[child("Rations",{INVENTORY:{Quantity:1,Container:"Pack"}})]}}));
+    requireValue(!conflict[1].success && conflict[1].errors.some(e => e.includes("one form")),"Nested item with INVENTORY.Container was accepted.");
+    const spellInside = parser().parseAll(yaml.dump({SCHEMA_VERSION:6,CONTAINER:{ITEM:{Name:"Pack",Rarities:[]},CONTENTS:[{SPELL:{ITEM:{Name:"Nope"}}}]}}));
+    requireValue(!spellInside[1].success && spellInside[1].errors.some(e => e.includes("physical")),"Non-physical content was accepted.");
+    let deep = child("Leaf");
+    for (let i = 0; i < 6; i++) deep = {CONTAINER:{ITEM:{Name:"Box " + i,Rarities:[]},CONTENTS:[deep]}};
+    const tooDeep = parser().parseAll(yaml.dump({SCHEMA_VERSION:6,...deep}));
+    requireValue(tooDeep.some(r => !r.success && r.errors.some(e => e.includes("deep"))),"Depth limit not enforced.");
+    const ambiguous = parser().parseAll([{CONTAINER:{ITEM:{Name:"Sack",Rarities:[]}}},{CONTAINER:{ITEM:{Name:"Sack",Rarities:[]}}},{LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"Sack"}}}].map(d => yaml.dump({SCHEMA_VERSION:6,...d})).join("\n---\n"));
+    requireValue(!ambiguous[2].success && ambiguous[2].errors.some(e => e.includes("matches 2")),"Ambiguous batch container name was accepted.");
+    const selfRef = parser().parseAll(yaml.dump({SCHEMA_VERSION:6,CONTAINER:{ITEM:{Name:"Loop",Rarities:[]},INVENTORY:{Quantity:1,Container:"Loop"}}}) + "\n---\n" + yaml.dump({SCHEMA_VERSION:6,LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"}}}));
+    requireValue(selfRef[0].success && selfRef[0].item.containerRef.kind === "reference","A container naming itself should fall through to a destination reference: " + JSON.stringify(selfRef[0].item?.containerRef) + selfRef[0].errors.join("; "));
+    const exportedBatch = exportStrictItemYamlBatch([
+      {id:"Container000001",_id:"Container000001",name:"Sack",type:"container",system:{quantity:1,properties:[],rarities:[]}},
+      {id:"Pebble0000000001",_id:"Pebble0000000001",name:"Pebble",type:"loot",system:{quantity:1,properties:[],rarities:[],container:"Container000001"}},
+      {id:"Stone00000000001",_id:"Stone00000000001",name:"Stone",type:"loot",system:{quantity:1,properties:[],rarities:[],container:"Elsewhere0000001"}}
+    ]);
+    const docs = yaml.loadAll(exportedBatch);
+    requireValue(docs[1].LOOT.INVENTORY.Container === "Sack" && docs[2].LOOT.INVENTORY.Container === "Item.Elsewhere0000001" && docs[0].CONTAINER.INVENTORY.Container === undefined,"Batch export container labels wrong: " + JSON.stringify(docs.map(d => Object.values(d)[1].INVENTORY)));
+  });
+  await test("Feat prerequisite items reject malformed identifiers",async () => {
+    const parsed=new YamlItemParser().parse(yaml.dump({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Bad Prereq"},PREREQUISITES:{Items:["not valid!"]}}}));
+    requireValue(!parsed.success&&parsed.errors.some(e=>e.includes("PREREQUISITES.Items")),"Malformed prerequisite identifier was accepted.");
+    const accepted=await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Good Prereq"},PREREQUISITES:{Items:["fighter","feat:alert"],Level:"n/a"}}});
+    requireValue(same(accepted.item.itemData.system.prerequisites.items,["fighter","feat:alert"])&&accepted.item.itemData.system.prerequisites.level===null,"Valid prerequisite identifiers or nullable level were lost.");
   });
   for (const [name,mutate] of [
     ["invalid preparation",d=>d.SPELL.PREPARATION.Prepared=3],
     ["fractional activation",d=>d.SPELL.ACTIVATION.Value=0.5],
     ["expression in numeric field",d=>d.SPELL.ITEM.Sort="1 + 2"],
     ["unknown damage label",d=>{d.SPELL.PREPARATION.Prepared="sometimes";}],
-    ["future schema",d=>d.SCHEMA_VERSION=5]
+    ["future schema",d=>d.SCHEMA_VERSION=7]
   ]) await test("Reject " + name,async () => {
     const doc=itemToStrictYamlDocument(spell);mutate(doc);
     const parsed = new YamlItemParser().parse(yaml.dump(doc));

@@ -2,8 +2,9 @@ import {
     createCatalogAccumulator, addCatalogModel, addCatalogDiagnostic, finishCatalog,
     isFieldKind, isModelSubclass, toCatalogValue
 } from "./fieldCatalogCore.js";
+import { SUPPORTED_ADVANCEMENT_TYPES } from "./itemAdvancement.js";
 
-const SUPPORTED_ITEMS = new Set(["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"]);
+const SUPPORTED_ITEMS = new Set(["weapon", "equipment", "consumable", "tool", "loot", "container", "spell", "feat"]);
 const KNOWN_ITEMS = {
     background: "BackgroundData", class: "ClassData", consumable: "ConsumableData",
     container: "ContainerData", equipment: "EquipmentData", facility: "FacilityData",
@@ -136,7 +137,8 @@ export function discoverNativeCatalog() {
         addCatalogModel(acc, { kind: "advancement", type, model,
             label: model.metadata?.title ?? type,
             source: { package: "dnd5e", namespace: "dnd5e.documents.advancement", export: exportName },
-            importSupport: "catalog-only",
+            // Feature Items author the six feat-valid types; HitPoints, Size and Subclass stay catalog-only.
+            importSupport: SUPPORTED_ITEMS.has("feat") && SUPPORTED_ADVANCEMENT_TYPES.includes(type) ? "supported" : "catalog-only",
             activeModel: config?.documentClass,
             typeDetails: {
                 applicableItemTypes: Array.from(config?.validItemTypes ?? model.metadata?.validItemTypes ?? []).sort(),

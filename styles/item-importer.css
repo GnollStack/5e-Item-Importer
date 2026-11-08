@@ -1159,3 +1159,38 @@ body.theme-dark .ii-shortcuts-hint kbd {
 .ai-window .ai-template-group { flex: 1 1 0; min-width: 0; }
 .ai-window #ai-template-select { width: 100%; min-width: 0; }
 .ii-window #ii-template-select { flex: 1 1 0; width: 0; min-width: 0; }
+
+/* Document references owned by Item Importer (advancement grants, container placement).
+   Every reference is a drop zone so a drop can override the automatic match. */
+.ii-window .ii-ref-help { margin: 0 0 .5rem; font-size: 12px; opacity: .8; }
+.ii-window .ii-ref-list { display: flex; flex-direction: column; gap: 6px; }
+.ii-window .ii-ref-dropzone {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+    border: 1px dashed #888; border-radius: 4px; padding: 6px 10px;
+    font-size: 12px; min-height: 30px;
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.ii-window .ii-ref-dropzone.ii-ref-resolved { border-style: solid; border-color: var(--ii-success, #2d8f51); }
+.ii-window .ii-ref-dropzone.ii-ref-ambiguous { border-color: var(--ii-warning, #c28a00); }
+.ii-window .ii-ref-dropzone.ii-ref-invalid { border-color: var(--ii-error, #e63946); }
+.ii-window .ii-ref-dropzone.drag-over {
+    border-color: var(--ii-primary, #3f88c5); background: rgba(63, 136, 197, .1);
+    box-shadow: 0 0 4px rgba(63, 136, 197, .3);
+}
+.ii-window .ii-ref-label { font-weight: 600; }
+.ii-window .ii-ref-hint { opacity: .85; }
+.ii-window .ii-ref-hint i, .ii-window .ii-ref-resolved-name i { margin-right: 4px; opacity: .7; }
+.ii-window .ii-ref-resolved-name { color: var(--ii-success, #2d8f51); font-weight: 600; }
+.ii-window .ii-ref-uuid { font-family: "Roboto Mono", "Courier New", monospace; font-size: 10px; word-break: break-all; opacity: .7; }
+.ii-window .ii-ref-candidates { flex: 1 1 220px; min-width: 0; width: auto; }
+.ii-window .ii-ref-clear {
+    background: none; border: none; color: #888; cursor: pointer;
+    padding: 2px 6px; font-size: 14px; line-height: 1; margin-left: auto;
+    border-radius: 3px; width: auto; flex: 0 0 auto;
+}
+.ii-window .ii-ref-clear:hover { color: var(--ii-error, #e63946); }
+body.theme-dark .ii-window .ii-ref-dropzone { border-color: rgba(255, 255, 255, .3); }
+body.theme-dark .ii-window .ii-ref-dropzone.ii-ref-resolved { border-color: var(--ii-success, #2d8f51); }
+
+.ii-window .ii-batch-item-container { font-size: 11px; opacity: .85; margin-top: 2px; }
+.ii-window .ii-batch-item-container i { margin-right: 4px; opacity: .7; }

@@ -10,7 +10,9 @@ import { ItemUtils } from "../../scripts/itemUtils.js";
 import { MODULE_TITLE } from "../../scripts/itemConfig.js";
 import { ItemData } from "../../scripts/itemData.js";
 import { withCompatibleActivityCompanion } from "../helpers/compatibleActivityCompanion.js";
-import { parseItemText } from "../../scripts/parserRouting.js";
+import { parseItemText, isYamlMultiItem } from "../../scripts/parserRouting.js";
+import { YamlItemParser } from "../../scripts/strictItemParsers/yamlItemParser.js";
+import { validateItemReferences } from "../../scripts/itemReferenceResolver.js";
 import { NaturalItemParser } from "../../scripts/naturalItemParser.js";
 import { ITEM_TEMPLATES } from "../../scripts/ui/itemTemplates.js";
 import { analyzeItemActivitiesText } from "../../scripts/activityIntegrationDiagnostics.js";
@@ -880,6 +882,251 @@ export class ItemImporterTests {
                 legacySpellPhysicalFields
             );
 
+            const legacyFeatPhysicalFields = parseItemText([
+                "FEAT:",
+                "  ITEM:",
+                "    Name: Legacy Physical Feature",
+                "    Rarity: legendary",
+                "    Feature Type: class",
+                "  INVENTORY:",
+                "    Quantity: 99",
+                "  COST_AND_WEIGHT:",
+                "    Price Value: 999",
+                "  ATTUNEMENT:",
+                "    Attunement: required"
+            ].join("\n"));
+            check("strict feat warns and ignores unsupported physical fields",
+                legacyFeatPhysicalFields.success === true
+                && legacyFeatPhysicalFields.item?.type === "feat"
+                && legacyFeatPhysicalFields.item?.featureType === "class"
+                && legacyFeatPhysicalFields.item?.quantity === 1
+                && legacyFeatPhysicalFields.item?.attunement === ""
+                && legacyFeatPhysicalFields.warnings?.filter(
+                    (warning) => warning.includes("current dnd5e FeatData")
+                ).length === 4,
+                legacyFeatPhysicalFields
+            );
+
+            const completeFeatSource = {
+                name: "Schema Validation Feature",
+                type: "feat",
+                system: {
+                    type: { value: "class", subtype: "fightingStyle" },
+                    requirements: "Fighter 1",
+                    prerequisites: { level: 4, items: ["fighter", "feat:alert"], repeatable: true },
+                    properties: ["mgc", "trait"],
+                    enchant: { max: "1 + @prof", period: "lr" },
+                    cover: 0.5,
+                    crewed: true,
+                    uses: { spent: 0, max: "@prof", recovery: [{ period: "lr", type: "recoverAll" }] }
+                }
+            };
+            const completeFeatValidation = ItemUtils.validateItemData(completeFeatSource);
+            check("live Item validation accepts a complete feat source", completeFeatValidation.valid === true, completeFeatValidation);
+
+            const strictFeat = parseItemText([
+                "SCHEMA_VERSION: 6",
+                "FEAT:",
+                "  ITEM:",
+                "    Name: Live Feature",
+                "    Feature Type: feat",
+                "    Feature Subtype: general",
+                "    Requirements: Level 4+",
+                "  PREREQUISITES:",
+                "    Level: 4",
+                "    Items: [fighter, \"feat:alert\"]",
+                "    Repeatable: false",
+                "  PROPERTIES:",
+                "    Magical: false",
+                "    Passive Trait: true",
+                "  USAGE:",
+                "    Uses Spent: 0",
+                "    Uses Max: \"@prof\"",
+                "  RECOVERY:",
+                "    - Period: turnStart",
+                "      Type: recoverAll",
+                "  DESCRIPTION:",
+                "    Description: A live feature fixture."
+            ].join("\n"));
+            if (strictFeat.item) await strictFeat.item.buildFoundryData({ deterministicIcons: true });
+            const strictFeatData = strictFeat.item?.toJSON?.().foundryData;
+            const strictFeatValidation = ItemUtils.validateItemData(strictFeatData ?? {});
+            check("strict feat builds valid dnd5e FeatData with combat recovery",
+                strictFeat.success === true
+                && strictFeatData?.type === "feat"
+                && strictFeatData?.system?.type?.value === "feat"
+                && strictFeatData?.system?.type?.subtype === "general"
+                && strictFeatData?.system?.requirements === "Level 4+"
+                && strictFeatData?.system?.prerequisites?.level === 4
+                && strictFeatData?.system?.uses?.recovery?.[0]?.period === "turnStart"
+                && strictFeatData?.system?.quantity === undefined
+                && strictFeatValidation.valid === true,
+                { errors: strictFeat.errors, warnings: strictFeat.warnings, system: strictFeatData?.system, validation: strictFeatValidation }
+            );
+
+            // Advancement: literal UUIDs build valid native data; an unresolvable name blocks import before any write.
+            const advancementSpellUuid = "Compendium.dnd5e.spells24.Item.phbsplFireball00";
+            const advancementFeat = parseItemText([
+                "SCHEMA_VERSION: 6",
+                "FEAT:",
+                "  ITEM:",
+                "    Name: Live Advancement Feature",
+                "    Feature Type: feat",
+                "  ADVANCEMENT:",
+                "    - ABILITY_SCORE_IMPROVEMENT:",
+                "        Advancement ID: liveAdvAsi000001",
+                "        Points: 1",
+                "        FIXED:",
+                "          - Ability: con",
+                "            Value: 1",
+                "    - GRANT_ITEMS:",
+                "        Advancement ID: liveAdvGrant0001",
+                "        ITEMS:",
+                `          - UUID: ${advancementSpellUuid}`,
+                "            Type: spell",
+                "        SPELL:",
+                "          Ability: [int]",
+                "          Method: spell",
+                "          Prepared: always",
+                "    - TRAIT:",
+                "        Advancement ID: liveAdvTrait0001",
+                "        Grants: [\"skills:ath\"]",
+                "    - SCALE_VALUE:",
+                "        Advancement ID: liveAdvScale0001",
+                "        Identifier: storm-dice",
+                "        Type: dice",
+                "        SCALE:",
+                "          - Level: 4",
+                "            Dice Count: 1",
+                "            Die Denomination: 6"
+            ].join("\n"));
+            const advancementReferenceIssues = advancementFeat.item ? await validateItemReferences(advancementFeat.item, { destination: { kind: "world", folderId: null } }) : ["parse failed"];
+            if (advancementFeat.item) await advancementFeat.item.buildFoundryData({ deterministicIcons: true });
+            const advancementData = advancementFeat.item?.toJSON?.().foundryData;
+            const advancementValidation = ItemUtils.validateItemData(advancementData ?? {});
+            const advancementEntries = Object.values(advancementData?.system?.advancement ?? {});
+            check("strict feat advancement with literal UUIDs builds valid dnd5e advancement",
+                advancementFeat.success === true
+                && advancementReferenceIssues.length === 0
+                && advancementFeat.item.references.length === 1
+                && advancementFeat.item.references[0].status === "resolved"
+                && advancementEntries.length === 4
+                && advancementData.system.advancement.liveAdvGrant0001?.configuration?.items?.[0]?.uuid === advancementSpellUuid
+                && advancementData.system.advancement.liveAdvAsi000001?.configuration?.fixed?.con === 1
+                && advancementData.system.advancement.liveAdvScale0001?.configuration?.scale?.["4"]?.faces === 6
+                && advancementValidation.valid === true,
+                { errors: advancementFeat.errors, warnings: advancementFeat.warnings, referenceIssues: advancementReferenceIssues, advancement: advancementData?.system?.advancement, validation: advancementValidation }
+            );
+
+            const unresolvedFeat = parseItemText([
+                "SCHEMA_VERSION: 6",
+                "FEAT:",
+                "  ITEM:",
+                "    Name: Live Unresolved Advancement Feature",
+                "  ADVANCEMENT:",
+                "    - GRANT_ITEMS:",
+                "        ITEMS:",
+                "          - Name: Item Importer Nonexistent Spell Fixture",
+                "            Type: spell"
+            ].join("\n"));
+            const itemCountBefore = game.items.size;
+            const unresolvedResult = unresolvedFeat.item
+                ? await unresolvedFeat.item.createItem5e(null, { destination: { kind: "world", folderId: null }, deterministicIcons: true })
+                : null;
+            check("unresolved advancement reference blocks import before any write",
+                unresolvedFeat.success === true
+                && unresolvedResult?.success === false
+                && unresolvedResult?.item === null
+                && (unresolvedResult?.issues ?? []).some(issue => /Granted item 1/.test(issue))
+                && game.items.size === itemCountBefore,
+                { errors: unresolvedFeat.errors, result: unresolvedResult, references: unresolvedFeat.item?.references }
+            );
+
+            // Container contents (read-only): nested CONTENTS take the batch path and children never import without their parent.
+            const nestedYaml = [
+                "SCHEMA_VERSION: 6",
+                "CONTAINER:",
+                "  ITEM:",
+                "    Name: Live Nested Pack",
+                "    Rarities: []",
+                "  CONTENTS:",
+                "    - LOOT:",
+                "        ITEM:",
+                "          Name: Live Nested Rations",
+                "          Loot Type: gear",
+                "          Rarities: []",
+                "        INVENTORY:",
+                "          Quantity: 3"
+            ].join("\n");
+            const nestedResults = new YamlItemParser().parseAll(nestedYaml);
+            const nestedSingle = parseItemText(nestedYaml);
+            const nestedCountBefore = game.items.size;
+            const orphanResult = nestedResults[1]?.item
+                ? await nestedResults[1].item.createItem5e(null, { destination: { kind: "world", folderId: null }, deterministicIcons: true })
+                : null;
+            check("nested CONTENTS flatten into a batch and a child never imports without its container",
+                isYamlMultiItem(nestedYaml) === true
+                && nestedResults.length === 2
+                && nestedResults.every(result => result.success)
+                && nestedResults[1].item.containerRef?.kind === "batch"
+                && nestedResults[1].item.containerRef.parentOrder === 0
+                && nestedSingle.success === false
+                && nestedSingle.errors.some(error => error.includes("batch flow"))
+                && orphanResult?.success === false
+                && orphanResult.item === null
+                && game.items.size === nestedCountBefore,
+                { results: nestedResults.map(result => ({ name: result.item?.name, containerRef: result.item?.containerRef, errors: result.errors })), single: nestedSingle.errors, orphan: orphanResult }
+            );
+
+            const existingContainer = game.items.find(item => item.type === "container" && !item.system.container);
+            if (existingContainer) {
+                const worldReference = parseItemText([
+                    "SCHEMA_VERSION: 6",
+                    "LOOT:",
+                    "  ITEM:",
+                    "    Name: Live Container Reference",
+                    "    Loot Type: gear",
+                    "    Rarities: []",
+                    "  INVENTORY:",
+                    "    Quantity: 1",
+                    `    Container: ${existingContainer.uuid}`
+                ].join("\n"));
+                const worldIssues = worldReference.item ? await validateItemReferences(worldReference.item, { destination: { kind: "world", folderId: null } }) : ["parse failed"];
+                // Read the placement before the cross-collection pass, which correctly clears the UUID again.
+                const worldContainerUuid = worldReference.item?.containerRef?.uuid ?? null;
+                const actorDestination = game.actors.find(actor => actor.isOwner) ?? null;
+                const crossIssues = worldReference.item && actorDestination
+                    ? await validateItemReferences(worldReference.item, { destination: { kind: "actor", actorUuid: actorDestination.uuid } })
+                    : null;
+                check("INVENTORY.Container UUID resolves in its own collection and is rejected for another collection",
+                    worldReference.success === true
+                    && worldIssues.length === 0
+                    && worldContainerUuid === existingContainer.uuid
+                    && (crossIssues === null || (crossIssues.some(issue => /one collection/.test(issue)) && worldReference.item.containerRef?.uuid === null)),
+                    { errors: worldReference.errors, worldIssues, worldContainerUuid, crossIssues, container: existingContainer.uuid }
+                );
+            }
+
+            const naturalFeatureFixtures = [
+                ["Second Wind\n1st-level Fighter feature\nYou have a limited well of stamina. Once you use this feature, you must finish a short or long rest before you can use it again.", "feat"],
+                ["Legendary Resistance (3/Day)\nIf the dragon fails a saving throw, it can choose to succeed instead.", "feat"],
+                ["Fire Breath (Recharge 5-6). The dragon exhales fire in a 60-foot cone.", "feat"],
+                ["Heavy Armor Master\nPrerequisite: Proficiency with heavy armor\nYou can use your armor to deflect strikes that would kill others.", "feat"],
+                ["Wand of Fireballs\nWand, rare (requires attunement by a spellcaster)\nThis wand has 7 charges. It regains 1d6 + 1 expended charges daily at dawn.", "consumable"],
+                ["Bite\nMelee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 7 (1d8 + 3) piercing damage.", "weapon"]
+            ].map(([text, expectedType]) => {
+                const parsed = parseItemText(text, { trace: true });
+                // Routing is what matters here; a paste without a base weapon still fails strict parsing by design.
+                const routedType = parsed.item?.type
+                    ?? parsed.trace?.generatedStrictTemplate?.match(/^(WEAPON|EQUIPMENT|CONSUMABLE|TOOL|LOOT|CONTAINER|SPELL|FEAT):/m)?.[1]?.toLowerCase()
+                    ?? null;
+                return { text, expectedType, type: routedType, featureDetected: !!parsed.trace?.featureDetection, errors: parsed.errors };
+            });
+            check("natural feature detection routes features without stealing items",
+                naturalFeatureFixtures.every((fixture) => fixture.type === fixture.expectedType && fixture.featureDetected === (fixture.expectedType === "feat")),
+                naturalFeatureFixtures.filter((fixture) => fixture.type !== fixture.expectedType || fixture.featureDetected !== (fixture.expectedType === "feat"))
+            );
+
             const unsupportedDartAmmo = parseItemText([
                 "CONSUMABLE:",
                 "  ITEM:",
@@ -967,7 +1214,7 @@ export class ItemImporterTests {
 
         try {
             const splitTopLevelItems = (text) => {
-                const marker = /^(WEAPON|EQUIPMENT|CONSUMABLE|TOOL|LOOT|CONTAINER|SPELL):\s*$/gm;
+                const marker = /^(WEAPON|EQUIPMENT|CONSUMABLE|TOOL|LOOT|CONTAINER|SPELL|FEAT):\s*$/gm;
                 const matches = [...text.matchAll(marker)];
                 if (matches.length <= 1) return [text];
                 return matches.map((match, index) => {
@@ -996,7 +1243,7 @@ export class ItemImporterTests {
                         warnings: parsed.warnings
                     });
                     const unknownKeyWarnings = (parsed.warnings || []).filter(
-                        (warning) => /^(?:Unknown (?:key|\w+ section|top-level key)|Unsupported spell)/.test(warning)
+                        (warning) => /^(?:Unknown (?:key|\w+ section|top-level key)|Unsupported (?:spell|feat))/.test(warning)
                     );
                     check(`template ${testId} has no unknown schema keys`, unknownKeyWarnings.length === 0, {
                         unknownKeyWarnings

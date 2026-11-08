@@ -1,6 +1,6 @@
 # Automation storage in schema 4
 
-Reviewed against Foundry 14.369, dnd5e 6.0.6, MIDI-QOL 14.6.0 and DAE 14.6.0.
+Reviewed against Foundry 14.369, dnd5e 6.0.6, MIDI-QOL 14.6.8 and DAE 14.6.6.
 
 Use `AUTOMATION` inside an existing Item, Activity or Effect block. This is a typed, reviewed mapping, not a raw-data escape hatch. Unknown keys fail with their exact path. Native fields keep their existing YAML sections. Do not combine canonical automation with legacy MIDI/DAE sections in the same Activity or Effect.
 
@@ -18,15 +18,15 @@ Paths are relative to the existing type block. `[*]` means each array element. S
 
 | Kind | Applies to | YAML path | Stored value |
 | --- | --- | --- | --- |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.midi-qol.flags.onUseMacroName` | string or null |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.midi-qol.flags.noProvokeReaction` | boolean |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.dae.macro._id` | string or null |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.dae.macro.name` | string |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.dae.macro.img` | string or null |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.dae.macro.type` | "script", "chat" |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.dae.macro.scope` | "global", "actors", "actor" |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.dae.macro.command` | string |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.dae.macro.author` | string or null |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.dae.macro.folder` | string or null |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.dae.macro.ownership` | ownership |
-| item | weapon, equipment, consumable, tool, loot, container, spell | `AUTOMATION.dae.macro._stats` | metadata |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.midi-qol.flags.onUseMacroName` | string or null |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.midi-qol.flags.noProvokeReaction` | boolean |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro._id` | string or null |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro.name` | string |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro.img` | string or null |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro.type` | "script", "chat" |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro.scope` | "global", "actors", "actor" |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro.command` | string |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro.author` | string or null |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro.folder` | string or null |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro.ownership` | ownership |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro._stats` | metadata |

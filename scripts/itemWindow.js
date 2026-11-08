@@ -394,10 +394,16 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       const active = this.element.querySelector(`.ii-destination-${kind}`);
       if (active) active.hidden = false;
       this._persistDestination();
+      // Container references resolve within the destination collection, so re-run.
+      Actions.refreshReferenceResolution.call(this);
     };
     kindSelect.addEventListener("change", refresh);
-    this.element.querySelector("#ii-actor-select")?.addEventListener("change", () => this._persistDestination());
-    this.element.querySelector("#ii-pack-select")?.addEventListener("change", () => this._persistDestination());
+    const onLocationChange = () => {
+      this._persistDestination();
+      Actions.refreshReferenceResolution.call(this);
+    };
+    this.element.querySelector("#ii-actor-select")?.addEventListener("change", onLocationChange);
+    this.element.querySelector("#ii-pack-select")?.addEventListener("change", onLocationChange);
   }
 
   _setupDragAndDrop() {
@@ -901,7 +907,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       };
       stateIndicator.innerHTML = icons[state] || icons.empty;
       stateIndicator.className = `ii-state-indicator state-${state}`;
-      if (state === "valid" && this.element.querySelector(".ii-section-issues, .ai-section-issues, .ai-parse-warning, .ii-parse-warning, .ai-uuid-dropzone")) {
+      if (state === "valid" && this.element.querySelector(".ii-section-issues, .ai-section-issues, .ai-parse-warning, .ii-parse-warning, .ai-uuid-dropzone, .ii-ref-pending")) {
         stateIndicator.textContent = localize("II.State.Review", "Parsed: review findings");
         stateIndicator.classList.add("state-review");
       }
@@ -950,7 +956,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   _updateBatchSelection() {
     const successes = this.currentParseResult?.successes || [];
     successes.forEach((result, index) => {
-      if (result.item?._hasUnresolvedUuids) this.selectedBatchItems.delete(index);
+      if (result.item?._hasUnresolvedUuids || result.item?._hasUnresolvedReferences) this.selectedBatchItems.delete(index);
     });
 
     const items = this.element.querySelectorAll(".ii-batch-item.selectable");

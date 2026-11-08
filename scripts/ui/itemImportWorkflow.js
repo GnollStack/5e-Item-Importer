@@ -129,7 +129,8 @@ async function importOne(window, parseResult, {
     destination,
     duplicateMode,
     session,
-    buildOptions
+    buildOptions,
+    placement = {}
 }) {
     const parsedItem = parseResult?.item;
     let existingItem = null;
@@ -149,6 +150,7 @@ async function importOne(window, parseResult, {
             : null;
         result = await parsedItem.createItem5e(null, {
             ...buildOptions,
+            ...placement,
             destination,
             existingItem,
             operation,
@@ -287,6 +289,9 @@ export async function runItemImportWorkflow(window) {
             const failedIndices = new Set();
             let successCount = 0;
             let skippedCount = 0;
+            // Containers created (or matched by duplicate policy) earlier in this run,
+            // keyed by their parseAll() order so nested contents can be placed inside them.
+            const importedContainers = new Map();
 
             for (let position = 0; position < queue.length; position++) {
                 if (window.importCancelled) {
@@ -300,12 +305,30 @@ export async function runItemImportWorkflow(window) {
                     running: true,
                     progress: `Importing ${position + 1}/${queue.length}`
                 });
+                let placement = {};
+                const containerRef = parseResult.item?.containerRef;
+                if (containerRef?.kind === "batch") {
+                    const parent = importedContainers.get(containerRef.parentOrder);
+                    if (!parent) {
+                        failedIndices.add(index);
+                        ui.notifications.error(`Failed to import ${parseResult.item.name}: its container "${containerRef.parentName}" was not imported in this batch.`);
+                        continue;
+                    }
+                    placement = { containerId: parent.id, containerFolderId: parent.folderId };
+                }
                 const result = await importOne(window, parseResult, {
                     destination,
                     duplicateMode: mode,
                     session,
-                    buildOptions
+                    buildOptions,
+                    placement
                 });
+                if (result?.success === true && result.item && parseResult.item?.type === "container") {
+                    importedContainers.set(parseResult._batchSourceOrder, {
+                        id: result.item.id,
+                        folderId: result.item.folder?.id ?? result.item.folder ?? null
+                    });
+                }
 
                 if (result?.cancelled === true) {
                     failedIndices.add(index);

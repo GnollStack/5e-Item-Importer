@@ -74,4 +74,4 @@ Run `node --experimental-vm-modules tools/Test-TemplateAuthoring.mjs` for marked
 
 ## Current optional integration checks
 
-D&D5e 6 uses the MIDI-QOL/DAE 14.6 release lines. Active integration checks for 14.3.0 used MIDI-QOL 14.6.0 and DAE 14.6.0. Keep native checks and inactive-module behavior separate from active automation; do not update or activate integrations as an incidental packaging step. See the official [MIDI-QOL](https://foundryvtt.com/packages/midi-qol) and [DAE](https://foundryvtt.com/packages/dae) compatibility notices.
+D&D5e 6 uses the MIDI-QOL/DAE 14.6 release lines. Active integration checks for 14.3.0 used MIDI-QOL 14.6.8 and DAE 14.6.6. Keep native checks and inactive-module behavior separate from active automation; do not update or activate integrations as an incidental packaging step. See the official [MIDI-QOL](https://foundryvtt.com/packages/midi-qol) and [DAE](https://foundryvtt.com/packages/dae) compatibility notices.

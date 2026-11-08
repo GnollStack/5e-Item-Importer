@@ -1,7 +1,7 @@
 import { createCatalogAccumulator, addCatalogModel, finishCatalog } from "../../scripts/fieldCatalogCore.js";
 import { createFieldCatalogService } from "../../scripts/fieldCatalogService.js";
 import { extendMidiCatalog } from "../../scripts/fieldCatalogMidi.js";
-import { midiRulesFor } from "../../scripts/fieldCatalogMidiRules.js";
+import { midiRulesFor, MIDI_REVIEW } from "../../scripts/fieldCatalogMidiRules.js";
 import { assembleSnapshot, compareSnapshots } from "../../tools/field-catalog-reports.mjs";
 
 const assert = (condition, message = "Assertion failed") => { if (!condition) throw new Error(message); };
@@ -53,7 +53,7 @@ function syntheticEnvironment(provider) {
         static defineSchema() { return { ...super.defineSchema(), laterModule: new StringField(), twiceExtended: new NumberField({ min: 4 }) }; }
     }
     globalThis.game = { version: "14.369", release: { generation: 14 }, system: { id: "dnd5e", version: "6.0.6" },
-        modules: new Map([["midi-qol", { id: "midi-qol", active: true, version: "14.6.0" }]]),
+        modules: new Map([["midi-qol", { id: "midi-qol", active: true, version: MIDI_REVIEW.midi }]]),
         items: { create() { calls++; throw new Error("World write"); } }, i18n: { lang: "en" } };
     globalThis.dnd5e = { documents: { activity: { NativeActivity } } };
     globalThis.foundry = { data: { fields: { StringField, NumberField, SchemaField } } };
@@ -179,6 +179,20 @@ export function runMidiFieldCatalogTests({ provider, decorate }) {
             assert(!service.getFieldDetails({ layer: "native", fieldId: find("inherited").id }).success);
             assert(!service.probeFieldValues({ fieldId: "game.items.create", values: [1] }).success);
         });
+        check("MIDI 14.6.8 follow-up, status, targeting and region movement fields carry reviewed annotations", () => {
+            const rules = path => midiRulesFor({ kind: "activity", type: "attack", path }, { version: MIDI_REVIEW.midi, active: true });
+            for (const path of ["midiProperties.followUp", "midiProperties.followUpTargets", "midiProperties.followUpCondition", "midiProperties.targetMustBeSeen",
+                "midiProperties.statuses[*].id", "midiProperties.statuses[*].onSave", "regionBehavior.moveDistance", "regionBehavior.moveTiming", "ammunitionPerTarget"])
+                assert(rules(path).sheet.status === "reviewed", "Not reviewed: " + path);
+            assert(rules("midiProperties.followUpTargets").sheet.options[0].ids.includes("hitTargets"));
+            assert(rules("midiProperties.followUpCondition").behavior.conditions.some(text => text.includes("stored without execution")));
+            assert(rules("regionBehavior.moveDirection").sheet.options.some(option => option.ids.includes("choose")));
+            assert(rules("midiProperties.rollMode").sheet.options[0].ids.includes("public"));
+            const teleport = midiRulesFor({ kind: "activity", type: "teleport", path: "midiTeleport.movers" }, { version: MIDI_REVIEW.midi, active: true });
+            assert(teleport.sheet.status === "reviewed" && teleport.sheet.options[0].ids.includes("swap"), "midiTeleport.movers not reviewed.");
+            const older = midiRulesFor({ kind: "activity", type: "attack", path: "midiProperties.followUp" }, { version: "14.6.0", active: true });
+            assert(older.sheet.status === "needs-review" && older.behavior.unresolved.some(text => text.includes(MIDI_REVIEW.midi)));
+        });
         check("MIDI unavailable retains explicit references and independent provider operation", () => {
             globalThis.game.modules.get("midi-qol").active = false;
             globalThis.CONFIG.DND5E.activityTypes.attack.documentClass = fixture.native;
@@ -200,7 +214,7 @@ export function runMidiFieldCatalogTests({ provider, decorate }) {
 export function installMidiParserTestEnvironment() {
     if (globalThis.__fieldCatalogTestSandbox !== true) throw new Error("Parser fixtures require an isolated test VM.");
     globalThis.game = { version: "14.369", release: { generation: 14 }, system: { id: "dnd5e", version: "6.0.6" },
-        modules: new Map([["midi-qol", { active: true, version: "14.6.0" }]]), settings: { get: () => false },
+        modules: new Map([["midi-qol", { active: true, version: MIDI_REVIEW.midi }]]), settings: { get: () => false },
         i18n: { localize: value => value, format: value => value }, packs: [] };
     globalThis.foundry = { utils: { deepClone: structuredClone, getProperty: (value, path) => path.split(".").reduce((value, key) => value?.[key], value),
         setProperty: (object, path, value) => { const keys = path.split("."); let cursor = object; for (const key of keys.slice(0, -1)) cursor = cursor[key] ??= {}; cursor[keys.at(-1)] = value; },
@@ -225,7 +239,7 @@ export function runMidiYamlCoverageTests({ parser, serializer, decorate }) {
     check("MIDI consumption and dialog declarations match exact parser conversions", () => {
         const data = parse(yaml("utility", "  MIDI CONDITIONS:\n    Auto Consume: true\n    Force Consume Dialog: always\n    Force Roll Config: never\n    Force Damage Config: default\n    Choose Effects: yes\n    Toggle Effect: 'TRUE'")).activityData.midiProperties;
         assert(data.autoConsume === true && data.forceConsumeDialog === "always" && data.forceRollDialog === "never" && data.chooseEffects === false && data.toggleEffect === true);
-        const rules = midiRulesFor({ kind: "activity", type: "utility", path: "midiProperties.forceConsumeDialog" }, { version: "14.6.0", active: true });
+        const rules = midiRulesFor({ kind: "activity", type: "utility", path: "midiProperties.forceConsumeDialog" }, { version: MIDI_REVIEW.midi, active: true });
         assert(rules.behavior.conditions.some(condition => condition.includes("forceConsumeDialog=always returns false")));
     });
     check("MIDI overtime preserves inactive authored values", () => {

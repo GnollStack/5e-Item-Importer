@@ -2,12 +2,18 @@
 
 import jsyaml from '../vendor/js-yaml.mjs';
 import { extendExplicitItemSchema, parseExplicitItemFields, preparedState } from '../itemExplicitFields.js';
-import { formulaValue, exactNumber } from '../explicitYamlFields.js';
+import { formulaValue, exactNumber, exactBoolean, isUnset, stringList } from '../explicitYamlFields.js';
+import { createReference } from '../itemReferenceResolver.js';
+import {
+    ADVANCEMENT_ROOTS, ADVANCEMENT_COMMON_KEYS, ADVANCEMENT_KEYS, MULTI_LEVEL_ADVANCEMENT_TYPES,
+    GRANTABLE_ITEM_TYPES, SPELL_METHODS, SCALE_VALUE_TYPES, TRAIT_MODES, TRAIT_KEY_PATTERN,
+    TRAIT_CATEGORY_CORRECTIONS, CLASS_RESTRICTIONS, SORTING_MODES, ABILITY_IDS
+} from '../itemAdvancement.js';
 import { parseItemRarities } from '../itemRarities.js';
 import { parseAutomation } from '../automationFields.js';
 import { ItemData } from '../itemData.js';
 import { ItemUtils } from '../itemUtils.js';
-import { MODULE_NAME } from '../itemConfig.js';
+import { MODULE_NAME, isPhysicalItemType } from '../itemConfig.js';
 import {
     ITEM_YAML_SCHEMA_KEY,
     migrateItemYamlDocument,
@@ -24,6 +30,30 @@ function asBool(val, fallback = false) {
     if (val === true || val === false) return val;
     if (typeof val === 'string') return val.toLowerCase() === 'true';
     return fallback;
+}
+
+function isPlainMapping(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+const hasKey = (object, key) => Object.prototype.hasOwnProperty.call(object ?? {}, key);
+
+/**
+ * Token lists such as trait keys (`skills:ath`) and identifiers (`feat:alert`) lose their
+ * shape when written unquoted: the LLM normalizer turns `- skills:ath` into a one-key
+ * mapping `{ skills: "ath" }`. Fold those back into `key:value` strings before stringList.
+ */
+function foldTokenList(value) {
+    const items = value instanceof Set ? [...value] : value;
+    if (!Array.isArray(items)) return value;
+    return items.map(entry => {
+        if (!isPlainMapping(entry)) return entry;
+        const keys = Object.keys(entry);
+        const inner = entry[keys[0]];
+        if (keys.length !== 1) return entry;
+        if (inner === null) return `${keys[0]}:`;
+        return ['string', 'number'].includes(typeof inner) ? `${keys[0]}:${String(inner).trim()}` : entry;
+    });
 }
 
 function asInt(val, fallback = 0) {
@@ -87,7 +117,10 @@ function asString(val, fallback = '') {
 //
 // Per-line passes track block-scalar regions (`|`, `>`) so HTML descriptions
 // and freeform multi-line content are never modified.
-const KEY_NO_SPACE_RE = /^(\s*-?\s*)([A-Za-z_](?:[A-Za-z0-9_\- ]*[A-Za-z0-9_\-])?):(\S)/;
+// The character after the colon must not be a YAML indicator (`*` alias, `&` anchor,
+// `!` tag, `%` directive, `@` and backtick reserved): `skills:*` is a plain-scalar
+// trait key, and `skills: *` would be an empty alias.
+const KEY_NO_SPACE_RE = /^(\s*-?\s*)([A-Za-z_](?:[A-Za-z0-9_\- ]*[A-Za-z0-9_\-])?):([^\s*&!%@`])/;
 const BLOCK_SCALAR_OPENER_RE = /:\s*[|>][\d+\-]*\s*(?:#.*)?$/;
 const SMART_QUOTE_RE = /[‘’“”]/;
 const LEADING_TABS_RE = /^\t+/;
@@ -198,7 +231,7 @@ const VALID_DAMAGE_TYPES = [
     'slashing', 'thunder'
 ];
 
-const VALID_RECOVERY_PERIODS = ['lr', 'sr', 'day', 'dawn', 'dusk', 'recharge'];
+const VALID_RECOVERY_PERIODS = ['lr', 'sr', 'day', 'dawn', 'dusk', 'recharge', 'initiative', 'turnStart', 'turnEnd', 'turn'];
 const VALID_RECOVERY_TYPES = ['recoverAll', 'loseAll', 'formula'];
 const RECOVERY_TYPE_MAP = {
     'recoverall': 'recoverAll',
@@ -324,9 +357,30 @@ const VALID_TARGET_TYPES = ['self', 'ally', 'enemy', 'creature', 'object', 'spac
 const VALID_AREA_SHAPES = ['cone', 'cube', 'cylinder', 'radius', 'line', 'sphere', 'circle', 'square', 'wall'];
 const VALID_AREA_UNITS = ['ft', 'mi', 'm', 'km'];
 
+// ─── Feat Constants ──────────────────────────────────────────────────────────
+// dnd5e 6.0.6 CONFIG.DND5E.featureTypes. The system stores unknown values
+// as-is and labels them "Feature", so these lists drive warnings, not errors.
+
+const VALID_FEATURE_TYPES = [
+    'background', 'class', 'monster', 'race', 'enchantment',
+    'feat', 'pietyTrait', 'supernaturalGift', 'vehicle'
+];
+const FEATURE_SUBTYPES = {
+    class: [
+        'arcaneShot', 'artificerInfusion', 'channelDivinity', 'defensiveTactic',
+        'eldritchInvocation', 'elementalDiscipline', 'fightingStyle', 'huntersPrey',
+        'ki', 'maneuver', 'metamagic', 'multiattack', 'pact', 'psionicPower',
+        'rune', 'superiorHuntersDefense'
+    ],
+    enchantment: ['artificerInfusion', 'rune'],
+    feat: ['general', 'origin', 'fightingStyle', 'epicBoon'],
+    supernaturalGift: ['blessing', 'charm', 'epicBoon']
+};
+const VALID_ENCHANT_PERIODS = ['sr', 'lr', 'atwill'];
+
 const COMMON_SECTION_KEYS = {
     ITEM: ['Name', 'Rarities', 'Rarity'],
-    INVENTORY: ['Quantity', 'Identified', 'Equipped'],
+    INVENTORY: ['Quantity', 'Identified', 'Equipped', 'Container'],
     COST_AND_WEIGHT: ['Price Value', 'Price Denomination', 'Weight Value', 'Weight Units'],
     DESCRIPTION: ['Description'],
     UNIDENTIFIED_DESCRIPTION: ['Unidentified Name', 'Unidentified Description'],
@@ -336,10 +390,17 @@ const COMMON_SECTION_KEYS = {
 const ATTUNEMENT_KEYS = ['Attunement', 'Attunement By', 'Magic Bonus'];
 const USAGE_KEYS = ['Uses Spent', 'Uses Current', 'Uses Max'];
 const RECOVERY_KEYS = ['Period', 'Type', 'Formula'];
-const SPELL_UNSUPPORTED_SECTIONS = new Set([
-    'INVENTORY', 'COST_AND_WEIGHT', 'UNIDENTIFIED_DESCRIPTION'
+// Sections and keys that only exist on physical/identifiable dnd5e item types.
+// Non-physical types (spell, feat) warn about them and ignore their values.
+const NON_PHYSICAL_UNSUPPORTED_SECTIONS = new Set([
+    'INVENTORY', 'COST_AND_WEIGHT', 'UNIDENTIFIED_DESCRIPTION', 'ATTUNEMENT'
 ]);
-const SPELL_UNSUPPORTED_ITEM_KEYS = new Set(['Rarity', 'Rarities']);
+const NON_PHYSICAL_UNSUPPORTED_ITEM_KEYS = new Set(['Rarity', 'Rarities']);
+const NON_PHYSICAL_DATA_MODEL = { spell: 'SpellData', feat: 'FeatData' };
+// dnd5e PhysicalItemTemplate.MAX_DEPTH: a container chain may be at most this deep.
+const CONTAINER_MAX_DEPTH = 5;
+// Only physical Items can sit inside a container.
+const CONTENT_ROOT_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER'];
 
 // This schema is intentionally warning-only. It catches misspelled or stale
 // fields without preventing forward-compatible data from being inspected.
@@ -409,6 +470,16 @@ const TYPE_SECTION_KEYS = {
         AREA: ['Shape', 'Size', 'Units', 'Count', 'Width', 'Height', 'Contiguous'],
         USAGE: USAGE_KEYS,
         RECOVERY: RECOVERY_KEYS
+    },
+    feat: {
+        // PREREQUISITES, ENCHANTMENT, and VEHICLE_PROPERTIES are added by
+        // extendExplicitItemSchema() from the explicit field descriptors.
+        // ADVANCEMENT is a list validated entry by entry in extractAdvancement().
+        ITEM: ['Feature Type', 'Feature Subtype', 'Requirements'],
+        PROPERTIES: ['Magical', 'Passive Trait'],
+        USAGE: USAGE_KEYS,
+        RECOVERY: RECOVERY_KEYS,
+        ADVANCEMENT: []
     }
 };
 
@@ -499,7 +570,7 @@ export class YamlItemParser {
             const { type, data, rootKey } = this.detectItemType(doc);
             this.trace.detectedType = type || null;
             if (!type) {
-                this.addError('Could not detect item type. Expected top-level key: WEAPON, LOOT, EQUIPMENT, CONSUMABLE, TOOL, CONTAINER, or SPELL');
+                this.addError('Could not detect item type. Expected top-level key: WEAPON, LOOT, EQUIPMENT, CONSUMABLE, TOOL, CONTAINER, SPELL, or FEAT');
                 this.trace.errors = [...this.errors];
                 this.trace.warnings = [...this.warnings];
                 return this.createResult(false, null);
@@ -517,6 +588,11 @@ export class YamlItemParser {
             // Warn about ignored fields before extraction so copy/paste typos
             // are visible instead of silently disappearing.
             this.validateKnownKeys(data, type, doc);
+
+            // Nested contents create several Items; only the batch flow can do that.
+            if (type === 'container' && Array.isArray(data.CONTENTS) && data.CONTENTS.length > 0 && this.options?.allowContents !== true) {
+                this.addError('CONTAINER.CONTENTS imports through the batch flow (the import window or parseAll()); parse() creates one Item and cannot create the contents.');
+            }
 
             // 4. Extract universal fields
             const itemData = this.extractUniversalFields(data, type);
@@ -543,6 +619,9 @@ export class YamlItemParser {
                     break;
                 case 'spell':
                     this.extractSpellFields(itemData, data);
+                    break;
+                case 'feat':
+                    this.extractFeatFields(itemData, data);
                     break;
             }
 
@@ -579,6 +658,13 @@ export class YamlItemParser {
             itemData.yamlSourceSchemaVersion = schema.sourceVersion;
             itemData.yamlSchemaMigrations = [...schema.migrations];
 
+            // 5d. A lone Item cannot bind its container by batch name; register the
+            // destination-scoped reference now. parseAll() defers this until it has
+            // looked for the container among the batch.
+            if (itemData.containerRef && this.options?.deferContainerBinding !== true) {
+                this.registerContainerReference(itemData, itemData.containerRef);
+            }
+
             // 6. Return result
             const success = this.errors.length === 0;
             ItemUtils.log(`YamlItemParser: Parsing ${success ? 'succeeded' : 'completed with errors'}`);
@@ -608,7 +694,7 @@ export class YamlItemParser {
         if (!text || !text.trim()) return [];
 
         const stripped = this.stripCodeFences(text);
-        const validKeys = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER', 'SPELL'];
+        const validKeys = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER', 'SPELL', 'FEAT'];
 
         // Run the LLM-tolerance pre-pass so loadAll() doesn't reject the batch.
         // Per-item warnings are emitted later when each sub-document is re-parsed
@@ -642,11 +728,14 @@ export class YamlItemParser {
             }];
         }
 
-        // Single document with single key — delegate to existing parse()
+        // Single document with single key — delegate to existing parse(), unless the
+        // sole Item is a container with nested CONTENTS (several Items).
         if (documents.length === 1) {
             const topKeys = Object.keys(documents[0]);
             const itemKeys = topKeys.filter(k => validKeys.includes(k));
-            if (itemKeys.length <= 1) {
+            const nestedContents = itemKeys.length === 1 && itemKeys[0] === 'CONTAINER'
+                && Array.isArray(documents[0].CONTAINER?.CONTENTS) && documents[0].CONTAINER.CONTENTS.length > 0;
+            if (itemKeys.length <= 1 && !nestedContents) {
                 const result = this.parse(text);
                 result.sourceText = stripped.trim();
                 return [result];
@@ -697,41 +786,189 @@ export class YamlItemParser {
                     results.push({
                         success: false,
                         item: null,
-                        errors: [`Unknown item type key "${key}". Expected: ${validKeys.join(', ')}. Note: SPELL items can be batched with other types.`],
+                        errors: [`Unknown item type key "${key}". Expected: ${validKeys.join(', ')}. Note: SPELL and FEAT items can be batched with other types.`],
                         warnings: [],
                         sourceText: subYaml
                     });
                     continue;
                 }
 
-                const subParser = new YamlItemParser(this.options);
-                const result = subParser.parse(subYaml);
-                const migrationWarning = schema.migrations.length > 0
-                    ? `Migrated Item YAML schema: ${schema.migrations.join('; ')}.`
-                    : null;
-                result.warnings = [...new Set([
-                    ...schema.warnings,
-                    ...(migrationWarning ? [migrationWarning] : []),
-                    ...(result.warnings ?? [])
-                ])];
-                result.schema = {
-                    sourceVersion: schema.sourceVersion,
-                    targetVersion: schema.targetVersion,
-                    explicitVersion: schema.explicitVersion,
-                    migrations: [...schema.migrations]
-                };
-                if (result.item) {
-                    result.item.yamlSourceSchemaVersion = schema.sourceVersion;
-                    result.item.yamlSchemaMigrations = [...schema.migrations];
-                }
-                if (result.trace) result.trace.schema = { ...result.schema };
+                // parseAll() is the batch flow, so a container may carry CONTENTS here.
+                const result = this.parseBatchEntry(subDoc, schema, { allowContents: true });
                 result.sourceText = subYaml;
                 results.push(result);
+                // A container's CONTENTS become separate results right after it.
+                if (key === 'CONTAINER' && Array.isArray(doc[key]?.CONTENTS)) {
+                    this.expandContents(results, results.length - 1, doc[key], schema, 1);
+                }
             }
         }
 
+        this.bindContainerReferences(results);
+
         ItemUtils.log(`YamlItemParser: Batch parsed ${results.length} items from ${documents.length} document(s)`);
         return results;
+    }
+
+    /** Parse one batch sub-document with the shared schema provenance. */
+    parseBatchEntry(subDoc, schema, { allowContents = false } = {}) {
+        const subParser = new YamlItemParser({ ...this.options, allowContents, deferContainerBinding: true });
+        const result = subParser.parse(jsyaml.dump(subDoc).trim());
+        const migrationWarning = schema.migrations.length > 0
+            ? `Migrated Item YAML schema: ${schema.migrations.join('; ')}.`
+            : null;
+        result.warnings = [...new Set([
+            ...schema.warnings,
+            ...(migrationWarning ? [migrationWarning] : []),
+            ...(result.warnings ?? [])
+        ])];
+        result.schema = {
+            sourceVersion: schema.sourceVersion,
+            targetVersion: schema.targetVersion,
+            explicitVersion: schema.explicitVersion,
+            migrations: [...schema.migrations]
+        };
+        if (result.item) {
+            result.item.yamlSourceSchemaVersion = schema.sourceVersion;
+            result.item.yamlSchemaMigrations = [...schema.migrations];
+        }
+        if (result.trace) result.trace.schema = { ...result.schema };
+        return result;
+    }
+
+    /**
+     * Flatten a CONTAINER's nested CONTENTS into the results that follow it. Each child
+     * carries `containerRef = { kind: "batch", parentOrder, parentName, depth }`, where
+     * parentOrder is the parent's index in the parseAll() results. Children of a failed
+     * container fail too; nothing is ever imported at the top level by accident.
+     */
+    expandContents(results, parentOrder, containerData, schema, depth) {
+        const parent = results[parentOrder];
+        const parentName = parent.item?.name ?? asString(containerData?.ITEM?.Name, 'Container');
+        const contents = containerData?.CONTENTS;
+        if (!Array.isArray(contents)) {
+            parent.warnings = [...(parent.warnings ?? []), 'CONTENTS must be a list of Item documents; it was ignored.'];
+            return;
+        }
+        const schemaKey = schema.document?.[ITEM_YAML_SCHEMA_KEY] ?? schema.targetVersion;
+        contents.forEach((entry, index) => {
+            const location = `"${parentName}" CONTENTS[${index}]`;
+            const containerRef = { kind: 'batch', parentOrder, parentName, depth };
+            const fail = (message, sourceText = '') => results.push({
+                success: false, item: null, errors: [message], warnings: [], sourceText, containerRef
+            });
+            if (!isPlainMapping(entry)) return fail(`${location} must be a mapping with one Item root key.`);
+            const keys = Object.keys(entry);
+            if (keys.length !== 1) return fail(`${location} must contain exactly one Item root key; found ${keys.length}.`);
+            const key = keys[0];
+            const body = entry[key];
+            const retryDoc = {
+                [ITEM_YAML_SCHEMA_KEY]: schemaKey,
+                [key]: isPlainMapping(body) ? { ...body, INVENTORY: { ...(body.INVENTORY ?? {}), Container: parentName } } : body
+            };
+            const retryText = jsyaml.dump(retryDoc).trim();
+            if (!CONTENT_ROOT_KEYS.includes(key)) {
+                return fail(`${location}: "${key}" cannot be placed in a container. Contents must be physical Items (${CONTENT_ROOT_KEYS.join(', ')}).`, retryText);
+            }
+            if (depth > CONTAINER_MAX_DEPTH) {
+                return fail(`${location} is nested ${depth} containers deep; dnd5e allows at most ${CONTAINER_MAX_DEPTH}.`, retryText);
+            }
+            const result = this.parseBatchEntry({ [ITEM_YAML_SCHEMA_KEY]: schemaKey, [key]: body }, schema, { allowContents: true });
+            // The retry text re-links by container name if this child is imported again later.
+            result.sourceText = retryText;
+            result.containerRef = containerRef;
+            if (!parent.success || !parent.item) {
+                result.success = false;
+                result.item = null;
+                result.errors = [`${location}: its container "${parentName}" did not parse.`, ...(result.errors ?? [])];
+            } else if (result.item) {
+                if (result.item.containerRef) {
+                    result.success = false;
+                    result.item = null;
+                    result.errors = [...(result.errors ?? []), `${location} sets INVENTORY.Container while already nested under CONTENTS; use one form.`];
+                } else {
+                    result.item.containerRef = containerRef;
+                }
+            }
+            results.push(result);
+            const childOrder = results.length - 1;
+            if (key === 'CONTAINER' && isPlainMapping(body) && Array.isArray(body.CONTENTS) && body.CONTENTS.length > 0) {
+                this.expandContents(results, childOrder, body, schema, depth + 1);
+            }
+        });
+    }
+
+    /** Depth of a batch-nested item: the number of batch containers above it. */
+    batchContainerDepth(results, order) {
+        let depth = 0;
+        let current = results[order]?.item?.containerRef ?? results[order]?.containerRef;
+        while (current?.kind === 'batch' && depth <= CONTAINER_MAX_DEPTH + 1) {
+            depth += 1;
+            current = results[current.parentOrder]?.item?.containerRef ?? results[current.parentOrder]?.containerRef;
+        }
+        return depth;
+    }
+
+    /**
+     * Bind INVENTORY.Container names to containers in the same batch; everything else
+     * (UUIDs, names not in the batch) becomes a destination-scoped container reference.
+     */
+    bindContainerReferences(results) {
+        const containers = results
+            .map((result, order) => ({ result, order }))
+            .filter(({ result }) => result.success && result.item?.type === 'container');
+        results.forEach((result, order) => {
+            const item = result.item;
+            const ref = item?.containerRef;
+            if (!item || !ref || ref.kind === 'batch' || ref.kind === 'reference') return;
+            if (ref.kind === 'name') {
+                const wanted = ref.value.trim().toLowerCase();
+                const matches = containers.filter(candidate => candidate.order !== order
+                    && String(candidate.result.item.name ?? '').trim().toLowerCase() === wanted);
+                if (matches.length > 1) {
+                    result.success = false;
+                    result.item = null;
+                    result.errors = [...(result.errors ?? []), `INVENTORY.Container "${ref.value}" matches ${matches.length} containers in this batch; give them distinct names or use a UUID.`];
+                    return;
+                }
+                if (matches.length === 1) {
+                    const parentOrder = matches[0].order;
+                    item.containerRef = { kind: 'batch', parentOrder, parentName: matches[0].result.item.name, depth: this.batchContainerDepth(results, parentOrder) + 1 };
+                    // A container cannot end up inside its own contents.
+                    let cursor = item.containerRef;
+                    let steps = 0;
+                    while (cursor?.kind === 'batch' && steps <= CONTAINER_MAX_DEPTH + 1) {
+                        if (cursor.parentOrder === order) {
+                            result.success = false;
+                            result.item = null;
+                            result.errors = [...(result.errors ?? []), `INVENTORY.Container "${ref.value}" would place "${item.name}" inside itself.`];
+                            return;
+                        }
+                        cursor = results[cursor.parentOrder]?.item?.containerRef;
+                        steps += 1;
+                    }
+                    if (item.containerRef.depth > CONTAINER_MAX_DEPTH) {
+                        result.success = false;
+                        result.item = null;
+                        result.errors = [...(result.errors ?? []), `"${item.name}" would be nested ${item.containerRef.depth} containers deep; dnd5e allows at most ${CONTAINER_MAX_DEPTH}.`];
+                    }
+                    return;
+                }
+            }
+            this.registerContainerReference(item, ref);
+        });
+    }
+
+    /** Register a destination-scoped container reference (resolved by UUID, name or drag-and-drop). */
+    registerContainerReference(item, ref) {
+        item.references ??= [];
+        item.references.push(createReference({
+            kind: 'container',
+            path: 'containerRef.uuid',
+            label: `Container (${ref.value})`,
+            query: ref.kind === 'uuid' ? { uuid: ref.value } : { name: ref.value }
+        }));
+        item.containerRef = { kind: 'reference', value: ref.value, uuid: ref.kind === 'uuid' ? ref.value : null };
     }
 
     // ─── Utility Methods ────────────────────────────────────────────────────
@@ -753,7 +990,8 @@ export class YamlItemParser {
             'TOOL': 'tool',
             'LOOT': 'loot',
             'CONTAINER': 'container',
-            'SPELL': 'spell'
+            'SPELL': 'spell',
+            'FEAT': 'feat'
         };
 
         for (const [key, type] of Object.entries(typeMap)) {
@@ -768,9 +1006,11 @@ export class YamlItemParser {
     validateKnownKeys(data, type, doc) {
         const rootKeyByType = {
             weapon: 'WEAPON', equipment: 'EQUIPMENT', consumable: 'CONSUMABLE',
-            tool: 'TOOL', loot: 'LOOT', container: 'CONTAINER', spell: 'SPELL'
+            tool: 'TOOL', loot: 'LOOT', container: 'CONTAINER', spell: 'SPELL', feat: 'FEAT'
         };
         const validRootKeys = new Set(Object.values(rootKeyByType));
+        const nonPhysical = !isPhysicalItemType(type);
+        const dataModel = NON_PHYSICAL_DATA_MODEL[type] ?? 'item data';
         const expectedRootKey = rootKeyByType[type];
 
         for (const key of Object.keys(doc || {})) {
@@ -785,9 +1025,9 @@ export class YamlItemParser {
 
         const sectionSchemas = {};
         for (const [section, keys] of Object.entries(COMMON_SECTION_KEYS)) {
-            if (type === 'spell' && SPELL_UNSUPPORTED_SECTIONS.has(section)) continue;
-            sectionSchemas[section] = type === 'spell' && section === 'ITEM'
-                ? keys.filter((key) => !SPELL_UNSUPPORTED_ITEM_KEYS.has(key))
+            if (nonPhysical && NON_PHYSICAL_UNSUPPORTED_SECTIONS.has(section)) continue;
+            sectionSchemas[section] = nonPhysical && section === 'ITEM'
+                ? keys.filter((key) => !NON_PHYSICAL_UNSUPPORTED_ITEM_KEYS.has(key))
                 : [...keys];
         }
         for (const [section, keys] of Object.entries(TYPE_SECTION_KEYS[type] || {})) {
@@ -801,12 +1041,17 @@ export class YamlItemParser {
         const passthroughSections = new Set([
             'Activities', 'effects', 'Effects', 'EFFECTS', 'CUSTOM_PROPERTIES', 'AUTOMATION'
         ]);
+        // List-shaped sections whose entries are validated by their own extractors.
+        const extractorValidatedSections = new Set(['ADVANCEMENT']);
         const allowedSections = Object.keys(sectionSchemas);
 
         for (const [section, sectionData] of Object.entries(data || {})) {
             if (passthroughSections.has(section)) continue;
-            if (type === 'spell' && SPELL_UNSUPPORTED_SECTIONS.has(section)) {
-                this.addWarning(`Unsupported spell section "${section}" is ignored by current dnd5e SpellData.`);
+            if (extractorValidatedSections.has(section) && hasKey(sectionSchemas, section)) continue;
+            // CONTENTS is a list of nested Item documents, validated when parseAll() expands it.
+            if (section === 'CONTENTS' && type === 'container') continue;
+            if (nonPhysical && NON_PHYSICAL_UNSUPPORTED_SECTIONS.has(section)) {
+                this.addWarning(`Unsupported ${type} section "${section}" is ignored by current dnd5e ${dataModel}.`);
                 continue;
             }
             if (!Object.prototype.hasOwnProperty.call(sectionSchemas, section)) {
@@ -842,8 +1087,8 @@ export class YamlItemParser {
             for (const [index, entry] of entries.entries()) {
                 if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue;
                 for (const key of Object.keys(entry)) {
-                    if (type === 'spell' && section === 'ITEM' && SPELL_UNSUPPORTED_ITEM_KEYS.has(key)) {
-                        this.addWarning(`Unsupported spell key "ITEM.${key}" is ignored by current dnd5e SpellData.`);
+                    if (nonPhysical && section === 'ITEM' && NON_PHYSICAL_UNSUPPORTED_ITEM_KEYS.has(key)) {
+                        this.addWarning(`Unsupported ${type} key "ITEM.${key}" is ignored by current dnd5e ${dataModel}.`);
                         continue;
                     }
                     if (allowedKeys.includes(key)) continue;
@@ -895,9 +1140,10 @@ export class YamlItemParser {
 
         const itemData = new ItemData(name || 'Unnamed Item');
         itemData.type = type;
+        const physical = isPhysicalItemType(type);
 
-        if (type !== 'spell') {
-            // Physical/identifiable fields are not part of current dnd5e SpellData.
+        if (physical) {
+            // Physical/identifiable fields are not part of dnd5e SpellData or FeatData.
             itemData.rarities = parseItemRarities(itemSection);
             itemData.rarity = itemData.rarities[0] ?? "";
 
@@ -912,6 +1158,18 @@ export class YamlItemParser {
             }
             itemData.identified = asBool(inv['Identified'], getDefaultIdentifiedSetting());
             itemData.equipped = asBool(inv['Equipped'], false);
+
+            // INVENTORY.Container: a container in the same batch (by name) or an existing
+            // container (UUID, or drag-and-drop onto the reference zone). parseAll() binds
+            // batch names; anything else becomes a destination-scoped reference.
+            const containerRaw = asNullable(inv['Container']);
+            itemData.containerRef = null;
+            if (containerRaw !== null) {
+                const value = String(containerRaw).trim();
+                itemData.containerRef = /^(?:Compendium|Item|Actor)\.[^\s]+$/.test(value)
+                    ? { kind: 'uuid', value }
+                    : { kind: 'name', value };
+            }
 
             const cw = data?.COST_AND_WEIGHT || {};
             const priceRaw = asNullable(cw['Price Value']);
@@ -955,7 +1213,7 @@ export class YamlItemParser {
         const descSection = data?.DESCRIPTION || {};
         itemData.description = asString(descSection['Description'], '');
 
-        if (type !== 'spell') {
+        if (physical) {
             const unidentSection = data?.UNIDENTIFIED_DESCRIPTION || {};
             const unidentName = asNullable(unidentSection['Unidentified Name']);
             itemData.unidentifiedName = unidentName ? String(unidentName) : '';
@@ -967,7 +1225,7 @@ export class YamlItemParser {
         itemData.chatDescription = asString(chatSection['Chat Description'], '');
 
         // Validation
-        if (type !== 'spell') {
+        if (physical) {
             if (itemData.quantity < 0) {
                 this.addError('Quantity cannot be negative');
             }
@@ -1175,7 +1433,11 @@ export class YamlItemParser {
         for (const entry of items) {
             if (!entry || typeof entry !== 'object') continue;
 
-            const periodRaw = asString(entry['Period'], '').toLowerCase();
+            // Periods are matched case-insensitively and stored with their dnd5e
+            // spelling (turnStart, turnEnd) rather than lowercased.
+            const periodInput = asString(entry['Period'], '');
+            const periodRaw = VALID_RECOVERY_PERIODS.find(p => p.toLowerCase() === periodInput.toLowerCase())
+                ?? periodInput.toLowerCase();
             const typeRaw = asString(entry['Type'], '').toLowerCase();
             const formulaRaw = asNullable(entry['Formula']);
 
@@ -2149,6 +2411,567 @@ export class YamlItemParser {
             vocal: item.vocal, somatic: item.somatic, material: item.material,
             preparationMode: item.preparationMode, activationType: item.activationType
         });
+    }
+
+    // ─── FEAT ───────────────────────────────────────────────────────────────
+
+    extractFeatFields(item, data) {
+        const itemSection = data?.ITEM || {};
+
+        // Feature Type (optional). dnd5e stores unknown values as-is and labels
+        // them "Feature", so mismatches are warnings rather than errors.
+        const featureTypeRaw = asNullable(itemSection['Feature Type']);
+        if (featureTypeRaw === null) {
+            item.featureType = '';
+        } else {
+            const text = String(featureTypeRaw).trim();
+            const canonical = VALID_FEATURE_TYPES.find(t => t.toLowerCase() === text.toLowerCase());
+            if (canonical) {
+                item.featureType = canonical;
+            } else {
+                this.addWarning(`Unknown Feature Type "${text}"; dnd5e displays it as a generic Feature.`);
+                item.featureType = text;
+            }
+        }
+
+        // Feature Subtype (optional; meaningful only for types that define subtypes)
+        const subtypeRaw = asNullable(itemSection['Feature Subtype']);
+        if (subtypeRaw === null) {
+            item.featureSubtype = '';
+        } else {
+            const text = String(subtypeRaw).trim();
+            const knownType = VALID_FEATURE_TYPES.includes(item.featureType);
+            const known = FEATURE_SUBTYPES[item.featureType] || [];
+            const canonical = known.find(s => s.toLowerCase() === text.toLowerCase());
+            item.featureSubtype = canonical ?? text;
+            if (!canonical && knownType) {
+                if (!item.featureType) {
+                    this.addWarning(`Feature Subtype "${text}" is set without a Feature Type; dnd5e shows no subtype label.`);
+                } else if (!known.length) {
+                    this.addWarning(`Feature Type "${item.featureType}" has no subtypes in dnd5e; Feature Subtype "${text}" is stored but not labeled.`);
+                } else {
+                    this.addWarning(`Unknown Feature Subtype "${text}" for Feature Type "${item.featureType}". Known: ${known.join(', ')}.`);
+                }
+            }
+        }
+
+        // Properties (dnd5e validProperties.feat: mgc, trait)
+        const props = data?.PROPERTIES || {};
+        item.isMagical = asBool(props['Magical'], false);
+        item.passiveTrait = asBool(props['Passive Trait'], false);
+
+        // Features have no attunement
+        item.attunement = '';
+        item.attunementRequirement = null;
+
+        // ENCHANTMENT.Period is stored by its explicit descriptor; warn on unknown values.
+        const period = asNullable(data?.ENCHANTMENT?.['Period']);
+        if (period !== null && !VALID_ENCHANT_PERIODS.includes(String(period).trim())) {
+            this.addWarning(`Unknown ENCHANTMENT.Period "${period}". Known: ${VALID_ENCHANT_PERIODS.join(', ')}.`);
+        }
+
+        // Usage and Recovery
+        this.extractUsageAndRecovery(item, data);
+
+        // Advancement (ability score improvements, granted items, choices, item changes, scale values, traits)
+        this.extractAdvancement(item, data);
+
+        ItemUtils.log('YamlItemParser: Feat fields extracted', {
+            featureType: item.featureType, featureSubtype: item.featureSubtype,
+            isMagical: item.isMagical, passiveTrait: item.passiveTrait,
+            advancement: item.advancement?.length ?? 0
+        });
+    }
+
+    // ─── ADVANCEMENT (feat) ──────────────────────────────────────────────────
+
+    /**
+     * ADVANCEMENT is a list of one-root entries (ABILITY_SCORE_IMPROVEMENT, GRANT_ITEMS,
+     * CHOOSE_ITEMS, MODIFY_ITEMS, SCALE_VALUE, TRAIT). Each becomes a native-shaped
+     * `{ _id?, type, level?, name?, hint?, img?, classRestriction?, configuration }` on
+     * `item.advancement`; the builder keys them by `_id`. Document references (granted
+     * Items, choice pools, the recommendation, ModifyItem effects) are registered on
+     * `item.references` and must resolve before import; an authored UUID is kept as the
+     * initial configuration value so offline round trips stay exact.
+     */
+    extractAdvancement(item, data) {
+        item.advancement = [];
+        item.references ??= [];
+        if (!hasKey(data, 'ADVANCEMENT')) return;
+        const section = data.ADVANCEMENT;
+        if (section === null || (typeof section === 'string' && isUnset(section))) return;
+        if (!Array.isArray(section)) {
+            this.addError('ADVANCEMENT must be a list; start each entry with one root key such as "- GRANT_ITEMS:".');
+            return;
+        }
+        const roots = Object.keys(ADVANCEMENT_ROOTS).join(', ');
+        section.forEach((entry, index) => {
+            const location = `ADVANCEMENT[${index}]`;
+            if (!isPlainMapping(entry)) {
+                this.addError(`${location} must be a mapping with one advancement root key (${roots}).`);
+                return;
+            }
+            const keys = Object.keys(entry);
+            if (keys.length !== 1) {
+                this.addError(`${location} must contain exactly one root key (${roots}); found ${keys.length}.`);
+                return;
+            }
+            const root = keys[0];
+            const type = ADVANCEMENT_ROOTS[root];
+            if (!type) {
+                this.addError(`${location}: "${root}" is not an advancement that feats support (${roots}). HitPoints, Size and Subclass belong to classes and species.`);
+                return;
+            }
+            const body = entry[root];
+            const where = `${location}.${root}`;
+            if (!isPlainMapping(body)) {
+                this.addError(`${where} must be a mapping.`);
+                return;
+            }
+            for (const key of Object.keys(body)) {
+                if (!ADVANCEMENT_COMMON_KEYS.includes(key) && !ADVANCEMENT_KEYS[root].includes(key)) {
+                    this.addWarning(`Unknown key "${key}" in ${where}; it will be ignored.`);
+                }
+            }
+            const advancement = this.extractAdvancementCommon(body, type, where);
+            const path = `advancement[${item.advancement.length}]`;
+            advancement.configuration = this.extractAdvancementConfiguration(root, body, where, item, path);
+            item.advancement.push(advancement);
+        });
+    }
+
+    /** Run a strict value parser; a thrown message becomes a parse error and the value is dropped. */
+    attemptValue(parse) {
+        try {
+            return parse();
+        } catch (error) {
+            this.addError(error.message);
+            return undefined;
+        }
+    }
+
+    extractAdvancementCommon(body, type, where) {
+        const advancement = { type };
+        const id = asNullable(body['Advancement ID']);
+        if (id !== null) {
+            if (/^[A-Za-z0-9]{16}$/.test(id)) advancement._id = id;
+            else this.addError(`${where}.Advancement ID must be exactly 16 alphanumeric characters.`);
+        }
+        if (hasKey(body, 'Level') && !isUnset(body.Level)) {
+            const level = this.attemptValue(() => exactNumber(body.Level, `${where}.Level`, { integer: true, min: 0, nullable: false }));
+            if (MULTI_LEVEL_ADVANCEMENT_TYPES.includes(type)) {
+                this.addWarning(`${where}.Level is ignored; ${type} takes its levels from its CHOICES or SCALE entries.`);
+            } else if (level !== undefined) {
+                advancement.level = level;
+            }
+        }
+        const name = asNullable(body.Name);
+        if (name !== null) advancement.name = name;
+        const hint = asNullable(body.Hint);
+        if (hint !== null) advancement.hint = hint;
+        const icon = asNullable(body.Icon);
+        if (icon !== null) advancement.img = icon;
+        const restriction = asNullable(body['Class Restriction']);
+        if (restriction !== null) {
+            if (CLASS_RESTRICTIONS.includes(restriction)) advancement.classRestriction = restriction;
+            else this.addError(`${where}.Class Restriction must be primary, secondary or n/a.`);
+        }
+        return advancement;
+    }
+
+    extractAdvancementConfiguration(root, body, where, item, path) {
+        let configuration = {};
+        switch (root) {
+            case 'ABILITY_SCORE_IMPROVEMENT': configuration = this.extractAsiConfiguration(body, where, item, path); break;
+            case 'GRANT_ITEMS': configuration = this.extractItemGrantConfiguration(body, where, item, path); break;
+            case 'CHOOSE_ITEMS': configuration = this.extractItemChoiceConfiguration(body, where, item, path); break;
+            case 'MODIFY_ITEMS': configuration = this.extractModifyItemConfiguration(body, where, item, path); break;
+            case 'SCALE_VALUE': configuration = this.extractScaleValueConfiguration(body, where); break;
+            case 'TRAIT': configuration = this.extractTraitConfiguration(body, where); break;
+        }
+        return Object.fromEntries(Object.entries(configuration).filter(([, value]) => value !== undefined));
+    }
+
+    /**
+     * Register a document reference for an ITEMS/POOL/RECOMMENDATION/EFFECT entry.
+     * Returns the authored UUID (or null); the resolver writes the final UUID to `path`.
+     */
+    registerAdvancementReference(item, entry, { kind, path, label, where, itemTypes = [], extraKeys = [] }) {
+        if (!isPlainMapping(entry)) {
+            this.addError(`${where} must be a mapping with UUID, Name or Identifier.`);
+            return null;
+        }
+        const allowed = [...(kind === 'item' ? ['UUID', 'Name', 'Identifier', 'Type'] : ['UUID', 'Name']), ...extraKeys];
+        for (const key of Object.keys(entry)) {
+            if (!allowed.includes(key)) this.addWarning(`Unknown key "${key}" in ${where}; it will be ignored.`);
+        }
+        let types = [...itemTypes];
+        const type = asNullable(entry.Type);
+        if (kind === 'item' && type !== null) {
+            if (GRANTABLE_ITEM_TYPES.includes(type)) types = [type];
+            else this.addError(`${where}.Type must be one of ${GRANTABLE_ITEM_TYPES.join(', ')}.`);
+        }
+        const query = { uuid: asNullable(entry.UUID), name: asNullable(entry.Name), identifier: asNullable(entry.Identifier), itemTypes: types };
+        if (!query.uuid && !query.name && !query.identifier) {
+            this.addError(`${where} needs a UUID, Name or Identifier.`);
+            return null;
+        }
+        item.references.push(createReference({ kind, path, label, query }));
+        return query.uuid;
+    }
+
+    extractAsiConfiguration(body, where, item, path) {
+        const configuration = {};
+        if (hasKey(body, 'Points') && !isUnset(body.Points)) {
+            configuration.points = this.attemptValue(() => exactNumber(body.Points, `${where}.Points`, { integer: true, min: 0, nullable: false }));
+        }
+        if (hasKey(body, 'Cap') && !isUnset(body.Cap)) {
+            configuration.cap = this.attemptValue(() => exactNumber(body.Cap, `${where}.Cap`, { integer: true, min: 1, nullable: false }));
+        }
+        if (hasKey(body, 'Max') && !isUnset(body.Max)) {
+            configuration.max = this.attemptValue(() => exactNumber(body.Max, `${where}.Max`, { integer: true, min: 1, nullable: false }));
+        }
+        if (hasKey(body, 'Locked') && !isUnset(body.Locked)) {
+            const locked = this.attemptValue(() => stringList(foldTokenList(body.Locked), `${where}.Locked`));
+            if (locked) {
+                for (const ability of locked) if (!ABILITY_IDS.includes(ability)) this.addWarning(`${where}.Locked: "${ability}" is not a dnd5e ability identifier (${ABILITY_IDS.join(', ')}).`);
+                configuration.locked = locked;
+            }
+        }
+        if (hasKey(body, 'FIXED') && !isUnset(body.FIXED)) {
+            const fixed = {};
+            const entries = body.FIXED;
+            const assign = (ability, value, entryWhere) => {
+                if (!ability) { this.addError(`${entryWhere} needs an Ability identifier.`); return; }
+                if (!ABILITY_IDS.includes(ability)) this.addWarning(`${entryWhere}: "${ability}" is not a dnd5e ability identifier (${ABILITY_IDS.join(', ')}).`);
+                const amount = this.attemptValue(() => exactNumber(value, `${entryWhere}.Value`, { integer: true, nullable: false }));
+                if (amount !== undefined) fixed[ability] = amount;
+            };
+            if (Array.isArray(entries)) {
+                entries.forEach((entry, index) => {
+                    const entryWhere = `${where}.FIXED[${index}]`;
+                    if (!isPlainMapping(entry)) { this.addError(`${entryWhere} must be a mapping with Ability and Value.`); return; }
+                    for (const key of Object.keys(entry)) if (!['Ability', 'Value'].includes(key)) this.addWarning(`Unknown key "${key}" in ${entryWhere}; it will be ignored.`);
+                    assign(asNullable(entry.Ability), entry.Value, entryWhere);
+                });
+            } else if (isPlainMapping(entries)) {
+                // Compact form: { str: 1 }
+                for (const [ability, value] of Object.entries(entries)) assign(ability, value, `${where}.FIXED.${ability}`);
+            } else {
+                this.addError(`${where}.FIXED must be a list of { Ability, Value } entries.`);
+            }
+            configuration.fixed = fixed;
+        }
+        if (hasKey(body, 'RECOMMENDATION') && !isUnset(body.RECOMMENDATION)) {
+            configuration.recommendation = this.registerAdvancementReference(item, body.RECOMMENDATION, {
+                kind: 'item', path: `${path}.configuration.recommendation`, label: 'Recommended feat',
+                where: `${where}.RECOMMENDATION`, itemTypes: ['feat']
+            });
+        }
+        return configuration;
+    }
+
+    extractSpellConfiguration(section, where) {
+        if (!isPlainMapping(section)) {
+            this.addError(`${where} must be a mapping (Ability, Method, Prepared, Uses Max, Uses Per, Require Slot).`);
+            return undefined;
+        }
+        const allowed = ['Ability', 'Method', 'Prepared', 'Uses Max', 'Uses Per', 'Require Slot'];
+        for (const key of Object.keys(section)) if (!allowed.includes(key)) this.addWarning(`Unknown key "${key}" in ${where}; it will be ignored.`);
+        const spell = {};
+        if (hasKey(section, 'Ability') && !isUnset(section.Ability)) {
+            const abilities = this.attemptValue(() => stringList(foldTokenList(section.Ability), `${where}.Ability`));
+            if (abilities) {
+                for (const ability of abilities) if (!ABILITY_IDS.includes(ability)) this.addWarning(`${where}.Ability: "${ability}" is not a dnd5e ability identifier (${ABILITY_IDS.join(', ')}).`);
+                spell.ability = abilities;
+            }
+        }
+        const method = asNullable(section.Method);
+        if (method !== null) {
+            if (SPELL_METHODS.includes(method)) spell.method = method;
+            else this.addError(`${where}.Method must be one of ${SPELL_METHODS.join(', ')} or n/a.`);
+        }
+        if (hasKey(section, 'Prepared') && !isUnset(section.Prepared)) {
+            spell.prepared = this.attemptValue(() => preparedState(section.Prepared));
+        }
+        if (['Uses Max', 'Uses Per', 'Require Slot'].some(key => hasKey(section, key))) {
+            const uses = {};
+            if (hasKey(section, 'Uses Max')) uses.max = this.attemptValue(() => formulaValue(section['Uses Max'], `${where}.Uses Max`));
+            const per = asNullable(section['Uses Per']);
+            if (hasKey(section, 'Uses Per')) {
+                if (per !== null && !VALID_RECOVERY_PERIODS.includes(per)) this.addWarning(`${where}.Uses Per "${per}" is not a dnd5e recovery period (${VALID_RECOVERY_PERIODS.join(', ')}); it is stored as written.`);
+                uses.per = per ?? '';
+            }
+            if (hasKey(section, 'Require Slot') && !isUnset(section['Require Slot'])) {
+                uses.requireSlot = this.attemptValue(() => exactBoolean(section['Require Slot'], `${where}.Require Slot`));
+            }
+            spell.uses = Object.fromEntries(Object.entries(uses).filter(([, value]) => value !== undefined));
+        }
+        return spell;
+    }
+
+    extractItemGrantConfiguration(body, where, item, path) {
+        const configuration = { items: [] };
+        if (hasKey(body, 'Optional') && !isUnset(body.Optional)) {
+            configuration.optional = this.attemptValue(() => exactBoolean(body.Optional, `${where}.Optional`));
+        }
+        const sorting = asNullable(body.Sorting);
+        if (sorting !== null) {
+            if (SORTING_MODES.includes(sorting)) configuration.sorting = sorting;
+            else this.addError(`${where}.Sorting must be a (alphabetical) or m (manual).`);
+        }
+        if (hasKey(body, 'ITEMS') && !isUnset(body.ITEMS)) {
+            if (!Array.isArray(body.ITEMS)) {
+                this.addError(`${where}.ITEMS must be a list of granted Item references.`);
+            } else {
+                body.ITEMS.forEach((entry, index) => {
+                    const entryWhere = `${where}.ITEMS[${index}]`;
+                    const uuid = this.registerAdvancementReference(item, entry, {
+                        kind: 'item', path: `${path}.configuration.items[${configuration.items.length}].uuid`,
+                        label: `Granted item ${index + 1}${isPlainMapping(entry) && asNullable(entry.Name) ? ` (${asNullable(entry.Name)})` : ''}`,
+                        where: entryWhere, itemTypes: GRANTABLE_ITEM_TYPES, extraKeys: ['Optional', 'Sort']
+                    });
+                    if (!isPlainMapping(entry)) return;
+                    const record = { uuid };
+                    if (hasKey(entry, 'Optional') && !isUnset(entry.Optional)) record.optional = this.attemptValue(() => exactBoolean(entry.Optional, `${entryWhere}.Optional`));
+                    if (hasKey(entry, 'Sort') && !isUnset(entry.Sort)) record.sort = this.attemptValue(() => exactNumber(entry.Sort, `${entryWhere}.Sort`, { integer: true, nullable: false }));
+                    configuration.items.push(Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)));
+                });
+            }
+        }
+        if (hasKey(body, 'SPELL') && !isUnset(body.SPELL)) configuration.spell = this.extractSpellConfiguration(body.SPELL, `${where}.SPELL`);
+        return configuration;
+    }
+
+    extractItemChoiceConfiguration(body, where, item, path) {
+        const configuration = { pool: [] };
+        if (hasKey(body, 'Allow Drops') && !isUnset(body['Allow Drops'])) {
+            configuration.allowDrops = this.attemptValue(() => exactBoolean(body['Allow Drops'], `${where}.Allow Drops`));
+        }
+        const sorting = asNullable(body.Sorting);
+        if (sorting !== null) {
+            if (SORTING_MODES.includes(sorting)) configuration.sorting = sorting;
+            else this.addError(`${where}.Sorting must be a (alphabetical) or m (manual).`);
+        }
+        if (hasKey(body, 'Type')) {
+            const type = asNullable(body.Type);
+            if (type === null) configuration.type = null;
+            else if (GRANTABLE_ITEM_TYPES.includes(type)) configuration.type = type;
+            else this.addError(`${where}.Type must be one of ${GRANTABLE_ITEM_TYPES.join(', ')} or n/a.`);
+        }
+        if (hasKey(body, 'CHOICES') && !isUnset(body.CHOICES)) {
+            const choices = {};
+            const addChoice = (levelValue, entry, entryWhere) => {
+                const level = this.attemptValue(() => exactNumber(levelValue, `${entryWhere}.Level`, { integer: true, min: 0, nullable: false }));
+                if (level === undefined) return;
+                if (hasKey(choices, String(level))) { this.addError(`${entryWhere}: level ${level} is listed more than once.`); return; }
+                const choice = {};
+                if (hasKey(entry, 'Count') && !isUnset(entry.Count)) choice.count = this.attemptValue(() => exactNumber(entry.Count, `${entryWhere}.Count`, { integer: true, min: 0, nullable: false }));
+                if (hasKey(entry, 'Replacement') && !isUnset(entry.Replacement)) choice.replacement = this.attemptValue(() => exactBoolean(entry.Replacement, `${entryWhere}.Replacement`));
+                choices[String(level)] = Object.fromEntries(Object.entries(choice).filter(([, value]) => value !== undefined));
+            };
+            if (Array.isArray(body.CHOICES)) {
+                body.CHOICES.forEach((entry, index) => {
+                    const entryWhere = `${where}.CHOICES[${index}]`;
+                    if (!isPlainMapping(entry)) { this.addError(`${entryWhere} must be a mapping with Level, Count and Replacement.`); return; }
+                    for (const key of Object.keys(entry)) if (!['Level', 'Count', 'Replacement'].includes(key)) this.addWarning(`Unknown key "${key}" in ${entryWhere}; it will be ignored.`);
+                    addChoice(entry.Level, entry, entryWhere);
+                });
+            } else if (isPlainMapping(body.CHOICES)) {
+                for (const [level, entry] of Object.entries(body.CHOICES)) {
+                    if (!isPlainMapping(entry)) { this.addError(`${where}.CHOICES.${level} must be a mapping with Count and Replacement.`); continue; }
+                    addChoice(level, entry, `${where}.CHOICES.${level}`);
+                }
+            } else {
+                this.addError(`${where}.CHOICES must be a list of { Level, Count, Replacement } entries.`);
+            }
+            configuration.choices = choices;
+        }
+        if (hasKey(body, 'POOL') && !isUnset(body.POOL)) {
+            if (!Array.isArray(body.POOL)) {
+                this.addError(`${where}.POOL must be a list of Item references.`);
+            } else {
+                body.POOL.forEach((entry, index) => {
+                    const entryWhere = `${where}.POOL[${index}]`;
+                    const uuid = this.registerAdvancementReference(item, entry, {
+                        kind: 'item', path: `${path}.configuration.pool[${configuration.pool.length}].uuid`,
+                        label: `Choice pool item ${index + 1}${isPlainMapping(entry) && asNullable(entry.Name) ? ` (${asNullable(entry.Name)})` : ''}`,
+                        where: entryWhere, itemTypes: configuration.type ? [configuration.type] : GRANTABLE_ITEM_TYPES, extraKeys: ['Sort']
+                    });
+                    if (!isPlainMapping(entry)) return;
+                    const record = { uuid };
+                    if (hasKey(entry, 'Sort') && !isUnset(entry.Sort)) record.sort = this.attemptValue(() => exactNumber(entry.Sort, `${entryWhere}.Sort`, { integer: true, nullable: false }));
+                    configuration.pool.push(Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)));
+                });
+            }
+        }
+        if (hasKey(body, 'RESTRICTION') && !isUnset(body.RESTRICTION)) {
+            const section = body.RESTRICTION;
+            if (!isPlainMapping(section)) {
+                this.addError(`${where}.RESTRICTION must be a mapping (Level, List, School, Type, Subtype).`);
+            } else {
+                const restriction = {};
+                for (const key of Object.keys(section)) if (!['Level', 'List', 'School', 'Type', 'Subtype'].includes(key)) this.addWarning(`Unknown key "${key}" in ${where}.RESTRICTION; it will be ignored.`);
+                if (hasKey(section, 'Level')) restriction.level = asNullable(section.Level) ?? '';
+                if (hasKey(section, 'List')) restriction.list = this.attemptValue(() => stringList(foldTokenList(section.List), `${where}.RESTRICTION.List`));
+                if (hasKey(section, 'School')) restriction.school = this.attemptValue(() => stringList(foldTokenList(section.School), `${where}.RESTRICTION.School`));
+                if (hasKey(section, 'Type')) restriction.type = asNullable(section.Type) ?? '';
+                if (hasKey(section, 'Subtype')) restriction.subtype = asNullable(section.Subtype) ?? '';
+                configuration.restriction = Object.fromEntries(Object.entries(restriction).filter(([, value]) => value !== undefined));
+            }
+        }
+        if (hasKey(body, 'SPELL') && !isUnset(body.SPELL)) configuration.spell = this.extractSpellConfiguration(body.SPELL, `${where}.SPELL`);
+        return configuration;
+    }
+
+    extractModifyItemConfiguration(body, where, item, path) {
+        const configuration = { changes: [] };
+        if (!hasKey(body, 'CHANGES') || isUnset(body.CHANGES)) return configuration;
+        if (!Array.isArray(body.CHANGES)) {
+            this.addError(`${where}.CHANGES must be a list of { Effect ID | EFFECT, Identifiers } entries.`);
+            return configuration;
+        }
+        body.CHANGES.forEach((entry, index) => {
+            const entryWhere = `${where}.CHANGES[${index}]`;
+            if (!isPlainMapping(entry)) { this.addError(`${entryWhere} must be a mapping.`); return; }
+            for (const key of Object.keys(entry)) if (!['Effect ID', 'EFFECT', 'Identifiers'].includes(key)) this.addWarning(`Unknown key "${key}" in ${entryWhere}; it will be ignored.`);
+            const change = {};
+            const effectId = asNullable(entry['Effect ID']);
+            if (effectId !== null) {
+                if (/^[A-Za-z0-9]{16}$/.test(effectId)) change._id = effectId;
+                else this.addError(`${entryWhere}.Effect ID must be exactly 16 alphanumeric characters.`);
+            }
+            if (hasKey(entry, 'EFFECT') && !isUnset(entry.EFFECT)) {
+                change.uuid = this.registerAdvancementReference(item, entry.EFFECT, {
+                    kind: 'activeEffect', path: `${path}.configuration.changes[${configuration.changes.length}].uuid`,
+                    label: `Modify Items effect ${index + 1}${isPlainMapping(entry.EFFECT) && asNullable(entry.EFFECT.Name) ? ` (${asNullable(entry.EFFECT.Name)})` : ''}`,
+                    where: `${entryWhere}.EFFECT`
+                });
+            }
+            if (change._id === undefined && !hasKey(change, 'uuid')) {
+                this.addError(`${entryWhere} needs an Effect ID (an enchantment effect on this feature) or an EFFECT reference (a standalone ActiveEffect).`);
+            }
+            if (hasKey(entry, 'Identifiers') && !isUnset(entry.Identifiers)) {
+                const identifiers = this.attemptValue(() => stringList(foldTokenList(entry.Identifiers), `${entryWhere}.Identifiers`));
+                if (identifiers) {
+                    for (const identifier of identifiers) {
+                        if (!/^(?:[a-z0-9_-]+:)?[a-z0-9_-]+$/i.test(identifier)) this.addError(`${entryWhere}.Identifiers entries must be "identifier" or "type:identifier"; found "${identifier}".`);
+                    }
+                    change.identifiers = identifiers;
+                }
+            }
+            configuration.changes.push(change);
+        });
+        return configuration;
+    }
+
+    extractScaleValueConfiguration(body, where) {
+        const configuration = {};
+        const identifier = asNullable(body.Identifier);
+        if (identifier === null) this.addError(`${where}.Identifier is required (the @scale key, e.g. storm-dice).`);
+        else if (!/^[a-z0-9_-]+$/i.test(identifier)) this.addError(`${where}.Identifier "${identifier}" must contain only letters, digits, dashes and underscores.`);
+        else configuration.identifier = identifier;
+        const type = asNullable(body.Type) ?? 'string';
+        if (SCALE_VALUE_TYPES.includes(type)) configuration.type = type;
+        else this.addError(`${where}.Type must be one of ${SCALE_VALUE_TYPES.join(', ')}.`);
+        const units = asNullable(body['Distance Units']);
+        if (units !== null) configuration.distance = { units };
+        if (hasKey(body, 'SCALE') && !isUnset(body.SCALE)) {
+            const scale = {};
+            const addStep = (levelValue, entry, entryWhere) => {
+                const level = this.attemptValue(() => exactNumber(levelValue, `${entryWhere}.Level`, { integer: true, min: 0, nullable: false }));
+                if (level === undefined) return;
+                if (hasKey(scale, String(level))) { this.addError(`${entryWhere}: level ${level} is listed more than once.`); return; }
+                const step = {};
+                if (type === 'dice') {
+                    for (const key of Object.keys(entry)) if (!['Level', 'Dice Count', 'Die Denomination', 'Modifiers'].includes(key)) this.addWarning(`Unknown key "${key}" in ${entryWhere} for a dice scale; it will be ignored.`);
+                    if (hasKey(entry, 'Dice Count')) step.number = this.attemptValue(() => exactNumber(entry['Dice Count'], `${entryWhere}.Dice Count`, { integer: true, min: 0 }));
+                    if (hasKey(entry, 'Die Denomination') && !isUnset(entry['Die Denomination'])) step.faces = this.attemptValue(() => exactNumber(entry['Die Denomination'], `${entryWhere}.Die Denomination`, { integer: true, min: 1, nullable: false }));
+                    if (hasKey(entry, 'Modifiers') && !isUnset(entry.Modifiers)) step.modifiers = this.attemptValue(() => stringList(foldTokenList(entry.Modifiers), `${entryWhere}.Modifiers`));
+                } else if (type === 'usage') {
+                    for (const key of Object.keys(entry)) if (!['Level', 'Value', 'Period'].includes(key)) this.addWarning(`Unknown key "${key}" in ${entryWhere} for a usage scale; it will be ignored.`);
+                    if (hasKey(entry, 'Value')) step.value = this.attemptValue(() => exactNumber(entry.Value, `${entryWhere}.Value`, { integer: true, min: 0 }));
+                    const period = asNullable(entry.Period);
+                    if (period !== null) {
+                        if (!VALID_RECOVERY_PERIODS.includes(period)) this.addWarning(`${entryWhere}.Period "${period}" is not a dnd5e recovery period (${VALID_RECOVERY_PERIODS.join(', ')}); it is stored as written.`);
+                        step.period = period;
+                    }
+                } else {
+                    for (const key of Object.keys(entry)) if (!['Level', 'Value'].includes(key)) this.addWarning(`Unknown key "${key}" in ${entryWhere} for a ${type} scale; it will be ignored.`);
+                    if (type === 'string') step.value = asNullable(entry.Value) ?? '';
+                    else if (hasKey(entry, 'Value') && !isUnset(entry.Value)) step.value = this.attemptValue(() => exactNumber(entry.Value, `${entryWhere}.Value`, { nullable: false, ...(type === 'cr' ? { min: 0 } : {}) }));
+                    else this.addError(`${entryWhere}.Value is required for a ${type} scale.`);
+                }
+                scale[String(level)] = Object.fromEntries(Object.entries(step).filter(([, value]) => value !== undefined));
+            };
+            if (Array.isArray(body.SCALE)) {
+                body.SCALE.forEach((entry, index) => {
+                    const entryWhere = `${where}.SCALE[${index}]`;
+                    if (!isPlainMapping(entry)) { this.addError(`${entryWhere} must be a mapping with Level and its scale values.`); return; }
+                    addStep(entry.Level, entry, entryWhere);
+                });
+            } else if (isPlainMapping(body.SCALE)) {
+                for (const [level, entry] of Object.entries(body.SCALE)) {
+                    if (!isPlainMapping(entry)) { this.addError(`${where}.SCALE.${level} must be a mapping of scale values.`); continue; }
+                    addStep(level, entry, `${where}.SCALE.${level}`);
+                }
+            } else {
+                this.addError(`${where}.SCALE must be a list of { Level, ... } entries.`);
+            }
+            configuration.scale = scale;
+        }
+        return configuration;
+    }
+
+    validateTraitKey(key, where) {
+        if (typeof key !== 'string' || !TRAIT_KEY_PATTERN.test(key)) {
+            this.addError(`${where}: "${key}" is not a trait key. Use <trait>:<category>[:<child>] such as skills:ath, weapon:mar, armor:hvy or languages:*.`);
+            return;
+        }
+        const correction = TRAIT_CATEGORY_CORRECTIONS[key.toLowerCase()];
+        if (correction) this.addWarning(`${where}: dnd5e names that category "${correction}", not "${key}"; the key is stored as written.`);
+    }
+
+    extractTraitConfiguration(body, where) {
+        const configuration = {};
+        const mode = asNullable(body.Mode);
+        if (mode !== null) {
+            if (TRAIT_MODES.includes(mode)) configuration.mode = mode;
+            else this.addError(`${where}.Mode must be one of ${TRAIT_MODES.join(', ')}.`);
+        }
+        if (hasKey(body, 'Allow Replacements') && !isUnset(body['Allow Replacements'])) {
+            configuration.allowReplacements = this.attemptValue(() => exactBoolean(body['Allow Replacements'], `${where}.Allow Replacements`));
+        }
+        if (hasKey(body, 'Grants') && !isUnset(body.Grants)) {
+            const grants = this.attemptValue(() => stringList(foldTokenList(body.Grants), `${where}.Grants`));
+            if (grants) {
+                for (const key of grants) this.validateTraitKey(key, `${where}.Grants`);
+                configuration.grants = grants;
+            }
+        }
+        if (hasKey(body, 'CHOICES') && !isUnset(body.CHOICES)) {
+            if (!Array.isArray(body.CHOICES)) {
+                this.addError(`${where}.CHOICES must be a list of { Count, Pool } entries.`);
+            } else {
+                configuration.choices = [];
+                body.CHOICES.forEach((entry, index) => {
+                    const entryWhere = `${where}.CHOICES[${index}]`;
+                    if (!isPlainMapping(entry)) { this.addError(`${entryWhere} must be a mapping with Count and Pool.`); return; }
+                    for (const key of Object.keys(entry)) if (!['Count', 'Pool'].includes(key)) this.addWarning(`Unknown key "${key}" in ${entryWhere}; it will be ignored.`);
+                    const choice = {};
+                    if (hasKey(entry, 'Count') && !isUnset(entry.Count)) choice.count = this.attemptValue(() => exactNumber(entry.Count, `${entryWhere}.Count`, { integer: true, min: 1, nullable: false }));
+                    if (hasKey(entry, 'Pool') && !isUnset(entry.Pool)) {
+                        const pool = this.attemptValue(() => stringList(foldTokenList(entry.Pool), `${entryWhere}.Pool`));
+                        if (pool) {
+                            for (const key of pool) this.validateTraitKey(key, `${entryWhere}.Pool`);
+                            choice.pool = pool;
+                        }
+                    }
+                    configuration.choices.push(Object.fromEntries(Object.entries(choice).filter(([, value]) => value !== undefined)));
+                });
+            }
+        }
+        return configuration;
     }
 
     // ─── ACTIVITIES & EFFECTS ────────────────────────────────────────────────

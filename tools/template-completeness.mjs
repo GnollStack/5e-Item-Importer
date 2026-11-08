@@ -1,6 +1,8 @@
 /** Source-only structural checks for the first full YAML fence in reference templates. */
-const ITEM_TYPES = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"];
-const ACTIVITY_TYPES = ["attack", "save", "damage", "heal", "utility", "check", "cast", "enchant", "summon", "transform", "forward"];
+const ITEM_TYPES = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell", "feat"];
+/** Feature advancement types authored through FEAT.ADVANCEMENT; their declared paths belong to the Feat template. */
+const FEAT_ADVANCEMENT_TYPES = ["AbilityScoreImprovement", "ItemGrant", "ItemChoice", "ModifyItem", "ScaleValue", "Trait"];
+const ACTIVITY_TYPES = ["attack", "save", "damage", "heal", "utility", "check", "cast", "enchant", "summon", "transform", "forward", "teleport"];
 const START_FIELDS = ["Effect Start Time", "Effect Start (combat) Rounds", "Effect Start (combat) Turns", "Combat Encounter", "Combatant", "Initiative"];
 const EMPTY_TEXT = new Set(["", "n/a"]);
 const object = value => value !== null && typeof value === "object" && !Array.isArray(value);
@@ -8,10 +10,12 @@ const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 
 /** Public coverage audits enumerate missing native references; decorators merge each reference's canonical mappings. */
 export function declaredTemplateRequirements(coverageApi, itemModule) {
-  const sentinels = itemModule ? ITEM_TYPES.map(type => ({ kind: "item", type, path: "__template_coverage_sentinel__" }))
+  const sentinels = itemModule ? [...ITEM_TYPES.map(type => ({ kind: "item", type, path: "__template_coverage_sentinel__" })),
+      ...FEAT_ADVANCEMENT_TYPES.map(type => ({ kind: "advancement", type, path: "__template_coverage_sentinel__" }))]
     : [...ACTIVITY_TYPES.map(type => ({ kind: "activity", type, path: "__template_coverage_sentinel__" })),
       { kind: "effect", type: "base", path: "__template_coverage_sentinel__" },
-      { kind: "effect", type: "enchantment", path: "__template_coverage_sentinel__" }];
+      { kind: "effect", type: "enchantment", path: "__template_coverage_sentinel__" },
+      { kind: "effect", type: "condition", path: "__template_coverage_sentinel__" }];
   const missing = coverageApi.auditCoverageReferences(sentinels).missing;
   const fields = coverageApi.decorateCatalogFields(missing.map((entry, index) => ({ ...entry, id: "template-" + index })),
     { systemVersion: "5.3.3", foundryVersion: "14.367" });
@@ -127,9 +131,10 @@ export function checkTemplate({ markdown, requirements, yaml, itemModule, type }
   catch (error) { return { success: false, issues: [{ code: "invalid-main-yaml", message: error.message }], exceptions }; }
   const root = itemModule ? type.toUpperCase() : type === "effect" ? "EFFECT" : "ACTIVITY_" + type.toUpperCase();
   if (!object(main) || !object(main[root])) return { success: false, issues: [{ code: "wrong-main-root", root }], exceptions };
-  if (itemModule && main.SCHEMA_VERSION !== 4) issues.push({ code: "wrong-item-schema-version", expected: 4 });
+  if (itemModule && main.SCHEMA_VERSION !== 6) issues.push({ code: "wrong-item-schema-version", expected: 6 });
   const paths = structuralPaths(main), alternatives = itemModule ? commentedRecovery(blocks[0], root, yaml) : new Map();
-  const mainRequirements = requirements.filter(entry => itemModule ? entry.kind === "item" && entry.type === type
+  const mainRequirements = requirements.filter(entry => itemModule
+    ? (entry.kind === "item" && entry.type === type) || (type === "feat" && entry.kind === "advancement")
     : type === "effect" ? entry.kind === "effect" : entry.kind === "activity" && entry.type === type);
   if (!itemModule && type !== "effect" && !["cast", "forward"].includes(type)) {
     mainRequirements.push(...requirements.filter(entry => entry.kind === "effect" && entry.type === (type === "enchant" ? "enchantment" : "base")).map(entry => ({

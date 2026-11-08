@@ -1,7 +1,7 @@
 import { cloneExplicit, applyExplicitSource, isMapping } from "./explicitYamlFields.js";
 
 /** Reviewed authored storage, not execution. Shared by the independent importers. */
-export const AUTOMATION_REVIEW = Object.freeze({ foundry: "14.369", system: "6.0.6", midi: "14.6.0", dae: "14.6.0" });
+export const AUTOMATION_REVIEW = Object.freeze({ foundry: "14.369", system: "6.0.6", midi: "14.6.8", dae: "14.6.6" });
 const string = { kind: "string" }, boolean = { kind: "boolean" }, number = { kind: "number" };
 const nullable = spec => ({ ...spec, nullable: true });
 const choice = (...choices) => ({ kind: typeof choices[0], choices });
@@ -22,13 +22,18 @@ const midiCommon = {
     midiProperties: object({
         ...fieldsOf("triggeredActivityId triggeredActivityConditionText triggeredActivityTargets triggeredActivityRollAs forceConsumeDialog forceRollDialog forceDamageDialog confirmTargets autoTargetType autoTargetAction identifier rollMode removeChatButtons autoCEEffects", string),
         ...fieldsOf("triggeredActivityConsume triggeredActivityConfigure autoConsume automationOnly otherActivityCompatible otherActivityAsParentType displayActivityName chooseEffects toggleEffect ignoreFullCover magicEffect magicDamage noConcentrationCheck skipConcentrationCheck", boolean),
-        ignoreTraits: strings
+        ignoreTraits: strings,
+        // MIDI 14.6.x: follow-up buttons, Targets you can see and Statuses Applied. Every activity stores their defaults.
+        followUp: boolean, followUpTargets: choice("default", "self", "targets", "hitTargets", "missedTargets", "failedSaves", "saveTargets"),
+        followUpCondition: string, targetMustBeSeen: boolean,
+        statuses: array(object({ id: string, specialDuration: strings, onSave: boolean }))
     }),
     isOverTimeFlag: boolean,
     overTimeProperties: object({ turnChoice: nullable(choice("start", "end")), saveRemoves: boolean, rollAs: choice("target", "source"),
         preRemoveConditionText: string, postRemoveConditionText: string }),
     regionBehavior: object({ enabled: boolean, dispositionFilter: choice(-1, 0, 1), excludeSource: boolean, oncePerTurn: boolean,
         wallRestriction: string, regionVisibility: number, attachToken: choice("default", "caster", "target"),
+        moveDistance: range(0), moveDirection: choice("away", "choose"), moveTiming: choice("start", "end"),
         templateOrigin: choice("default", "base", "top", "eye"), rules: array(object({
             trigger: choice("entry", "exit", "turnStart", "turnEnd"), action: choice("useActivity", "applyEffect"), targetId: string
         })) }),
@@ -37,11 +42,14 @@ const midiCommon = {
 };
 const midiSpecific = {
     attack: { otherActivityAsParentType: boolean, attackMode: string, ammunition: string, otherActivityUuid: string,
-        attackRollPerTarget: string, fumbleThreshold: number },
+        attackRollPerTarget: string, ammunitionPerTarget: string, fumbleThreshold: number },
     save: { otherActivityAsParentType: boolean, friendlySave: string, damage: object({ critical }) },
     check: { otherActivityAsParentType: boolean, friendlySave: string,
         damage: object({ onSave: choice("none", "half", "full"), critical, parts: array(damagePart) }) },
-    utility: { otherActivityAsParentType: boolean }, summon: { friendlySummon: boolean }
+    utility: { otherActivityAsParentType: boolean }, summon: { friendlySummon: boolean },
+    // MIDI 14.6.x stores these defaults on every Teleport activity.
+    teleport: { midiTeleport: object({ movers: choice("default", "caster", "casterAndTargets", "targets", "swap"),
+        plan: choice("button", "auto"), blocked: choice("refuse", "fail"), requireSight: boolean }) }
 };
 const macro = object({ _id: nullable(string), name: string, img: nullable(string), type: choice("script", "chat"),
     scope: choice("global", "actors", "actor"), command: string, author: nullable(string), folder: nullable(string),
@@ -191,10 +199,10 @@ export function automationFieldEntries(kind, type) {
 /** Canonical coverage supersedes legacy aliases, without claiming gameplay validation. */
 export function automationCoverage(field, owner) {
     const allowed = owner === "5e-item-importer"
-        ? field.kind === "item" && ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"].includes(field.type)
+        ? field.kind === "item" && ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell", "feat"].includes(field.type)
         : owner === "5e-activity-importer"
-            && (field.kind === "activity" && ["attack", "save", "check", "utility", "summon", "damage", "heal", "cast", "enchant", "transform", "forward"].includes(field.type)
-                || field.kind === "effect" && ["base", "enchantment"].includes(field.type));
+            && (field.kind === "activity" && ["attack", "save", "check", "utility", "summon", "damage", "heal", "cast", "enchant", "transform", "forward", "teleport"].includes(field.type)
+                || field.kind === "effect" && ["base", "enchantment", "condition"].includes(field.type));
     if (!allowed || field.configurationTarget || field.layer === "extensions") return null;
     const entry = automationFieldEntries(field.kind, field.type).find(entry => entry.path === field.path.replace(/\[\*\]$/, ""));
     if (!entry) return null;

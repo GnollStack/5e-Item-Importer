@@ -4,6 +4,7 @@ import { YamlItemParser } from "../strictItemParsers/yamlItemParser.js";
 import { itemToStrictYamlDocument } from "../itemYamlExporter.js";
 import { ItemData } from "../itemData.js";
 import { cloneExplicit, readPath } from "../explicitYamlFields.js";
+import { isPhysicalItemType } from "../itemConfig.js";
 const DAMAGE = {number:2,denomination:6,bonus:"@mod",types:["fire","cold"],custom:{enabled:false,formula:"3 + @mod"},modifiers:["min3","r1"],scaling:{mode:"whole",number:0,formula:"@prof"}};
 function stable(value) {
   value=cloneExplicit(value);
@@ -14,15 +15,15 @@ function stable(value) {
 const equal=(a,b)=>JSON.stringify(stable(a))===JSON.stringify(stable(b));
 export async function createExplicitItemFixtures(makeMarker) {
   const steps=[];
-  for (const type of ["weapon","equipment","consumable","tool","loot","container","spell"]) {
+  for (const type of ["weapon","equipment","consumable","tool","loot","container","spell","feat"]) {
     const marker=makeMarker("Explicit " + type);
     const source={name:marker.fixtureName,type,img:"icons/svg/book.svg",sort:0,system:{
       identifier:"explicit-" + type,source:{book:"Private fixture",page:"12a",custom:"Schema 3",license:"Private",rules:"2024",revision:1.5},
       properties:[],rarities:type==="loot"?[]:["rare","veryRare"],description:{value:"<p>Stored complete description</p>",chat:"<p>Stored chat description</p>"},unidentified:{name:"Unknown fixture",description:"<p>Stored unidentified description</p>"},quantity:1,identified:false,weight:{value:0.5,units:"lb"},price:{value:0.25,denomination:"gp"}
     }};
     const paths=["img","sort","system.identifier","system.source.book","system.source.page","system.source.custom","system.source.license","system.source.rules","system.source.revision"];
-    if(type!=="spell") paths.push("system.rarities","system.description","system.unidentified");
-    if(!["loot","spell"].includes(type)) {
+    if(isPhysicalItemType(type)) paths.push("system.rarities","system.description","system.unidentified");
+    if(!["loot","spell","feat"].includes(type)) {
       Object.assign(source.system,{equipped:true,attuned:true,attunement:""});
       paths.push("system.equipped","system.attuned");
     }
@@ -52,6 +53,27 @@ export async function createExplicitItemFixtures(makeMarker) {
       };
       paths.push("system.prepared","system.sourceItem","system.activation.value","system.range.value","system.duration.value","system.duration.expiry","system.materials","system.target.template","system.target.affects.count");
     }
+    if(type==="feat") {
+      source.system={
+        identifier:source.system.identifier,source:source.system.source,description:source.system.description,
+        type:{value:"class",subtype:"fightingStyle"},requirements:"Fighter 1",
+        prerequisites:{level:4,items:["fighter","feat:alert"],repeatable:true},properties:["mgc","trait"],
+        enchant:{max:"1 + @prof",period:"lr"},cover:0.5,crewed:true,
+        uses:{spent:1,max:"@prof",recovery:[{period:"lr",type:"recoverAll"}]},
+        // Literal compendium UUIDs so the fixture needs no name resolution; dnd5e keys advancement by _id.
+        advancement:{
+          FixtureAsi000001:{_id:"FixtureAsi000001",type:"AbilityScoreImprovement",level:0,configuration:{points:1,cap:2,fixed:{con:1},locked:["str"]},value:{}},
+          FixtureGrant0001:{_id:"FixtureGrant0001",type:"ItemGrant",level:4,name:"Storm Spells",configuration:{items:[{uuid:"Compendium.dnd5e.spells24.Item.phbsplThunderwav",optional:false,sort:0}],optional:false,sorting:"m",spell:{ability:["cha"],method:"spell",prepared:2,uses:{max:"1",per:"lr",requireSlot:false}}},value:{}},
+          FixtureScale0001:{_id:"FixtureScale0001",type:"ScaleValue",configuration:{identifier:"storm-dice",type:"dice",scale:{4:{number:1,faces:6,modifiers:[]},12:{number:2,faces:6,modifiers:["min2"]}}},value:{}},
+          FixtureTrait0001:{_id:"FixtureTrait0001",type:"Trait",level:0,configuration:{allowReplacements:false,choices:[{count:1,pool:["skills:*"]}],grants:["skills:ath"],mode:"default"},value:{}}
+        }
+      };
+      paths.push("system.description","system.type.value","system.type.subtype","system.requirements","system.prerequisites.level","system.prerequisites.items","system.prerequisites.repeatable","system.enchant.max","system.enchant.period","system.cover","system.crewed","system.uses.spent","system.uses.max",
+        "system.advancement.FixtureAsi000001.configuration.fixed.con","system.advancement.FixtureAsi000001.configuration.locked","system.advancement.FixtureAsi000001.level",
+        "system.advancement.FixtureGrant0001.name","system.advancement.FixtureGrant0001.configuration.items","system.advancement.FixtureGrant0001.configuration.spell.prepared","system.advancement.FixtureGrant0001.configuration.spell.uses.per",
+        "system.advancement.FixtureScale0001.configuration.identifier","system.advancement.FixtureScale0001.configuration.scale.12.number","system.advancement.FixtureScale0001.configuration.scale.12.modifiers",
+        "system.advancement.FixtureTrait0001.configuration.grants","system.advancement.FixtureTrait0001.configuration.choices");
+    }
     const options={includeActivities:false,includeEffects:false};
     const parsed=new YamlItemParser().parse(yaml.dump(itemToStrictYamlDocument(source,options)));
     if(!parsed.success) throw new Error(type+" fixture failed parsing: "+parsed.errors.join("; "));
@@ -65,7 +87,7 @@ export async function createExplicitItemFixtures(makeMarker) {
     await reparsed.item.buildFoundryData({deterministicIcons:true});
     const checks=paths.map(path=>({path,persisted:equal(readPath(source,path),readPath(stored,path)),roundTrip:equal(readPath(source,path),readPath(reparsed.item.itemData,path))}));
     steps.push({step:"explicit-"+type,success:checks.every(c=>c.persisted&&c.roundTrip),itemId:created.id,checks});
-    if(type!=="spell") {
+    if(isPhysicalItemType(type)) {
       for(const rarities of [[],["legendary"],["uncommon","rare"]]) {
         const updateSource=cloneExplicit(source);updateSource.system.rarities=rarities;
         const updateParsed=new YamlItemParser().parse(yaml.dump(itemToStrictYamlDocument(updateSource,options)));
@@ -78,6 +100,56 @@ export async function createExplicitItemFixtures(makeMarker) {
       }
     }
     if(type==="weapon")steps.push(await createExplicitInlineFixtures(parsed.item,created));
+  }
+  steps.push(...await createExplicitContainerFixtures(makeMarker));
+  return steps;
+}
+
+/**
+ * Nested CONTENTS: the container is created first, then its content is placed inside it
+ * the way the batch workflow does (placement options on createItem5e). Both documents
+ * carry the fixture flag, so the shared cleanup removes them.
+ */
+async function createExplicitContainerFixtures(makeMarker) {
+  const steps=[];
+  const packMarker=makeMarker("Explicit container pack");
+  const childMarker=makeMarker("Explicit container child");
+  const nested=new YamlItemParser().parseAll(yaml.dump({SCHEMA_VERSION:6,CONTAINER:{
+    ITEM:{Name:packMarker.fixtureName,Rarities:[]},INVENTORY:{Quantity:1,Identified:true},
+    CONTENTS:[{LOOT:{ITEM:{Name:childMarker.fixtureName,"Loot Type":"gear",Rarities:[]},INVENTORY:{Quantity:2,Identified:true}}}]
+  }}));
+  if(nested.length!==2||nested.some(result=>!result.success)) throw new Error("Container fixture failed parsing: "+nested.flatMap(result=>result.errors).join("; "));
+  for(const [result,marker] of [[nested[0],packMarker],[nested[1],childMarker]]) {
+    result.item.explicitSource ??= {};
+    result.item.explicitSource.flags={"5e-item-importer":{mcpAutomationFixture:marker}};
+  }
+  const destination={kind:"world",folderId:null};
+  const blocked=await nested[1].item.createItem5e(null,{destination,deterministicIcons:true});
+  steps.push({step:"explicit-container-child-blocked-without-parent",success:blocked.success===false&&blocked.item===null&&blocked.issues.some(issue=>issue.includes("was not imported")),issues:blocked.issues});
+  const pack=await nested[0].item.createItem5e(null,{destination,deterministicIcons:true});
+  if(!pack.success) throw new Error("Container fixture pack failed: "+pack.issues.join("; "));
+  const child=await nested[1].item.createItem5e(null,{destination,deterministicIcons:true,containerId:pack.item.id,containerFolderId:pack.item.folder?.id??null});
+  const contents=child.success?[...(pack.item.system.contents??[])].map(item=>item.id):[];
+  steps.push({step:"explicit-container-contents",success:child.success&&child.item.system.container===pack.item.id&&child.item.system.quantity===2&&contents.includes(child.item.id),
+    packId:pack.item.id,childId:child.item?.id,contents,issues:child.issues});
+  const exported=itemToStrictYamlDocument(pack.item,{includeContents:true,includeActivities:false,includeEffects:false});
+  const reparsed=new YamlItemParser().parseAll(yaml.dump(exported));
+  steps.push({step:"explicit-container-export-contents",success:reparsed.length===2&&reparsed.every(result=>result.success)&&reparsed[1].item.containerRef?.kind==="batch"&&reparsed[1].item.name===childMarker.fixtureName&&reparsed[1].item.quantity===2,
+    names:reparsed.map(result=>result.item?.name),errors:reparsed.flatMap(result=>result.errors)});
+  // An existing-container reference by UUID lands inside the same world container.
+  const byUuid=new YamlItemParser().parse(yaml.dump({SCHEMA_VERSION:6,LOOT:{ITEM:{Name:childMarker.fixtureName+" by UUID","Loot Type":"gear",Rarities:[]},INVENTORY:{Quantity:1,Identified:true,Container:pack.item.uuid}}}));
+  if(!byUuid.success) throw new Error("Container UUID fixture failed parsing: "+byUuid.errors.join("; "));
+  byUuid.item.explicitSource ??= {};
+  byUuid.item.explicitSource.flags={"5e-item-importer":{mcpAutomationFixture:{...childMarker,fixtureName:childMarker.fixtureName+" by UUID"}}};
+  const placed=await byUuid.item.createItem5e(null,{destination,deterministicIcons:true});
+  steps.push({step:"explicit-container-reference-uuid",success:placed.success===true&&placed.item.system.container===pack.item.id,issues:placed.issues,childId:placed.item?.id});
+  // The same reference into a compendium destination is a different collection and fails before any write.
+  const crossPack=game.packs.find(pack=>pack.documentName==="Item");
+  if(crossPack) {
+    const cross=new YamlItemParser().parse(yaml.dump({SCHEMA_VERSION:6,LOOT:{ITEM:{Name:childMarker.fixtureName+" cross","Loot Type":"gear",Rarities:[]},INVENTORY:{Quantity:1,Identified:true,Container:pack.item.uuid}}}));
+    const before=crossPack.index.size;
+    const rejected=await cross.item.createItem5e(null,{destination:{kind:"compendium",pack:crossPack.collection},deterministicIcons:true});
+    steps.push({step:"explicit-container-cross-collection-rejected",success:rejected.success===false&&rejected.item===null&&rejected.issues.some(issue=>issue.includes("one collection"))&&crossPack.index.size===before,issues:rejected.issues,pack:crossPack.collection});
   }
   return steps;
 }

@@ -10,7 +10,21 @@
 
 import { itemExplicitRows, explicitItemSource } from "../itemExplicitFields.js";
 import { damageDataToYaml } from "../explicitYamlFields.js";
+import { isPhysicalItemType } from "../itemConfig.js";
 import { formatItemRarities } from "../itemRarities.js";
+import { advancementEntries, describeAdvancement } from "../itemAdvancement.js";
+
+/** One comparison row per advancement entry, keyed by stable ID so both sides pair up. */
+function extractAdvancementProps(source, props) {
+    for (const entry of advancementEntries(source)) {
+        const described = describeAdvancement(entry);
+        props.push({
+            section: "Advancement",
+            label: entry._id ? `${described.title} (${entry._id})` : described.title,
+            value: `${described.level}${described.summary ? `: ${described.summary}` : ""}`
+        });
+    }
+}
 
 
 function appendDamageSummary(props, damage, versatile = false) {
@@ -66,7 +80,13 @@ const LOOT_TYPES = {
 
 const TYPE_NAMES = {
     weapon: "Weapon", equipment: "Equipment", consumable: "Consumable",
-    tool: "Tool", loot: "Loot", container: "Container", spell: "Spell"
+    tool: "Tool", loot: "Loot", container: "Container", spell: "Spell", feat: "Feature"
+};
+
+const FEATURE_TYPE_NAMES = {
+    background: "Background Feature", class: "Class Feature", monster: "Monster Feature",
+    race: "Species Feature", enchantment: "Enchantment", feat: "Feat", pietyTrait: "Piety Trait",
+    supernaturalGift: "Supernatural Gift", vehicle: "Vehicle Feature"
 };
 
 const SPELL_SCHOOLS = {
@@ -135,7 +155,7 @@ export function extractExpectedItemProps(parseResult) {
     // Header
     props.push({ section: "Header", label: "Name", value: item.name || "" });
     props.push({ section: "Header", label: "Type", value: TYPE_NAMES[item.type] || item.type || "" });
-    if (item.type !== "spell") props.push({ section: "Header", label: "Rarities", value: formatItemRarities(item) });
+    if (isPhysicalItemType(item.type)) props.push({ section: "Header", label: "Rarities", value: formatItemRarities(item) });
 
     if (item.isMagical) props.push({ section: "Header", label: "Magical", value: "Yes" });
     if (item.attunement && item.attunement !== "none" && item.attunement !== "") {
@@ -233,6 +253,9 @@ export function extractExpectedItemProps(parseResult) {
     // Spell properties
     extractSpellProps(item, props);
 
+    // Feature properties
+    extractFeatProps(item, props);
+
     // Special Properties
     if (item.properties?.length > 0) {
         props.push({ section: "Special Properties", label: "Properties", value: [...item.properties].sort().join(", ") });
@@ -317,6 +340,25 @@ function extractSpellProps(item, props) {
     }
 }
 
+/**
+ * Extract feature-specific properties from an item. Requirements, prerequisites,
+ * enchantment limits, and cover are explicit descriptors covered by itemExplicitRows().
+ */
+function extractFeatProps(item, props) {
+    if (item.type !== "feat") return;
+
+    if (item.featureType) {
+        props.push({ section: "Combat Statistics", label: "Feature Type", value: FEATURE_TYPE_NAMES[item.featureType] || item.featureType });
+    }
+    if (item.featureSubtype) {
+        props.push({ section: "Combat Statistics", label: "Feature Subtype", value: item.featureSubtype });
+    }
+    if (item.passiveTrait) {
+        props.push({ section: "Special Properties", label: "Passive Trait", value: "Yes" });
+    }
+    extractAdvancementProps(item.advancement, props);
+}
+
 // ==========================================
 // Extract from Foundry Item — Actual side
 // ==========================================
@@ -335,7 +377,7 @@ export function extractActualItemProps(foundryItem, parseResult = null) {
     // Header
     props.push({ section: "Header", label: "Name", value: foundryItem.name || "" });
     props.push({ section: "Header", label: "Type", value: TYPE_NAMES[foundryItem.type] || foundryItem.type || "" });
-    if (foundryItem.type !== "spell") props.push({ section: "Header", label: "Rarities", value: formatItemRarities(foundryItem) });
+    if (isPhysicalItemType(foundryItem.type)) props.push({ section: "Header", label: "Rarities", value: formatItemRarities(foundryItem) });
 
     const hasMagic = sys.properties instanceof Set ? sys.properties.has("mgc") : sys.properties?.includes?.("mgc");
     if (hasMagic) props.push({ section: "Header", label: "Magical", value: "Yes" });
@@ -497,6 +539,20 @@ function extractActualCombatProps(foundryItem, props) {
             props.push({ section: "Special Properties", label: "Material", value: sys.materials.value });
         }
     }
+
+    // Feature properties
+    if (type === "feat") {
+        if (sys.type?.value) {
+            props.push({ section: "Combat Statistics", label: "Feature Type", value: FEATURE_TYPE_NAMES[sys.type.value] || sys.type.value });
+        }
+        if (sys.type?.subtype) {
+            props.push({ section: "Combat Statistics", label: "Feature Subtype", value: sys.type.subtype });
+        }
+        if (propsSet.has("trait")) {
+            props.push({ section: "Special Properties", label: "Passive Trait", value: "Yes" });
+        }
+        extractAdvancementProps(sys.advancement, props);
+    }
 }
 
 /**
@@ -505,9 +561,10 @@ function extractActualCombatProps(foundryItem, props) {
 function extractActualSpecialProps(foundryItem, props) {
     const sys = foundryItem.system;
 
-    // Properties (as sorted array, excluding spell components and stealth which are handled elsewhere)
+    // Properties (as sorted array, excluding spell components, stealth, and the
+    // feature trait flag, which are handled elsewhere)
     const propsSet = sys.properties instanceof Set ? sys.properties : new Set(sys.properties || []);
-    const spellComponentKeys = new Set(["vocal", "somatic", "material", "concentration", "ritual", "stealthDisadvantage"]);
+    const spellComponentKeys = new Set(["vocal", "somatic", "material", "concentration", "ritual", "stealthDisadvantage", "trait"]);
     const displayProps = [...propsSet].filter(p => !spellComponentKeys.has(p)).sort();
     if (displayProps.length > 0) {
         props.push({ section: "Special Properties", label: "Properties", value: displayProps.join(", ") });

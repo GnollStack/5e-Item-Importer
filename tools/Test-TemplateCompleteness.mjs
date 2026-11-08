@@ -6,8 +6,8 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 import { declaredTemplateRequirements, checkTemplate } from "./template-completeness.mjs";
 import { checkMidiTemplateCoverage } from "./template-authoring.mjs";
-const ITEM_TYPES = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"];
-const ACTIVITY_TYPES = ["attack", "save", "damage", "heal", "utility", "check", "cast", "enchant", "summon", "transform", "forward", "effect"];
+const ITEM_TYPES = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell", "feat"];
+const ACTIVITY_TYPES = ["attack", "save", "damage", "heal", "utility", "check", "cast", "enchant", "summon", "transform", "forward", "teleport", "effect"];
 
 export async function runTemplateCompleteness({ root, api, yaml, moduleId }) {
   const itemModule = moduleId === "5e-item-importer";

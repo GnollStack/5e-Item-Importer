@@ -46,7 +46,7 @@ async function api(file) {
 const yaml=(await api("scripts/vendor/js-yaml.mjs")).default;
 const fixtures=JSON.parse(await fs.readFile(path.join(root,"tests/fixtures/template-authoring.json"),"utf8"));
 const parser=await api(itemModule?"scripts/strictItemParsers/yamlItemParser.js":"scripts/activityParsers/yamlParser.js");
-const types=itemModule?["weapon","equipment","consumable","tool","container","loot","spell"]:["attack","save","damage","heal","utility","check","cast","enchant","summon","transform","forward","effect"];
+const types=itemModule?["weapon","equipment","consumable","tool","container","loot","spell","feat"]:["attack","save","damage","heal","utility","check","cast","enchant","summon","transform","forward","teleport","effect"];
 for(const type of types) for(const midi of itemModule?[false]:[false,true]) {
  if(fixtures.filter(f=>f.template&&f.type===type&&f.midi===midi).length!==1)throw new Error("Expected one template example for "+type+" MIDI="+midi);
 }
@@ -67,7 +67,8 @@ for(const fixture of fixtures) {
   context.game.modules.set("midi-qol",{active:fixture.midi});
   context.game.modules.set("dae",{active:fixture.midi});
   context.game.modules.set("5e-activity-importer",{active:!!fixture.attachments});
-  const parsed=itemModule?[new parser.YamlItemParser().parse(text)]:parser.parseAllBlocksYaml(text);
+  // parseAll() returns one result for a single Item and expands CONTAINER.CONTENTS into several.
+  const parsed=itemModule?new parser.YamlItemParser().parseAll(text):parser.parseAllBlocksYaml(text);
   if(itemModule && parsed[0].success) {
    await parsed[0].item.buildFoundryData({deterministicIcons:true,generateAnimations:false});
    parsed[0].built=parsed[0].item.itemData;

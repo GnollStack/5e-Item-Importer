@@ -10,7 +10,7 @@ export const ITEM_TEMPLATES = [
     {
         id: "weapon",
         label: "Magic Weapon",
-        text: `SCHEMA_VERSION: 4
+        text: `SCHEMA_VERSION: 6
 WEAPON:
   ITEM:
     Name: "Longsword +1"
@@ -57,7 +57,7 @@ WEAPON:
     {
         id: "armor",
         label: "Wondrous Item",
-        text: `SCHEMA_VERSION: 4
+        text: `SCHEMA_VERSION: 6
 EQUIPMENT:
   ITEM:
     Name: "Cloak of Protection"
@@ -88,7 +88,7 @@ EQUIPMENT:
     {
         id: "potion",
         label: "Potion",
-        text: `SCHEMA_VERSION: 4
+        text: `SCHEMA_VERSION: 6
 CONSUMABLE:
   ITEM:
     Name: "Potion of Healing"
@@ -120,7 +120,7 @@ CONSUMABLE:
     {
         id: "tool",
         label: "Tool",
-        text: `SCHEMA_VERSION: 4
+        text: `SCHEMA_VERSION: 6
 TOOL:
   ITEM:
     Name: "Alchemist's Supplies"
@@ -152,7 +152,7 @@ TOOL:
     {
         id: "container",
         label: "Container",
-        text: `SCHEMA_VERSION: 4
+        text: `SCHEMA_VERSION: 6
 CONTAINER:
   ITEM:
     Name: "Bag of Holding"
@@ -188,7 +188,7 @@ CONTAINER:
     {
         id: "loot",
         label: "Loot/Gear",
-        text: `SCHEMA_VERSION: 4
+        text: `SCHEMA_VERSION: 6
 LOOT:
   ITEM:
     Name: "Ruby"
@@ -216,7 +216,7 @@ LOOT:
         id: "spell",
         label: "Spell (Core Fields)",
         text: `# Core spell fields only. Add Activities with Activity Importer for automated rolls.
-SCHEMA_VERSION: 4
+SCHEMA_VERSION: 6
 SPELL:
   ITEM:
     Name: "Magic Missile"
@@ -260,9 +260,42 @@ SPELL:
       n/a`
     },
     {
+        id: "feat",
+        label: "Feature (Core Fields)",
+        text: `# Core feature fields only. Features have no rarity, price, weight, or attunement.
+# Add Activities with Activity Importer for automated rolls and effects.
+SCHEMA_VERSION: 6
+FEAT:
+  ITEM:
+    Name: "Second Wind"
+    Feature Type: class
+    Feature Subtype: n/a
+    Requirements: "Fighter 1"
+  PREREQUISITES:
+    Level: n/a
+    Items: []
+    Repeatable: false
+  PROPERTIES:
+    Magical: false
+    Passive Trait: false
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 1
+  RECOVERY:
+    - Period: sr
+      Type: recoverAll
+  DESCRIPTION:
+    Description: |
+      <p>You have a limited well of stamina that you can draw on to protect yourself from harm. On your turn, you can use a bonus action to regain hit points equal to [[/heal 1d10 + @classes.fighter.levels]].</p>
+      <p>Once you use this feature, you must finish a short or long rest before you can use it again.</p>
+  CHAT_FLAVOR:
+    Chat Description: |
+      n/a`
+    },
+    {
         id: "batch",
         label: "Multi-Item Batch",
-        text: `SCHEMA_VERSION: 4
+        text: `SCHEMA_VERSION: 6
 WEAPON:
   ITEM:
     Name: "Shortsword +1"
@@ -326,12 +359,27 @@ LOOT:
     Magical: false
   DESCRIPTION:
     Description: |
-      A pouch containing 50 gold coins.`
+      A pouch containing 50 gold coins.
+
+FEAT:
+  ITEM:
+    Name: "Legendary Resistance"
+    Feature Type: monster
+    Requirements: n/a
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 3
+  RECOVERY:
+    - Period: day
+      Type: recoverAll
+  DESCRIPTION:
+    Description: |
+      If [[lookup @name]]{the creature} fails a saving throw, it can choose to succeed instead.`
     },
     {
         id: "mixed-damage-weapon",
         label: "Mixed Damage Weapon",
-        text: `SCHEMA_VERSION: 4
+        text: `SCHEMA_VERSION: 6
 WEAPON:
   ITEM:
     Name: "Flame Tongue Longsword"

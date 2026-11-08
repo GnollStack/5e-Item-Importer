@@ -6,7 +6,7 @@
  */
 
 export const ITEM_YAML_SCHEMA_KEY = "SCHEMA_VERSION";
-export const ITEM_YAML_SCHEMA_VERSION = 4;
+export const ITEM_YAML_SCHEMA_VERSION = 6;
 
 const LEGACY_SCHEMA_KEYS = ["Schema Version", "schemaVersion", "schema_version"];
 const ITEM_ROOT_KEYS = [
@@ -16,7 +16,8 @@ const ITEM_ROOT_KEYS = [
   "TOOL",
   "LOOT",
   "CONTAINER",
-  "SPELL"
+  "SPELL",
+  "FEAT"
 ];
 
 function isPlainObject(value) {

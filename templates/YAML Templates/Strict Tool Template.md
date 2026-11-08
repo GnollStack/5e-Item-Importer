@@ -2,11 +2,11 @@
 
 ## Destination and prerequisites
 
-Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 4` and the `TOOL` root.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 6` and the `TOOL` root.
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 / Foundry 14.369; MIDI/DAE annotations, when used, target the reviewed 14.6.0 integrations. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 / Foundry 14.369; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.8 and DAE 14.6.6 integrations. Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -35,7 +35,7 @@ For new physical Items, ordinary defaults are quantity 1, identified true, equip
 ## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 4
+SCHEMA_VERSION: 6
 TOOL:
   SOURCE:
     Book: "[text|n/a]"
@@ -59,6 +59,7 @@ TOOL:
     Quantity: "[integer]"
     Identified: "[true|false]"
     Equipped: "[true|false]"
+    Container: "[container name|uuid|n/a]" # Place inside a container: its name in this batch, an Item UUID, or drag-and-drop in the import window.
 
   COST_AND_WEIGHT:
     Price Value: "[number]"
@@ -91,7 +92,7 @@ TOOL:
 
   # Optional, repeatable. Use [] when there is no recovery.
   # With a positive Uses Max or a formula maximum, replace [] with entries shaped like:
-  #   - Period: "[lr|sr|day|dawn|dusk|recharge]"
+  #   - Period: "[lr|sr|day|dawn|dusk|recharge|initiative|turnStart|turnEnd|turn]"
   #     Type: "[recoverAll|loseAll|formula]"
   #     Formula: "[formula|n/a]" # Required for Type formula; recharge uses a 2..6 threshold.
   RECOVERY: []
@@ -124,7 +125,7 @@ A free/core tool import. Preserve the complete description; it does not automati
 
 <!-- AUTHORING-EXAMPLE:START -->
 ```yaml
-SCHEMA_VERSION: 4
+SCHEMA_VERSION: 6
 TOOL:
   ITEM:
     Name: Alchemist's Supplies
@@ -298,6 +299,10 @@ These are the accepted YAML proficiency values, including the native 1.5 multipl
 | `dawn` | At dawn |
 | `dusk` | At dusk |
 | `recharge` | Recharge threshold: set Formula to 2, 3, 4, 5, or 6 |
+| `initiative` | When initiative is rolled |
+| `turnStart` | At the start of the owner's turn |
+| `turnEnd` | At the end of the owner's turn |
+| `turn` | Each turn |
 
 ### **Recharge Values**
 | Formula | Display |
@@ -411,7 +416,7 @@ These are the accepted YAML proficiency values, including the native 1.5 multipl
 ---
 
 
-## Explicit fields in Item YAML schema 4
+## Explicit fields in Item YAML schema 6
 
 Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 and 3 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 

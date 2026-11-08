@@ -1,16 +1,20 @@
-# Explicit Item YAML schema 4 and field coverage
+# Explicit Item YAML schema 6 and field coverage
 
-Schema 4 adds reviewed typed automation storage and recipe authoring. See [Automation storage in schema 4](automation-schema-4.md). Earlier supported YAML remains readable.
+Schema 6 adds feature advancement (`FEAT.ADVANCEMENT`: ability score improvements, granted items, item choices, item changes, scale values and traits), container contents (`CONTAINER.CONTENTS` and `INVENTORY.Container`), and companion-free document references that resolve by UUID, name or identifier or through drag-and-drop before import. Schema 5 added the `FEAT` root for dnd5e Features (class features, feats, monster traits, species traits, background features) and the combat recovery periods `initiative`, `turnStart`, `turnEnd` and `turn`. Schema 4 added reviewed typed automation storage and recipe authoring; see [Automation storage in schema 4](automation-schema-4.md), which is a separate contract and is unchanged. Earlier supported YAML remains readable.
 
-Item exports now use `SCHEMA_VERSION: 4`. Versions 0 (including a missing version), 1, 2 and 3 are accepted and handled in memory; saved worlds are not migrated. Legacy Activity/Effect descriptor payloads 1, 2 and 3 remain readable alongside version 4. The active companion must advertise schema 4 for both strict Activity and Effect support before attachment import, builder, or full-export UI integration is enabled. Older or unknown companion contracts block the complete attachment batch with an update message; core Item operations remain available. The separate feature-envelope version remains 2.
+Item exports now use `SCHEMA_VERSION: 6`. Versions 0 (including a missing version), 1, 2, 3, 4 and 5 are accepted and handled in memory (5 to 6 needs no migration); saved worlds are not migrated. Legacy Activity/Effect descriptor payloads 1, 2, 3 and 4 remain readable alongside version 5 (which adds the Teleport activity and condition effects). The active companion must advertise schema 5 for both strict Activity and Effect support before attachment import, builder, or full-export UI integration is enabled. Older or unknown companion contracts block the complete attachment batch with an update message; core Item operations remain available. The separate feature-envelope version remains 2.
 
-The seven supported roots remain WEAPON, EQUIPMENT, CONSUMABLE, TOOL, LOOT, CONTAINER and SPELL. Core import/export works without Activity Importer. Existing attachment, MIDI-QOL and DAE integration behavior is retained.
+The eight supported roots are WEAPON, EQUIPMENT, CONSUMABLE, TOOL, LOOT, CONTAINER, SPELL and FEAT. Core import/export works without Activity Importer. Existing attachment, MIDI-QOL and DAE integration behavior is retained.
 
-### Native fields retained from schema 3
+### Feature (FEAT) root
 
-Physical Items use `ITEM.Rarities: [rare]` for `system.rarities`. Omitted rarity defaults to common; `Rarities: []` is explicitly mundane. Legacy `ITEM.Rarity` remains accepted, but populated canonical and legacy values must agree. Spell Items do not have physical rarities.
+`FEAT` maps dnd5e `FeatData`: `ITEM.Feature Type` / `Feature Subtype` (`system.type`), `ITEM.Requirements`, `PREREQUISITES` (level, item identifiers, repeatable), `PROPERTIES.Magical` / `Passive Trait` (`mgc` / `trait`), `ENCHANTMENT` limits, `VEHICLE_PROPERTIES.Cover` / `Crewed`, shared `USAGE` / `RECOVERY`, descriptions and source. Like Spells, Features have no physical or identifiable fields: `ITEM.Rarities`, `INVENTORY`, `COST_AND_WEIGHT`, `UNIDENTIFIED_DESCRIPTION` and `ATTUNEMENT` are reported as unsupported FeatData sections and ignored. Unknown feature types and subtypes are stored with a warning because dnd5e stores them as-is. `ADVANCEMENT` authors the six feat-valid advancement types (`ABILITY_SCORE_IMPROVEMENT`, `GRANT_ITEMS`, `CHOOSE_ITEMS`, `MODIFY_ITEMS`, `SCALE_VALUE`, `TRAIT`) as a list of one-root entries stored under `system.advancement`; referenced Items and effects are matched by UUID, name or identifier and must resolve before import (see the Advancement rows below). Features accept activities and passive effects through the companion.
 
-`DAMAGE.DAMAGE_DATA.Modifiers` and `VERSATILE_DAMAGE.DAMAGE_DATA.Modifiers` preserve dice modifier lists. Spells add nullable `DURATION.Expiry`. All seven Item roots remain unchanged; new native Item/advancement types are catalog-only. Companion activity/effect fields use descriptor schema 4; the generic feature envelope remains version 2. Paired full export preserves a shared local effect as one Item-level `effects` definition and per-Activity `Effect ID` references, including distinct APPLICATION settings. External `Effect UUID` references remain external. Older/custom serializers without reference support fail instead of duplicating shared effects.
+### Native fields retained from schema 3 and 4
+
+Physical Items use `ITEM.Rarities: [rare]` for `system.rarities`. Omitted rarity defaults to common; `Rarities: []` is explicitly mundane. Legacy `ITEM.Rarity` remains accepted, but populated canonical and legacy values must agree. Spell and Feature Items do not have physical rarities.
+
+`DAMAGE.DAMAGE_DATA.Modifiers` and `VERSATILE_DAMAGE.DAMAGE_DATA.Modifiers` preserve dice modifier lists. Spells add nullable `DURATION.Expiry`. The seven earlier Item roots gain only `INVENTORY.Container` (and `CONTENTS` on containers) in schema 6; other native Item types and the class-only advancement types remain catalog-only. Companion activity/effect fields use descriptor schema 5; the generic feature envelope remains version 2. Paired full export preserves a shared local effect as one Item-level `effects` definition and per-Activity `Effect ID` references, including distinct APPLICATION settings. External `Effect UUID` references remain external. Older/custom serializers without reference support fail instead of duplicating shared effects.
 
 ## Value rules
 
@@ -24,7 +28,8 @@ Missing keys use the existing parser/native defaults. Within the mapped fields, 
 |---|---|
 | `USAGE.Uses Spent` | Nonnegative integer already consumed. Must not exceed a literal maximum. |
 | `USAGE.Uses Max` | Nonnegative integer or quoted deterministic formula such as `"1 + @prof"`. A formula is one line, at most 200 characters, contains an `@` reference or arithmetic syntax, and contains no dice terms or semicolons. Bare decimal maximum values are rejected. Native formula storage does not mean every formula is accepted by this parser. |
-| `RECOVERY[]` | Imported only with a positive literal Uses Max or a formula maximum. `Type: formula` requires Formula; `Period: recharge` requires a threshold from 2 through 6. Supplied recovery formulas remain with recoverAll/loseAll. Empty recovery is `[]`. |
+| `RECOVERY[]` | Imported only with a positive literal Uses Max or a formula maximum. `Type: formula` requires Formula; `Period: recharge` requires a threshold from 2 through 6. Periods are `lr`, `sr`, `day`, `dawn`, `dusk`, `recharge`, `initiative`, `turnStart`, `turnEnd` and `turn`, matched case-insensitively and stored with their dnd5e spelling. Supplied recovery formulas remain with recoverAll/loseAll. Empty recovery is `[]`. |
+| `PREREQUISITES.Items` | List of `identifier` or `type:identifier` strings for dnd5e `IdentifierField` with `allowType`. Quote `"type:identifier"` entries; an unquoted entry that YAML normalization turns into a one-key mapping is folded back into one identifier. Malformed entries are errors. |
 | Magic Bonus | Deterministic formula or number; no dice. Canonical `ATTUNEMENT.Magic Bonus` applies to Weapon, Equipment and every Consumable subtype. A stored bonus does not enable explicitly false Magical. |
 | Tool Bonus | Finite number or formula, including dice; single line, at most 200 characters, no semicolons. Keep the full expression instead of reducing it to an integer. |
 | Spell range, duration, target count, area count/dimensions | Formula strings, including constants and `@` expressions, preserved even when units, target type or shape hide the controls. Activation Value remains an integer. |
@@ -83,21 +88,36 @@ Mapping owners:
 Tests:
 - **Core**: `tests/unit/itemCoreFeatureTests.js` and the type cases in `tests/foundry/itemImporterTests.js`.
 - **Explicit**: named preparation, identity/source/state, formula, inactive-control, damage/reload, nullable and rejection cases in `tests/unit/explicitYamlTests.js`.
-- **Create**: all-seven-type persistence/export/reparse cases in `scripts/diagnostics/explicitImportFixtures.js`, invoked by existing gated `runAutomation({suite:"explicit", ...})`.
+- **Create**: all-eight-type persistence/export/reparse cases in `scripts/diagnostics/explicitImportFixtures.js`, invoked by existing gated `runAutomation({suite:"explicit", ...})`.
 - **Attachments**: existing full-suite atomic attachment/optional-companion fixtures and paired controlled automation.
 - **Templates**: `tools/Test-TemplateCompleteness.mjs` checks the first YAML block of each full template against declared mappings, with explicit exceptions for the adjacent recovery-list schema and fixed Container quantity. It also checks canonical compact attachment syntax. `tools/Test-ExplicitYaml.mjs` includes the existing offline parser/serializer cases and template checks; compact quick starts remain covered by Core. Structural presence alone does not verify every value or native round trip.
 
 | Applies to | Native leaf or leaves | Explicit YAML location | Mapping | Condition / default | Test |
 |---|---|---|---|---|---|
-| All seven | `name` | ITEM.Name | I | Required item name | Core/Create |
-| All seven | `img`, `sort`, `system.identifier` | ITEM.Icon, Sort, Identifier | E | Supplied icon wins over automatic selection; sort integer 0 | Explicit/Create |
-| All seven | `system.source.{book,page,custom,license,rules,revision}` | SOURCE.Book, Page, Custom, License, Rules, Revision | E | Strings; revision is numeric, native default 1 | Explicit/Create |
-| All seven | `system.description.{value,chat}` | DESCRIPTION.Description; CHAT_FLAVOR.Chat Description | I+E | HTML/text; native null retained | Core/Explicit |
+| All eight | `name` | ITEM.Name | I | Required item name | Core/Create |
+| All eight | `img`, `sort`, `system.identifier` | ITEM.Icon, Sort, Identifier | E | Supplied icon wins over automatic selection; sort integer 0 | Explicit/Create |
+| All eight | `system.source.{book,page,custom,license,rules,revision}` | SOURCE.Book, Page, Custom, License, Rules, Revision | E | Strings; revision is numeric, native default 1 | Explicit/Create |
+| All eight | `system.description.{value,chat}` | DESCRIPTION.Description; CHAT_FLAVOR.Chat Description | I+E | HTML/text; native null retained | Core/Explicit |
 | Physical six | `system.quantity`, `system.rarities[]` | INVENTORY.Quantity; ITEM.Rarities | I | Rarities list, omitted [common], [] mundane; legacy Rarity accepted. Quantity non-negative integer, default 1; Container fixes 1 and export omits Quantity | Core |
 | Physical six | `system.weight.{value,units}`, `system.price.{value,denomination}` | COST_AND_WEIGHT.Weight Value, Weight Units, Price Value, Price Denomination | I | Non-negative decimal values; unit/currency IDs | Core/Create |
 | Physical six | `system.identified`, `system.unidentified.{name,description}` | INVENTORY.Identified; UNIDENTIFIED_DESCRIPTION.Unidentified Name, Unidentified Description | I | Identified defaults true | Core/Create |
 | Equippable five | `system.{attunement,attuned,equipped}` | ATTUNEMENT.Attunement, Attuned; INVENTORY.Equipped | I+E | Weapon, Equipment, Consumable, Tool, Container. Requirement none/required/optional is separate from current attuned state | Explicit/Create |
+| Physical six | `system.container` | INVENTORY.Container; CONTAINER.CONTENTS[] | I | A same-batch container name binds at parse time; a container Item UUID (or a container dropped onto the reference) resolves against the destination collection; nested CONTENTS entries are placed without the key. Contents stay in the container's collection and folder, at most five containers deep; the builder never writes it from text and import fails closed when the container is missing or in another collection. Export nests world/Actor contents under CONTENTS and names same-batch containers | Explicit/Live |
 | Physical six | `system.properties[mgc,gear]` | PROPERTIES.Magical, NPC Equipment | I+E | NPC Equipment is native `gear`, shown for NPC inventory; retained elsewhere. False stays false even with a stored magic bonus | Explicit |
+| Feat | `system.type.{value,subtype}` | ITEM.Feature Type, Feature Subtype | I | dnd5e featureTypes identifiers; unknown values are stored with a warning and labeled as a generic Feature; blank allowed | Explicit/Create |
+| Feat | `system.requirements` | ITEM.Requirements | E | Free text; `n/a` stores an empty string | Explicit/Create |
+| Feat | `system.prerequisites.{level,items[],repeatable}` | PREREQUISITES.Level, Items, Repeatable | E | Nullable non-negative integer; `identifier` or `type:identifier` list; boolean default false | Explicit/Create |
+| Feat | `system.properties[mgc,trait]` | PROPERTIES.Magical, Passive Trait | I+E | `gear` is not a valid feat property; false removes only that property | Explicit/Create |
+| Feat | `system.enchant.{max,period}` | ENCHANTMENT.Max, Period | E | Deterministic formula; period `sr`, `lr`, `atwill` or blank (unknown values warn); shown only for infusion/rune subtypes, retained otherwise | Explicit/Create |
+| Feat | `system.cover`, `system.crewed` | VEHICLE_PROPERTIES.Cover, Crewed | E | Cover labels or decimal 0..1, nullable; crewed boolean with no native sheet control; retained for every feature type | Explicit/Create |
+| Feat | `system.advancement` | ADVANCEMENT[] | I | List of one-root entries keyed by `Advancement ID` at build time (allocated when omitted); common keys Level, Name, Hint, Icon, Class Restriction. Unknown or class-only types (HitPoints, Size, Subclass) fail parse; export of an unmapped native type fails with `ITEM_EXPORT_UNSUPPORTED_ADVANCEMENT` | Explicit/Create |
+| Feat | AbilityScoreImprovement `configuration.{points,cap,max,locked[],fixed.{ability},recommendation}` | ADVANCEMENT[].ABILITY_SCORE_IMPROVEMENT.Points, Cap, Max, Locked, FIXED[].Ability/Value, RECOMMENDATION.UUID | I | Integers; FIXED also accepts a compact `{ str: 1 }` mapping; RECOMMENDATION is a feat Item reference | Explicit/Create |
+| Feat | ItemGrant `configuration.{items[].uuid/optional/sort,optional,sorting,spell}` | ADVANCEMENT[].GRANT_ITEMS.ITEMS[].UUID/Optional/Sort, Optional, Sorting, SPELL.* | I | ITEMS entries are Item references (UUID, Name, Identifier, Type); SPELL.Ability/Method/Prepared/Uses Max/Uses Per/Require Slot map to the spell configuration | Explicit/Create |
+| Feat | ItemChoice `configuration.{allowDrops,sorting,type,choices.{level},pool[],restriction,spell}` | ADVANCEMENT[].CHOOSE_ITEMS.Allow Drops, Sorting, Type, CHOICES[].Level/Count/Replacement, POOL[].UUID/Sort, RESTRICTION.Level/List/School/Type/Subtype, SPELL.* | I | CHOICES is a list keyed by Level (a level-keyed mapping is accepted); POOL entries are Item references | Explicit/Create |
+| Feat | ModifyItem `configuration.changes[].{_id,uuid,identifiers[]}` | ADVANCEMENT[].MODIFY_ITEMS.CHANGES[].Effect ID, EFFECT.UUID, Identifiers | I | Effect ID names an enchantment effect on this feature; EFFECT is a standalone ActiveEffect reference; each change needs one of them | Explicit/Create |
+| Feat | ScaleValue `configuration.{identifier,type,distance.units,scale.{level}}` | ADVANCEMENT[].SCALE_VALUE.Identifier, Type, Distance Units, SCALE[].Level/Value/Dice Count/Die Denomination/Modifiers/Period | I | SCALE is a list keyed by Level; dice entries use Dice Count/Die Denomination/Modifiers, usage entries Value/Period, other types Value | Explicit/Create |
+| Feat | Trait `configuration.{mode,allowReplacements,grants[],choices[].count/pool[]}` | ADVANCEMENT[].TRAIT.Mode, Allow Replacements, Grants, CHOICES[].Count/Pool | I | Trait keys follow `<trait>:<category>[:<child>]`; spelled-out categories (weapon:martial) warn with the dnd5e identifier | Explicit/Create |
+| Feat | advancement references | ITEMS[], POOL[], RECOMMENDATION, EFFECT `UUID`/`Name`/`Identifier`/`Type` | I | A UUID is validated as written (world or compendium, not embedded); a unique Name/Identifier match resolves automatically; ambiguous or missing references get a drop zone and block import until resolved | Explicit/Live |
 | Weapon | `system.type.{value,baseItem}` | ITEM.Weapon Type, Base Weapon | I | Existing subtype/base-weapon IDs | Core |
 | Weapon | `system.properties[ada,amm,fin,fir,foc,hvy,lgt,lod,rch,rel,ret,sil,spc,thr,two,ver]` | PROPERTIES named weapon checkboxes | I | Existing full template lists every property; false defaults | Core |
 | Weapon | `system.range.{value,long,reach,units}` | RANGE.Range Normal, Range Long, Reach, Range Units | I+E | Non-negative decimals; retain hidden reach/ranged values | Explicit/Create |
@@ -131,20 +151,20 @@ Tests:
 | Spell | `system.duration.expiry` | DURATION.Expiry | E | Nullable native expiry ID | Explicit/Create |
 | Spell | `system.target.affects.{type,count,choice,special}` | TARGETS.Type, Count, Choice, Special | I+E | Count formula; preserve other values when Type is empty | Explicit/Create |
 | Spell | `system.target.template.{type,count,size,width,height,units,contiguous,stationary}` | AREA.Shape, Count, Size, Width, Height, Units, Contiguous, Stationary | I+E | Count/dimensions formulas; preserve inactive dimensions and empty-shape settings | Explicit/Create |
-| Activity-capable five | `system.uses.{spent,max,recovery[].period,recovery[].type,recovery[].formula}` | USAGE.Uses Spent, Uses Max; RECOVERY[].Period, Type, Formula | I | Weapon, Equipment, Consumable, Tool, Spell. Spent integer, deterministic max/recovery formulas with limits above; Uses Current requires a literal maximum | Core |
+| Activity-capable six | `system.uses.{spent,max,recovery[].period,recovery[].type,recovery[].formula}` | USAGE.Uses Spent, Uses Max; RECOVERY[].Period, Type, Formula | I | Weapon, Equipment, Consumable, Tool, Spell, Feat. Spent integer, deterministic max/recovery formulas with limits above; Uses Current requires a literal maximum | Core |
 | Consumable | `system.uses.autoDestroy` | USAGE.Destroy on Empty | I | Boolean | Core |
-| Activity-capable five | `system.activities` | Activities[] with one ACTIVITY_* or EFFECT root per entry | A | Active companion requires both strict schema 4 capabilities; legacy descriptor payloads 1/2/3 remain readable | Attachments |
-| All seven | `effects` | effects[]; activity APPLIED_EFFECTS[] | A | Loot/Container accept passive effects only; see Activity/Effect reference | Attachments |
+| Activity-capable six | `system.activities` | Activities[] with one ACTIVITY_* or EFFECT root per entry | A | Active companion requires both strict schema 5 capabilities; legacy descriptor payloads 1/2/3/4 remain readable | Attachments |
+| All eight | `effects` | effects[]; activity APPLIED_EFFECTS[] | A | Loot/Container accept passive effects only; see Activity/Effect reference | Attachments |
 
 ## Explicit exclusions and metadata
 
 | Field / relationship | Classification and reason |
 |---|---|
-| Item `_id`, `type` | Creation identity: Item ID is allocated by Foundry; type is selected by the seven YAML roots |
+| Item `_id`, `type` | Creation identity: Item ID is allocated by Foundry; type is selected by the eight YAML roots |
 | `folder`, `ownership`, `_stats`, document pack/sheet configuration | Internal/document-management metadata, outside item mechanics/forms in this import contract |
-| `system.container`, Container contents | Deferred container placement/relationships |
+| Compendium container contents in a single export | Pack contents load asynchronously; export packs as batches, where contained Items keep INVENTORY.Container UUID references |
 | `system.crew.value[]` | Deferred actor crew assignments; capacity `crew.max` is covered |
-| Additional Item types / advancement models / Order or Teleport activities / Condition effects | Deferred YAML import support; the read-only native catalog may describe these without adding new item or activity roots |
+| Additional Item types (class, subclass, race, background, facility) and their HitPoints, Size and Subclass advancement; the Order activity | Deferred YAML import support; the read-only native catalog may describe these without adding new item or activity roots. Feature advancement uses the six feat-valid types above |
 | Container `system.quantity` editing | Current builder fixes quantity at 1; canonical export omits Quantity. Other native quantities are not preserved |
 | Loot equipped/attunement state | Not native Loot fields; omitted from the Loot reference |
 | Recovery with empty/zero maximum | Existing parser imports recovery only with a positive literal maximum or a formula maximum |
@@ -173,7 +193,7 @@ The dated sections below retain the earlier 5.3.3 baseline as historical evidenc
 
 At that date, the full references were updated to use canonical labels and documented parser value types, including deterministic Uses Max formulas, current Consumable Magic Bonus, typed inline effects and explicit damage. That guidance recorded the then-existing Container quantity and Tool proficiency limits. Schema 4 now accepts Tool proficiency 1.5; the Container quantity limit remains.
 
-The source-only completeness check covers all seven Item references; the companion check covers 24 Base/MIDI activity and effect references. These checks run inside the ordinary explicit YAML suite and fail missing canonical fields or ambiguous examples. Coverage is against declared importer mappings, with named structural alternatives, rather than a claim that every native field or combination is supported.
+The source-only completeness check now covers all eight Item references (seven at that date); the companion check covers 24 Base/MIDI activity and effect references. These checks run inside the ordinary explicit YAML suite and fail missing canonical fields or ambiguous examples. Coverage is against declared importer mappings, with named structural alternatives, rather than a claim that every native field or combination is supported.
 
 Checks at that date: Item offline 146/146 and live 187/187; Activity offline 108/108 and live 256/256. Live checks created no world documents. Source-only records: `docs/verification-template-completeness.json` and `tests/README.md`; these are excluded from the customer package.
 

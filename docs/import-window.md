@@ -1,6 +1,6 @@
 # Using the Item Importer window
 
-This guide covers the unreleased window improvements. Older screenshots may show **Parse** instead of **Preview**, or an always-visible normalized YAML panel. Item Importer remains free and standalone with its existing supported Item types.
+This guide covers the unreleased window improvements. Older screenshots may show **Parse** instead of **Preview**, or an always-visible normalized YAML panel. Item Importer remains free and standalone with its eight supported Item types, including Features.
 
 ## Prepare, preview and import
 
@@ -27,7 +27,13 @@ The optional second editor is useful when starting with prose: it lets you inspe
 
 **Import options** groups Auto-parse, Compare after import, identification, icons, image selection and available automation preferences. The image selection mode appears when **Match compendium icons** is enabled. The optional random seed appears only for **Random top match**. Hiding those controls retains their values.
 
-**Add activities or effects** appears for a valid single-Item preview when the compatible premium Activity Importer companion is available. It does not appear for empty input or a batch. It returns attachment data to the Item preview; the normal **Import** action performs the write. Required references have contextual resolution controls, including Search and drag-and-drop when the companion provides them. Resolve ambiguous or missing links before importing.
+**Add activities or effects** appears for a valid single-Item preview when the compatible premium Activity Importer companion is available. It does not appear for empty input or a batch. It returns attachment data to the Item preview; the normal **Import** action performs the write. Activity references (the spells and Actors that Cast, Summon and Transform need) have contextual resolution controls, including Search and drag-and-drop, when the companion provides them. Resolve ambiguous or missing links before importing.
+
+## References and containers
+
+A Feature's granted items, choice pools and recommended items, and any Item's `INVENTORY.Container`, are document references that work without the companion. After a preview, the **References** section lists each one. A reference resolves on its own when its UUID is valid or exactly one world or compendium document matches its name or identifier. Anything missing or ambiguous shows a drop zone: pick a candidate from its list or drag the intended document from a compendium, the sidebar or an Actor onto it; **Clear** forgets the choice. **Resolve document references** runs the automatic matching again. **Import** stays disabled, and `api.import()` returns the missing references instead of creating the Item, until every reference is resolved. The generated YAML shows the resolved UUID beside the authored name.
+
+Container references are matched within the chosen destination only (the world's containers, the selected Actor's bags, or the selected compendium), because dnd5e keeps a container's contents in one collection; changing the destination resolves them again. A `CONTAINER` with nested `CONTENTS`, or an Item naming a container from the same paste, previews as a batch: children show **Inside <container>**, import in source order after their container, and are skipped with a message if the container is deselected or fails. Nothing nested is ever created at the top level.
 
 Warnings, errors, missing references and batch selection controls remain visible in both preview modes. Suggestions from natural text still require review; previewing does not execute macros, effects or MIDI-QOL workflows.
 

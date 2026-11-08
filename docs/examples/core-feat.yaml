@@ -1,0 +1,30 @@
+SCHEMA_VERSION: 6
+FEAT:
+  ITEM:
+    Name: Second Wind
+    Feature Type: class
+    Feature Subtype: n/a
+    Requirements: Fighter 1
+  PREREQUISITES:
+    Level: n/a
+    Items: []
+    Repeatable: false
+  PROPERTIES:
+    Magical: false
+    Passive Trait: false
+  USAGE:
+    Uses Spent: 0
+    Uses Max: 1
+  RECOVERY:
+    - Period: sr
+      Type: recoverAll
+  DESCRIPTION:
+    Description: >
+      <p>You have a limited well of stamina that you can draw on to protect yourself from harm.
+      On your turn, you can use a bonus action to regain hit points equal to
+      [[/heal 1d10 + @classes.fighter.levels]].</p>
+
+      <p>Once you use this feature, you must finish a short or long rest before you can use it again.</p>
+  CHAT_FLAVOR:
+    Chat Description: |
+      n/a

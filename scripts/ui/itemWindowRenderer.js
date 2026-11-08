@@ -6,6 +6,8 @@ import { formatItemRarities } from "../itemRarities.js";
  */
 
 import { ItemUtils } from "../itemUtils.js";
+import { isPhysicalItemType } from "../itemConfig.js";
+import { describeAdvancement } from "../itemAdvancement.js";
 import { localize } from "./itemWorkflowServices.js";
 
 /** Shorthand for HTML escaping */
@@ -21,7 +23,8 @@ const TYPE_ICONS = {
     tool: "fa-wrench",
     container: "fa-box-open",
     loot: "fa-gem",
-    spell: "fa-magic"
+    spell: "fa-magic",
+    feat: "fa-star"
 };
 
 /**
@@ -34,7 +37,23 @@ const DEFAULT_ICONS = {
     tool: "systems/dnd5e/icons/svg/items/tool.svg",
     container: "systems/dnd5e/icons/svg/items/container.svg",
     loot: "systems/dnd5e/icons/svg/items/loot.svg",
-    spell: "systems/dnd5e/icons/svg/items/spell.svg"
+    spell: "systems/dnd5e/icons/svg/items/spell.svg",
+    feat: "systems/dnd5e/icons/svg/items/feature.svg"
+};
+
+/** dnd5e 6.0.6 featureTypes labels for the preview */
+const FEATURE_TYPE_LABELS = {
+    background: "Background Feature", class: "Class Feature", monster: "Monster Feature",
+    race: "Species Feature", enchantment: "Enchantment", feat: "Feat", pietyTrait: "Piety Trait",
+    supernaturalGift: "Supernatural Gift", vehicle: "Vehicle Feature"
+};
+const FEATURE_SUBTYPE_LABELS = {
+    arcaneShot: "Arcane Shot", artificerInfusion: "Artificer Plan", channelDivinity: "Channel Divinity",
+    defensiveTactic: "Defensive Tactic", eldritchInvocation: "Eldritch Invocation",
+    elementalDiscipline: "Elemental Discipline", fightingStyle: "Fighting Style", huntersPrey: "Hunter's Prey",
+    ki: "Ki Ability", maneuver: "Maneuver", metamagic: "Metamagic Option", multiattack: "Multiattack",
+    pact: "Pact Boon", psionicPower: "Psionic Power", rune: "Rune", superiorHuntersDefense: "Superior Hunter's Defense",
+    general: "General", origin: "Origin", epicBoon: "Epic Boon", blessing: "Blessing", charm: "Charm"
 };
 
 /**
@@ -100,18 +119,29 @@ export function getQuickStats(item) {
     const hasCost = Number.isFinite(numericCost)
         ? numericCost > 0
         : typeof costDisplay === "string" && !!costDisplay.trim() && costDisplay.trim() !== "0";
-    if (item.type !== "spell" && hasCost) {
+    const physical = isPhysicalItemType(item.type);
+    if (physical && hasCost) {
         const denom = item.costDenomination || "gp";
         stats.push({ icon: "fa-coins", value: `${costDisplay} ${denom}`, label: "Cost" });
     }
 
-    if (item.type !== "spell" && item.weight > 0) {
+    if (physical && item.weight > 0) {
         const unitDisplay = item.weightUnits === "lb" ? "lb." : item.weightUnits;
         stats.push({ icon: "fa-weight-hanging", value: `${item.weight} ${unitDisplay}`, label: "Weight" });
     }
 
-    if (item.type !== "spell" && item.quantity > 1) {
+    if (physical && item.quantity > 1) {
         stats.push({ icon: "fa-layer-group", value: item.quantity, label: "Qty" });
+    }
+
+    if (item.type === "feat") {
+        const typeLabel = item.featureType
+            ? (FEATURE_TYPE_LABELS[item.featureType] ?? item.featureType)
+            : "Feature";
+        const subtypeLabel = item.featureSubtype
+            ? ` • ${FEATURE_SUBTYPE_LABELS[item.featureSubtype] ?? item.featureSubtype}`
+            : "";
+        stats.push({ icon: "fa-star", value: `${typeLabel}${subtypeLabel}`, label: "Feature" });
     }
 
     if (item.damage && item.damage.formula) {
@@ -297,6 +327,35 @@ export function getCombatProperties(item) {
         }
     }
 
+    // Feature properties. Prerequisite items, enchantment limits, and vehicle
+    // cover are explicit descriptors and appear under Stored Fields.
+    if (item.type === "feat") {
+        if (item.featureType) {
+            props.push({ label: "Feature Type", value: FEATURE_TYPE_LABELS[item.featureType] ?? item.featureType });
+        }
+        if (item.featureSubtype) {
+            props.push({ label: "Subtype", value: FEATURE_SUBTYPE_LABELS[item.featureSubtype] ?? item.featureSubtype });
+        }
+        const explicit = item.explicitSource?.system ?? {};
+        if (explicit.requirements) {
+            props.push({ label: "Requirements", value: explicit.requirements, fullWidth: true });
+        }
+        if (Number.isFinite(explicit.prerequisites?.level)) {
+            props.push({ label: "Prerequisite Level", value: String(explicit.prerequisites.level) });
+        }
+        if (item.passiveTrait) {
+            props.push({ label: "Passive Trait", value: "Yes" });
+        }
+        for (const entry of item.advancement ?? []) {
+            const described = describeAdvancement(entry);
+            props.push({
+                label: `Advancement: ${described.title}`,
+                value: `${described.level}${described.summary ? ` — ${described.summary}` : ""}`,
+                fullWidth: true
+            });
+        }
+    }
+
     return props;
 }
 
@@ -326,7 +385,7 @@ export function getSpecialProperties(item) {
         props.push({ label: "Recovery", value: recoveryText });
     }
 
-    if (item.type !== "spell" && item.attunementRequirement) {
+    if (isPhysicalItemType(item.type) && item.attunementRequirement) {
         props.push({ label: "Attunement", value: item.attunementRequirement, fullWidth: true });
     }
 
@@ -467,14 +526,15 @@ export function renderItemCard(item, result) {
     html += `<h3 class="ii-card-name">${esc(item.name)}</h3>`;
     html += `<div class="ii-card-subtitle">`;
     html += `<span class="ii-card-type-badge type-${esc(item.type)}"><i class="fas ${esc(typeIcon)}"></i> ${esc(formatType(item.type))}</span>`;
-    if (item.type !== "spell") {
+    const physicalCard = isPhysicalItemType(item.type);
+    if (physicalCard) {
         html += `<span class="ii-card-rarity rarity-${esc(item.rarity)}">${esc(formatItemRarities(item))}</span>`;
     }
 
     if (item.isMagical) {
         html += `<span class="ii-card-magical"><i class="fas fa-sparkles"></i> Magical</span>`;
     }
-    if (item.type !== "spell" && item.attunement && item.attunement !== "none" && item.attunement !== "") {
+    if (physicalCard && item.attunement && item.attunement !== "none" && item.attunement !== "") {
         html += `<span class="ii-card-attunement"><i class="fas fa-link"></i> Attunement</span>`;
     }
 
@@ -582,6 +642,9 @@ export function renderItemCard(item, result) {
         html += `</div></div>`;
     }
 
+    // References Section (advancement grants, container placement)
+    html += renderReferencesSection(item);
+
     // Issues Section
     const allIssues = collectReviewMessages(result);
     if (allIssues.length > 0) {
@@ -671,7 +734,7 @@ export function renderBatchSummary(results, selectedItems) {
 
         results.successes.forEach((res, index) => {
             const icon = getPreviewIcon(res.item);
-            const hasUnresolvedUuids = !!res.item?._hasUnresolvedUuids;
+            const hasUnresolvedUuids = !!res.item?._hasUnresolvedUuids || !!res.item?._hasUnresolvedReferences;
             const isSelected = !hasUnresolvedUuids && selectedItems.has(index);
             const selectionClass = hasUnresolvedUuids ? " uuid-blocked" : " selectable";
             const duplicateMode = ["create", "update", "merge", "skip"].includes(res._duplicateMode) ? res._duplicateMode : "";
@@ -683,8 +746,9 @@ export function renderBatchSummary(results, selectedItems) {
         </div>
         <div class="ii-batch-item-info">
           <div class="ii-batch-item-name">${esc(res.item.name)}</div>
-          <div class="ii-batch-item-type">${esc(formatType(res.item.type))}${res.item.type === "spell" ? "" : ` &bull; ${esc(formatItemRarities(res.item))}`}</div>
-          ${hasUnresolvedUuids ? '<div class="ii-parse-warning">Resolve inline activity UUIDs to select this item.</div>' : ""}
+          <div class="ii-batch-item-type">${esc(formatType(res.item.type))}${isPhysicalItemType(res.item.type) ? ` &bull; ${esc(formatItemRarities(res.item))}` : ""}</div>
+          ${res.item.containerRef ? `<div class="ii-batch-item-container"><i class="fas fa-box-open"></i> ${esc(describeContainerPlacement(res.item.containerRef))}</div>` : ""}
+          ${hasUnresolvedUuids ? '<div class="ii-parse-warning">Resolve inline activity UUIDs and document references to select this item.</div>' : ""}
           <label class="ii-entry-mode-label">
             ${esc(localize("II.Batch.DuplicatePolicy", "Duplicate policy"))}
             <select class="ii-entry-mode" data-index="${index}" aria-label="${esc(localize("II.Batch.DuplicatePolicyFor", "Duplicate policy for {name}", { name: res.item.name }))}">
@@ -723,18 +787,18 @@ export function renderBatchSummary(results, selectedItems) {
         html += `</ul></div></div>`;
     }
 
-    // UUID Resolution Section for batch items that have unresolved UUIDs
+    // Resolution section for batch items with unresolved activity UUIDs or document references
     const itemsWithUuids = getItemsNeedingUuidResolution(results.successes);
     if (itemsWithUuids.length > 0) {
         html += `<div class="ii-section">
       <div class="ii-section-header">
         <i class="fas fa-crosshairs ii-section-icon" style="color: #1565c0;"></i>
-        <span class="ii-section-title">UUID Resolution (${itemsWithUuids.length} item${itemsWithUuids.length !== 1 ? 's' : ''} need attention)</span>
+        <span class="ii-section-title">References (${itemsWithUuids.length} item${itemsWithUuids.length !== 1 ? 's' : ''} need attention)</span>
         <i class="fas fa-chevron-down ii-section-toggle"></i>
       </div>
       <div class="ii-section-content" style="display: block;">
         <p style="margin: 0 0 0.75em; font-size: 0.85em; opacity: 0.8;">
-          The following items have activities that reference spells or actors. Drag the appropriate documents onto the drop zones below.
+          The following items link to other documents: activity spells or actors, advancement grants, or a parent container. Unique names resolve automatically; drag the intended document onto a reference to choose or override it.
         </p>`;
 
         for (const { index, item } of itemsWithUuids) {
@@ -742,7 +806,8 @@ export function renderBatchSummary(results, selectedItems) {
           <h4 style="margin: 0.5em 0 0.25em; font-size: 0.95em;">
             <i class="fas fa-box" style="margin-right: 4px; opacity: 0.6;"></i>${esc(item.name)}
           </h4>`;
-            html += renderParsedActivityCards(item._parsedActivityResults, index);
+            if (item._parsedActivityResults && item._hasUnresolvedUuids) html += renderParsedActivityCards(item._parsedActivityResults, index);
+            html += renderReferenceZones(item, index);
             html += `</div>`;
         }
 
@@ -797,7 +862,7 @@ export function setActivityRenderer(renderer) {
 }
 
 /**
- * Get batch items that have pre-parsed activities with unresolved UUIDs.
+ * Get batch items that have unresolved companion UUIDs or pending document references.
  * @param {Array<Object>} successes - Array of batch parse results
  * @returns {Array<{index: number, item: Object}>}
  */
@@ -806,9 +871,97 @@ function getItemsNeedingUuidResolution(successes) {
     const items = [];
     for (let i = 0; i < successes.length; i++) {
         const item = successes[i].item;
-        if (item?._parsedActivityResults && item._hasUnresolvedUuids) {
+        const unresolvedUuids = item?._parsedActivityResults && item._hasUnresolvedUuids;
+        const pendingReferences = (item?.references ?? []).some(reference => reference.status !== "resolved");
+        if (unresolvedUuids || pendingReferences) {
             items.push({ index: i, item });
         }
     }
     return items;
+}
+
+// ==========================================
+// Document References (advancement grants, container placement)
+// ==========================================
+
+const REFERENCE_STATUS_LABELS = {
+    pending: "Not resolved yet",
+    unresolved: "No match",
+    ambiguous: "Several matches",
+    invalid: "Invalid",
+    resolved: "Resolved"
+};
+
+/**
+ * Render the Item Importer's own reference drop zones. Every reference is a zone so a
+ * drop can override an automatic match; pending ones carry `ii-ref-pending`.
+ * @param {Object} item - Parsed item with `references`
+ * @param {number|null} [itemIndex=null] - Batch index, or null for the single-item card
+ * @returns {string} HTML string
+ */
+export function renderReferenceZones(item, itemIndex = null) {
+    const references = item?.references ?? [];
+    if (!references.length) return "";
+    const scope = itemIndex === null || itemIndex === undefined ? "" : ` data-item-index="${itemIndex}"`;
+    let html = `<div class="ii-ref-list">`;
+    for (const reference of references) {
+        const status = REFERENCE_STATUS_LABELS[reference.status] ? reference.status : "pending";
+        const pending = status !== "resolved";
+        const accept = reference.query?.documentName || "Item";
+        const types = reference.query?.itemTypes?.length ? ` (${reference.query.itemTypes.join(", ")})` : "";
+        const article = /^[aeiou]/i.test(accept) ? "an" : "a";
+        let state;
+        if (status === "resolved") {
+            state = `<span class="ii-ref-resolved-name"><i class="fas fa-check"></i>${esc(reference.resolvedName || reference.uuid || "")}</span>
+            <code class="ii-ref-uuid">${esc(reference.uuid || "")}</code>`;
+        } else if (status === "ambiguous") {
+            const candidates = reference.candidates ?? [];
+            state = `<select class="ii-ref-candidates" aria-label="${esc(`Choose the document for ${reference.label}`)}">
+              <option value="">${esc(`${candidates.length} matches: choose one or drop a document`)}</option>
+              ${candidates.map(candidate => `<option value="${esc(candidate.uuid)}">${esc(candidate.name)}${candidate.type ? ` (${esc(candidate.type)})` : ""} — ${esc(candidate.location || candidate.pack || "World")}</option>`).join("")}
+            </select>`;
+        } else {
+            state = `<span class="ii-ref-hint"><i class="fas fa-hand-point-down"></i>Drop ${article} ${esc(accept)}${esc(types)} here${reference.reason ? ` — ${esc(reference.reason)}` : ""}</span>`;
+        }
+        html += `<div class="ii-ref-dropzone ii-ref-${esc(status)}${pending ? " ii-ref-pending" : ""}" data-reference-id="${esc(reference.id)}"${scope}
+          data-accept-type="${esc(accept)}" data-status="${esc(status)}" title="${esc(`${REFERENCE_STATUS_LABELS[status]}. Drop ${article} ${accept}${types} to set this reference.`)}">
+          <span class="ii-ref-label">${esc(reference.label)}</span>
+          ${state}
+          ${reference.uuid ? `<button type="button" class="ii-ref-clear" title="Clear this reference" aria-label="${esc(`Clear ${reference.label}`)}">&times;</button>` : ""}
+        </div>`;
+    }
+    return html + `</div>`;
+}
+
+/** One line describing where a parsed item is placed. */
+function describeContainerPlacement(containerRef) {
+    if (!containerRef) return "";
+    if (containerRef.kind === "batch") return `Inside "${containerRef.parentName}" (this batch)`;
+    if (containerRef.uuid) return `Inside an existing container (${containerRef.uuid})`;
+    return `Inside "${containerRef.value}" (resolve the container reference)`;
+}
+
+/**
+ * Single-item card section listing every document reference with its drop zone,
+ * plus the container placement when the item sits inside a batch container.
+ * @param {Object} item - Parsed item
+ * @returns {string} HTML string
+ */
+function renderReferencesSection(item) {
+    const references = item?.references ?? [];
+    const placement = item?.containerRef?.kind === "batch" ? describeContainerPlacement(item.containerRef) : "";
+    if (!references.length && !placement) return "";
+    const pending = references.filter(reference => reference.status !== "resolved").length;
+    return `<div class="ii-section">
+      <div class="ii-section-header">
+        <i class="fas fa-link ii-section-icon"></i>
+        <span class="ii-section-title">References (${references.length}${pending ? `, ${pending} need attention` : ""})</span>
+        <i class="fas fa-chevron-down ii-section-toggle"></i>
+      </div>
+      <div class="ii-section-content"${pending ? ' style="display: block;"' : ""}>
+        ${placement ? `<p class="ii-ref-help"><i class="fas fa-box-open"></i> ${esc(placement)}</p>` : ""}
+        ${references.length ? `<p class="ii-ref-help">Linked documents are matched by UUID, name, or identifier in the world and compendia. Drag a document onto a reference to choose or override it; import waits until every reference resolves.</p>` : ""}
+        ${renderReferenceZones(item)}
+      </div>
+    </div>`;
 }

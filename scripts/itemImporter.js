@@ -218,7 +218,7 @@ function showWelcomeMessage() {
 }
 
 /** Resolve a world Item from Foundry v14 or legacy context-menu arguments. */
-const EXPORTABLE_ITEM_TYPES = new Set(["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"]);
+const EXPORTABLE_ITEM_TYPES = new Set(["weapon", "equipment", "consumable", "tool", "loot", "container", "spell", "feat"]);
 
 function isExportableItem(item) {
     return item?.documentName === "Item" && EXPORTABLE_ITEM_TYPES.has(item.type);

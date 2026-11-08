@@ -11,7 +11,7 @@
  */
 
 import { ItemUtils } from "./itemUtils.js";
-import { MODULE_NAME } from "./itemConfig.js";
+import { MODULE_NAME, isPhysicalItemType } from "./itemConfig.js";
 import { getParserForText } from "./strictItemParsers/strictParserDispatcher.js";
 import { ItemRegex } from "./itemRegex.js";
 import jsyaml from "./vendor/js-yaml.mjs";
@@ -23,6 +23,46 @@ function getDefaultIdentifiedSetting() {
   if (typeof game === "undefined") return true;
   return game.settings?.get?.(MODULE_NAME, "createIdentified") ?? true;
 }
+
+// Feature header vocabulary for natural text. Patterns are tested against a
+// header line (the `Type:` line, line 2, or line 3) after a leading
+// "Nth-level" prefix is removed. Specific subtypes come before generic words.
+// Generic single words (feat, feature, trait, blessing, charm) must be the
+// whole header, optionally followed by a parenthetical, so prose never matches.
+const FEATURE_HEADERS = [
+  { pattern: /^general\s+feat\b/i, type: "feat", subtype: "general" },
+  { pattern: /^origin\s+feat\b/i, type: "feat", subtype: "origin" },
+  { pattern: /^epic\s+boon(?:\s+feat)?\b/i, type: "feat", subtype: "epicBoon" },
+  { pattern: /^fighting\s+style\s+feat\b/i, type: "feat", subtype: "fightingStyle" },
+  { pattern: /^fighting\s+style\b/i, type: "class", subtype: "fightingStyle" },
+  { pattern: /^(?:eldritch\s+)?invocation\b/i, type: "class", subtype: "eldritchInvocation" },
+  { pattern: /^metamagic\b/i, type: "class", subtype: "metamagic" },
+  { pattern: /^(?:battle\s*master\s+)?maneuver\b/i, type: "class", subtype: "maneuver" },
+  { pattern: /^arcane\s+shot\b/i, type: "class", subtype: "arcaneShot" },
+  { pattern: /^channel\s+divinity\b/i, type: "class", subtype: "channelDivinity" },
+  { pattern: /^(?:artificer\s+)?infusion\b/i, type: "class", subtype: "artificerInfusion" },
+  { pattern: /^elemental\s+discipline\b/i, type: "class", subtype: "elementalDiscipline" },
+  { pattern: /^psionic\s+power\b/i, type: "class", subtype: "psionicPower" },
+  { pattern: /^pact\s+boon\b/i, type: "class", subtype: "pact" },
+  { pattern: /^hunter['’]?s\s+prey\b/i, type: "class", subtype: "huntersPrey" },
+  { pattern: /^defensive\s+tactic\b/i, type: "class", subtype: "defensiveTactic" },
+  { pattern: /^superior\s+hunter['’]?s\s+defense\b/i, type: "class", subtype: "superiorHuntersDefense" },
+  { pattern: /^supernatural\s+gift\b/i, type: "supernaturalGift", subtype: "" },
+  { pattern: /^blessing$/i, type: "supernaturalGift", subtype: "blessing" },
+  { pattern: /^charm$/i, type: "supernaturalGift", subtype: "charm" },
+  { pattern: /^piety\s+trait\b/i, type: "pietyTrait", subtype: "" },
+  { pattern: /^(?:species|racial|race|lineage)\s+(?:trait|feature)\b/i, type: "race", subtype: "" },
+  { pattern: /^monster\s+(?:feature|trait|ability|action)\b/i, type: "monster", subtype: "" },
+  { pattern: /^background\s+feature\b/i, type: "background", subtype: "" },
+  { pattern: /^vehicle\s+(?:feature|trait|action)\b/i, type: "vehicle", subtype: "" },
+  { pattern: /^(?:class|subclass|archetype)\s+feature\b/i, type: "class", subtype: "" },
+  { pattern: /^feat$/i, type: "feat", subtype: "" },
+  { pattern: /^(?:feature|trait)$/i, type: "", subtype: "" }
+];
+// "3rd-level Fighter feature" or "Fighter feature": a class feature whose
+// requirement is the class (and level) named in the header.
+const CLASS_FEATURE_HEADER = /^(?:(?<level>\d+)(?:st|nd|rd|th)[- ]level\s+)?(?<class>[A-Za-z][A-Za-z']+(?:\s+[A-Za-z][A-Za-z']+)?)\s+feature$/i;
+const GENERIC_HEADER_WORDS = /^(?:class|subclass|archetype|background|monster|vehicle|species|racial|race|lineage)$/i;
 
 function inferVersatileFormula(formula) {
   const match = String(formula ?? "").match(/^1d(4|6|8|10)$/i);
@@ -40,6 +80,7 @@ export class NaturalItemParser {
     this.confidence = {}; // Track confidence scores for extracted fields
     this.trace = null;
     this.extractedQuantity = null;
+    this.featureDetection = null;
   }
 
   // Base armor data lookup table for inheriting properties
@@ -141,6 +182,9 @@ export class NaturalItemParser {
     // Detect input format for better parsing
     this.inputFormat = this.detectInputFormat(this.text);
     this.trace.inputFormat = this.inputFormat;
+    this.trace.featureDetection = this.featureDetection
+      ? { ...this.featureDetection, headerLineIndexes: [...this.featureDetection.headerLineIndexes] }
+      : null;
     ItemUtils.log(`NaturalItemParser: Detected format: ${this.inputFormat}`);
 
     ItemUtils.log("NaturalItemParser: Starting natural language parsing...");
@@ -182,7 +226,9 @@ export class NaturalItemParser {
 
       const automation = synthesizeNaturalAutomation(this.text, {
         name: extracted.name,
-        itemType: extracted.itemType
+        itemType: extracted.itemType,
+        // A feature's "Recharge N-6" already became native uses/recovery.
+        recoveryHandled: extracted.featureUses?.recovery?.Period === "recharge"
       });
       this.trace.automation = {
         ...automation,
@@ -261,6 +307,11 @@ export class NaturalItemParser {
       return "dndbeyond";
     }
 
+    // Feature (dnd5e feat) text is recognised from header-level signals only,
+    // so item detection below is untouched whenever none of them fire.
+    this.featureDetection = this.detectFeature(text);
+    if (this.featureDetection) return "feature";
+
     // SRD/Statblock format: Item name on first line, then type line in format "Category (details), rarity"
     if (lines.length >= 2) {
       const secondLine = lines[1];
@@ -281,6 +332,201 @@ export class NaturalItemParser {
 
     // Default to freeform (paragraph description)
     return "freeform";
+  }
+
+  /**
+   * Detect dnd5e feature (feat Item) text from header-level signals only.
+   * Signals: feature vocabulary on a `Type:` line, line 2 or line 3; a
+   * `Prerequisite:` line or parenthetical; stat-block markers on line 1
+   * ("(3/Day)", "(Recharge 5-6)", "Multiattack", "Legendary Resistance");
+   * or a 2024 "Level N: Name" header. Returns null when nothing fires.
+   * @param {string} text
+   * @returns {Object|null}
+   */
+  detectFeature(text) {
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) return null;
+
+    const detection = {
+      featureType: "",
+      featureSubtype: "",
+      requirements: null,
+      prerequisiteLevel: null,
+      inlineName: null,
+      inlineBody: null,
+      headerLineIndexes: new Set([0]),
+      confidence: 0,
+      signals: []
+    };
+    const raise = (confidence) => {
+      detection.confidence = Math.max(detection.confidence, confidence);
+    };
+    const hasVocabulary = () =>
+      detection.signals.includes("feature-vocabulary") || detection.signals.includes("class-feature-header");
+    // A header is short and is not a sentence.
+    const isHeaderCandidate = (line) => line.length <= 80 && !/[.!?]\s/.test(line);
+
+    const applyHeader = (line, index) => {
+      const value = line.replace(/^type\s*:\s*/i, "").trim();
+      if (!isHeaderCandidate(value)) return false;
+      const paren = value.match(ItemRegex.prerequisiteParenthetical);
+      const header = value.replace(/\s*\([^)]*\)\s*$/, "").trim();
+      const classMatch = header.match(CLASS_FEATURE_HEADER);
+      if (classMatch && !GENERIC_HEADER_WORDS.test(classMatch.groups.class)) {
+        detection.featureType = "class";
+        detection.requirements = classMatch.groups.level
+          ? `${classMatch.groups.class} ${classMatch.groups.level}`
+          : classMatch.groups.class;
+        detection.signals.push("class-feature-header");
+      } else {
+        const stripped = header.replace(/^\d+(?:st|nd|rd|th)[- ]level\s+/i, "");
+        const hit = FEATURE_HEADERS.find((entry) => entry.pattern.test(stripped));
+        if (!hit) return false;
+        detection.featureType = hit.type;
+        detection.featureSubtype = hit.subtype;
+        detection.signals.push("feature-vocabulary");
+      }
+      detection.headerLineIndexes.add(index);
+      raise(0.98);
+      if (paren) this.applyPrerequisiteText(detection, paren.groups.text);
+      return true;
+    };
+
+    // (a) A labelled `Type:` line anywhere.
+    const labeled = lines.findIndex((line) => /^type\s*:/i.test(line));
+    if (labeled >= 0) applyHeader(lines[labeled], labeled);
+
+    // (a)/(b) Lines 2 and 3: vocabulary header or `Prerequisite:` line.
+    for (const index of [1, 2]) {
+      if (lines[index] === undefined || detection.headerLineIndexes.has(index)) continue;
+      const prerequisite = lines[index].match(ItemRegex.prerequisiteLine);
+      if (prerequisite) {
+        this.applyPrerequisiteText(detection, prerequisite.groups.text);
+        detection.headerLineIndexes.add(index);
+        detection.signals.push("prerequisite-line");
+        raise(0.95);
+        continue;
+      }
+      if (!hasVocabulary()) applyHeader(lines[index], index);
+    }
+    // A prerequisite parenthetical on the name line ("Alert (Prerequisite: ...)").
+    const firstParen = lines[0].match(ItemRegex.prerequisiteParenthetical);
+    if (firstParen && !detection.signals.includes("prerequisite-line")) {
+      this.applyPrerequisiteText(detection, firstParen.groups.text);
+      detection.signals.push("prerequisite-parenthetical");
+      raise(0.95);
+    }
+
+    // (c) Stat-block markers on the first line.
+    const first = lines[0];
+    const inline = first.match(ItemRegex.inlineFeatureLine);
+    const firstHeader = inline
+      ? `${inline.groups.name}${inline.groups.paren ? ` (${inline.groups.paren})` : ""}`
+      : first;
+    if (
+      ItemRegex.usesPerDay.test(firstHeader) ||
+      ItemRegex.rechargeThreshold.test(firstHeader) ||
+      ItemRegex.rechargeAfterRest.test(firstHeader) ||
+      ItemRegex.multiattack.test(first)
+    ) {
+      detection.signals.push("stat-block-marker");
+      if (!detection.featureType) detection.featureType = "monster";
+      raise(0.95);
+      if (inline) {
+        detection.inlineName = inline.groups.name.trim();
+        detection.inlineBody = inline.groups.body.trim();
+      }
+    }
+    if (lines.some((line) => ItemRegex.legendaryMarker.test(line))) {
+      detection.signals.push("legendary-marker");
+      if (!detection.featureType) detection.featureType = "monster";
+      raise(0.95);
+      if (inline && !detection.inlineBody) {
+        detection.inlineName = inline.groups.name.trim();
+        detection.inlineBody = inline.groups.body.trim();
+      }
+    }
+
+    // (d) 2024 class feature header: "Level 5: Extra Attack".
+    const level2024 = first.match(ItemRegex.levelHeader2024);
+    if (level2024) {
+      detection.signals.push("level-header");
+      if (!detection.featureType) detection.featureType = "class";
+      detection.requirements ??= `Level ${level2024.groups.level}`;
+      detection.inlineName = level2024.groups.title.trim();
+      raise(0.9);
+    }
+
+    if (!detection.signals.length) return null;
+    ItemUtils.log("NaturalItemParser: Feature signals detected", detection.signals);
+    return detection;
+  }
+
+  /**
+   * Record prerequisite text on a feature detection and parse a level from it.
+   * @param {Object} detection
+   * @param {string} text
+   */
+  applyPrerequisiteText(detection, text) {
+    const cleaned = String(text ?? "").trim().replace(/[.;]\s*$/, "");
+    if (!cleaned) return;
+    detection.requirements = detection.requirements
+      ? `${detection.requirements}; ${cleaned}`
+      : cleaned;
+    const level = cleaned.match(ItemRegex.prerequisiteLevel);
+    if (level) {
+      const parsed = Number(level.groups.level ?? level.groups.ordinal);
+      if (Number.isSafeInteger(parsed) && parsed >= 0) detection.prerequisiteLevel = parsed;
+    }
+  }
+
+  /**
+   * Feature uses and recovery from stat-block and class-feature wording.
+   * The first matching pattern wins. Returns null when nothing is stated so
+   * USAGE and RECOVERY are omitted from the template.
+   * @param {string} text
+   * @returns {{max: number|string, recovery: Object}|null}
+   */
+  extractFeatureUses(text) {
+    const restPeriod = (rest) => (/short/i.test(rest) ? "sr" : "lr");
+    const recoverAll = (period) => ({ Period: period, Type: "recoverAll" });
+    const countWords = { once: 1, twice: 2, "three times": 3 };
+
+    let match = text.match(ItemRegex.usesPerDay);
+    if (match) {
+      this.confidence.uses = 0.95;
+      return { max: Number(match.groups.count), recovery: recoverAll("day") };
+    }
+    match = text.match(ItemRegex.rechargeThreshold);
+    if (match) {
+      this.confidence.uses = 0.95;
+      return { max: 1, recovery: { Period: "recharge", Type: "recoverAll", Formula: match.groups.threshold } };
+    }
+    match = text.match(ItemRegex.rechargeAfterRest);
+    if (match) {
+      this.confidence.uses = 0.95;
+      return { max: 1, recovery: recoverAll(restPeriod(match.groups.rest)) };
+    }
+    match = text.match(ItemRegex.profBonusTimes);
+    if (match) {
+      this.confidence.uses = 0.9;
+      return { max: "@prof", recovery: recoverAll(restPeriod(match.groups.rest)) };
+    }
+    match = text.match(ItemRegex.timesPerRest);
+    if (match) {
+      const raw = match.groups.count.toLowerCase();
+      const max = countWords[raw] ?? Number(raw.replace(/\s+times$/, ""));
+      if (Number.isSafeInteger(max) && max > 0) {
+        this.confidence.uses = 0.9;
+        return { max, recovery: recoverAll(restPeriod(match.groups.rest)) };
+      }
+    }
+    match = text.match(ItemRegex.untilRest);
+    if (match) {
+      this.confidence.uses = 0.9;
+      return { max: 1, recovery: recoverAll(restPeriod(match.groups.rest)) };
+    }
+    return null;
   }
 
   /**
@@ -306,7 +552,14 @@ export class NaturalItemParser {
       weight: this.extractWeight(text),
       description: this.extractDescription(text),
       quantity: this.extractQuantity(text),
-      uses: this.extractUses(text),
+      uses: itemType === "feat" ? null : this.extractUses(text),
+
+      // Feature-specific (from detectFeature and feature wording)
+      featureType: this.featureDetection?.featureType ?? null,
+      featureSubtype: this.featureDetection?.featureSubtype ?? null,
+      requirements: this.featureDetection?.requirements ?? null,
+      prerequisiteLevel: this.featureDetection?.prerequisiteLevel ?? null,
+      featureUses: itemType === "feat" ? this.extractFeatureUses(text) : null,
 
       // Weapon-specific
       weaponType: this.extractWeaponType(text),
@@ -425,21 +678,25 @@ export class NaturalItemParser {
 
     data.ITEM = {
       Name: extracted.name || "Unnamed Item",
-      Rarities: [extracted.rarity || "common"],
     };
 
-    data.INVENTORY = {
-      Quantity: extracted.quantity ?? 1,
-      Identified: getDefaultIdentifiedSetting(),
-      Equipped: false,
-    };
+    // Rarity, inventory, and cost/weight only exist on physical dnd5e types.
+    if (isPhysicalItemType(itemType)) {
+      data.ITEM.Rarities = [extracted.rarity || "common"];
 
-    data.COST_AND_WEIGHT = {
-      "Price Value": extracted.cost?.value || 0,
-      "Price Denomination": extracted.cost?.denomination || "gp",
-      "Weight Value": extracted.weight?.value || 0,
-      "Weight Units": extracted.weight?.units || "lb",
-    };
+      data.INVENTORY = {
+        Quantity: extracted.quantity ?? 1,
+        Identified: getDefaultIdentifiedSetting(),
+        Equipped: false,
+      };
+
+      data.COST_AND_WEIGHT = {
+        "Price Value": extracted.cost?.value || 0,
+        "Price Denomination": extracted.cost?.denomination || "gp",
+        "Weight Value": extracted.weight?.value || 0,
+        "Weight Units": extracted.weight?.units || "lb",
+      };
+    }
 
     data.DESCRIPTION = {
       Description: extracted.description || "No description available.",
@@ -476,6 +733,8 @@ export class NaturalItemParser {
         this.buildConsumableSections(extracted, data); break;
       case "equipment":
         this.buildEquipmentSections(extracted, data); break;
+      case "feat":
+        this.buildFeatSections(extracted, data); break;
       default:
         this.buildLootSections(extracted, data); break;
     }
@@ -591,6 +850,34 @@ buildWeaponSections(extracted, data) {
     data.PROPERTIES = {
       Magical: extracted.isMagical,
     };
+  }
+
+  /**
+   * Build feature-specific sections. Properties are never inferred from
+   * prose: rarity words such as "Legendary Action" must not mark a feature
+   * as magical. Uses and recovery are written only when the text states them.
+   */
+  buildFeatSections(extracted, data) {
+    data.ITEM["Feature Type"] = extracted.featureType || "n/a";
+    data.ITEM["Feature Subtype"] = extracted.featureSubtype || "n/a";
+    data.ITEM.Requirements = extracted.requirements || "n/a";
+
+    if (Number.isSafeInteger(extracted.prerequisiteLevel)) {
+      data.PREREQUISITES = { Level: extracted.prerequisiteLevel };
+    }
+
+    data.PROPERTIES = {
+      Magical: false,
+      "Passive Trait": false,
+    };
+
+    if (extracted.featureUses) {
+      data.USAGE = {
+        "Uses Spent": 0,
+        "Uses Max": extracted.featureUses.max,
+      };
+      data.RECOVERY = [extracted.featureUses.recovery];
+    }
   }
 
   /**
@@ -817,6 +1104,7 @@ buildWeaponSections(extracted, data) {
       tool: "TOOL",
       loot: "LOOT",
       container: "CONTAINER",
+      feat: "FEAT",
     };
     return keys[itemType] || "LOOT";
   }
@@ -848,6 +1136,14 @@ buildWeaponSections(extracted, data) {
       const labelMatch = name.match(/^(?:Name|Item):\s*(.+)/i);
       if (labelMatch) {
         name = labelMatch[1];
+      }
+    } else if (this.inputFormat === "feature") {
+      // Single-line stat-block traits and "Level N: Name" headers carry the
+      // name inside the first line; otherwise strip a label prefix.
+      if (this.featureDetection?.inlineName) {
+        name = this.featureDetection.inlineName;
+      } else {
+        name = name.replace(/^(?:name|feature|trait|feat)\s*:\s*/i, "");
       }
     }
 
@@ -918,6 +1214,14 @@ buildWeaponSections(extracted, data) {
   }
 
   guessItemType(text) {
+    // Feature signals were evaluated by detectInputFormat(); they take
+    // precedence over item keywords such as "weapon" or "shield" in prose.
+    if (this.featureDetection) {
+      ItemUtils.log("NaturalItemParser: Detected item type: feat", this.featureDetection.signals);
+      this.confidence.itemType = this.featureDetection.confidence;
+      return "feat";
+    }
+
     const lines = text
       .split("\n")
       .map((line) => line.trim())
@@ -1357,6 +1661,31 @@ buildWeaponSections(extracted, data) {
     let description = text;
     const lines = text.split("\n").map((l) => l.trim());
 
+    if (this.inputFormat === "feature") {
+      // Features keep every line except the recognised header lines (name,
+      // vocabulary/Type line, Prerequisite line). Blank lines are preserved so
+      // paragraphs survive. The item-metadata cleanup below is skipped because
+      // it deletes any line that starts with a word such as "weapon".
+      const detection = this.featureDetection;
+      if (detection?.inlineBody) {
+        description = detection.inlineBody;
+      } else {
+        const kept = [];
+        let seen = -1;
+        for (const line of lines) {
+          if (!line) {
+            kept.push(line);
+            continue;
+          }
+          seen += 1;
+          if (detection?.headerLineIndexes.has(seen)) continue;
+          kept.push(line);
+        }
+        description = kept.join("\n").trim();
+      }
+      return this.finishDescription(description);
+    }
+
     if (this.inputFormat === "statblock") {
       // Statblock: skip first 2 lines (name and type line), keep rest
       if (lines.length > 2) {
@@ -1398,6 +1727,14 @@ buildWeaponSections(extracted, data) {
       ""
     );
 
+    return this.finishDescription(description);
+  }
+
+  /**
+   * Shared description tail: whitespace cleanup, bullet trimming, and the
+   * short-text fallback with its confidence score.
+   */
+  finishDescription(description) {
     // Clean up extra whitespace
     description = description.replace(/\n{3,}/g, "\n\n").trim();
 
@@ -2765,6 +3102,7 @@ buildWeaponSections(extracted, data) {
     this.text = "";
     this.confidence = {};
     this.extractedQuantity = null;
+    this.featureDetection = null;
   }
 
   addError(message) {

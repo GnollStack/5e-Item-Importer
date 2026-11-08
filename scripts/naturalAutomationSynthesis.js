@@ -171,7 +171,9 @@ export function synthesizeNaturalAutomation(text, context = {}) {
   }
 
   const rechargePattern = /\b(?:recharge\s*(\d)\s*[-\u2013\u2014]\s*6|recharges?\s+on\s+(?:a\s+)?(?:roll\s+of\s+)?(\d)\s+(?:or|through|to|[-\u2013\u2014])\s*6)\b/gi;
-  for (const match of source.matchAll(rechargePattern)) {
+  // Features map "Recharge N-6" to native uses/recovery; skip the roll helper then.
+  const rechargeMatches = context.recoveryHandled ? [] : [...source.matchAll(rechargePattern)];
+  for (const match of rechargeMatches) {
     const threshold = Number(match[1] ?? match[2]);
     if (threshold < 2 || threshold > 6) continue;
     const evidence = sentenceAt(source, match.index ?? 0);

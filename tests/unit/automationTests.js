@@ -22,8 +22,8 @@ export async function runAutomationContractTests({ itemModule = false } = {}) {
     const results = [];
     const test = async (name, run) => { try { await run(); results.push({ name, passed: true }); }
         catch (error) { results.push({ name, passed: false, details: { error: error.message } }); } };
-    const types = itemModule ? ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"]
-        : ["attack", "save", "damage", "heal", "utility", "check", "cast", "enchant", "summon", "transform", "forward"];
+    const types = itemModule ? ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell", "feat"]
+        : ["attack", "save", "damage", "heal", "utility", "check", "cast", "enchant", "summon", "transform", "forward", "teleport"];
     const kind = itemModule ? "item" : "activity";
     const { prepareRecipeText } = await import("../../scripts/ui/recipeEditor.js");
     const applicationsBefore = foundry.applications;
@@ -103,7 +103,7 @@ export async function runAutomationContractTests({ itemModule = false } = {}) {
             assert(rows.length > 0 && !rows.some(row => row.label === "Unsupported data"), "Automation preview failed.");
         });
     }
-    for (const type of ["base", "enchantment"]) for (const empty of [true, false]) {
+    for (const type of ["base", "enchantment", "condition"]) for (const empty of [true, false]) {
         await test(`${type}: DAE application and expiry controls round trip (${empty})`, () => {
             const section = sample(automationSchema("effect", type), empty);
             const patch = parseAutomation(section, "effect", type);
@@ -140,7 +140,7 @@ export async function runAutomationContractTests({ itemModule = false } = {}) {
         const { itemToStrictYamlDocument } = await import("../../scripts/itemYamlExporter.js");
         const { extractExpectedItemProps, extractActualItemProps } = await import("../../scripts/ui/itemComparisonExtractor.js");
         for (const type of types) await test(`${type}: full Item integration import/export without companion`, async () => {
-            const input = { SCHEMA_VERSION: 4, [type.toUpperCase()]: { ITEM: { Name: "Automation fixture" },
+            const input = { SCHEMA_VERSION: 6, [type.toUpperCase()]: { ITEM: { Name: "Automation fixture" },
                 AUTOMATION: { "midi-qol": { flags: { onUseMacroName: "[postActiveEffects]Canary", noProvokeReaction: false } },
                     dae: { macro: { name: "Stored name", command: "// stored only", type: "script", scope: "global" } } } } };
             if (type === "tool") input.TOOL.ABILITY_CHECK = { Proficient: 1.5 };
@@ -157,7 +157,7 @@ export async function runAutomationContractTests({ itemModule = false } = {}) {
             const source = result.item.itemData;
             if (type === "tool") assert(source.system.proficient === 1.5, "Fractional proficiency lost.");
             const output = itemToStrictYamlDocument(source);
-            assert(output.SCHEMA_VERSION === 4, "Wrong output version.");
+            assert(output.SCHEMA_VERSION === 6, "Wrong output version.");
             assert(same(input[type.toUpperCase()].AUTOMATION, output[type.toUpperCase()].AUTOMATION), "Item integration data lost.");
             const rows = automationRows(source, "item", type);
             assert(same(rows, extractExpectedItemProps(result).filter(row => row.section === "Automation")), "Item expected comparison lost automation.");
@@ -190,6 +190,26 @@ export async function runAutomationContractTests({ itemModule = false } = {}) {
             assert(parsed.success, parsed.errors.join("; "));
             for (const path of ["macroData", "otherActivityId", "isOverTimeFlag", "overTimeProperties", "regionLight"])
                 assert(same(readPath(source, path), readPath(parsed.activityData, path)), "Lost " + path);
+        });
+        for (const type of types) await test(`${type}: MIDI 14.6.8 follow-up, status, region movement and teleport settings survive strict export`, () => {
+            const source = explicitActivitySource(type);
+            // MIDI 14.6.8 stores these defaults on every activity; strict export failed on them before review.
+            source.midiProperties = { ...(source.midiProperties ?? {}), followUp: false, followUpTargets: "default", followUpCondition: "",
+                targetMustBeSeen: false, statuses: [{ id: "poisoned", specialDuration: ["turnEnd"], onSave: true }] };
+            source.regionBehavior = { enabled: false, moveDistance: 0, moveDirection: "away", moveTiming: "start" };
+            if (type === "attack") source.ammunitionPerTarget = "default";
+            if (type === "teleport") source.midiTeleport = { movers: "default", plan: "button", blocked: "refuse", requireSight: false };
+            const descriptor = serializeActivityToStrictYaml(source, { includeLinkedEffects: false });
+            const parsed = parseAllBlocksYaml(yaml.dump(descriptor.rawData))[0];
+            assert(parsed.success, parsed.errors.join("; "));
+            for (const path of ["midiProperties.followUp", "midiProperties.followUpTargets", "midiProperties.followUpCondition",
+                "midiProperties.targetMustBeSeen", "midiProperties.statuses", "regionBehavior", ...(type === "attack" ? ["ammunitionPerTarget"] : []),
+                ...(type === "teleport" ? ["midiTeleport"] : [])])
+                assert(same(readPath(source, path), readPath(parsed.activityData, path)), "Lost " + path);
+        });
+        await test("Unreviewed MIDI activity fields still stop strict export", () => {
+            assert(/not a reviewed authored field/.test((() => { try { exportAutomation({ midiProperties: { laterField: false } }, "activity", "utility"); return ""; }
+                catch (error) { return error.message; } })()), "An unreviewed MIDI field was exported.");
         });
         await test("Complete DAE effect serialization and legacy alias conflict", () => {
             const source = { type: "base", name: "DAE fixture", system: { changes: [] }, flags: {

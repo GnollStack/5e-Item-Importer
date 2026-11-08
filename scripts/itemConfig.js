@@ -8,12 +8,21 @@ export const MODULE_NAME = MODULE_ID;
 export const MODULE_TITLE = "5e Item Importer";
 
 /** Valid YAML top-level item type keys for strict parser detection */
-export const YAML_ITEM_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER', 'SPELL'];
+export const YAML_ITEM_KEYS = ['WEAPON', 'EQUIPMENT', 'CONSUMABLE', 'TOOL', 'LOOT', 'CONTAINER', 'SPELL', 'FEAT'];
 
 /** Pre-compiled regexes for YAML key detection (avoids re-compilation per parse) */
 export const YAML_KEY_REGEXES = Object.fromEntries(
     YAML_ITEM_KEYS.map(key => [key, new RegExp(`^${key}:`, 'm')])
 );
+
+/**
+ * Item types whose dnd5e data model has no physical/identifiable fields
+ * (no quantity, price, weight, rarity, identified state, or unidentified text).
+ */
+export const NON_PHYSICAL_ITEM_TYPES = new Set(["spell", "feat"]);
+
+/** True when the dnd5e type carries inventory, price/weight, rarity, and identification fields. */
+export const isPhysicalItemType = type => !NON_PHYSICAL_ITEM_TYPES.has(type);
 
 /**
  * Register all module settings

@@ -122,6 +122,12 @@ function fixtures() {
       range: { value: 60, units: "ft" }, duration: { value: null, units: "inst" },
       target: { type: "creature", count: 1, choice: false, special: null },
       properties: ["vocal", "somatic"], description: "A deterministic spell fixture."
+    },
+    {
+      name: "Core Test Second Wind", type: "feat", featureType: "class", featureSubtype: "",
+      isMagical: false, passiveTrait: false, properties: [],
+      uses: { value: 0, max: 1 }, recovery: [{ period: "sr", type: "recoverAll" }],
+      description: "A deterministic feature fixture."
     }
   ];
 }
@@ -303,8 +309,8 @@ export async function runItemCoreFeatureTests(options = {}) {
 
   const batchYaml = exportStrictItemYamlBatch(itemFixtures, { propertyRegistry });
   const batch = new YamlItemParser({ propertyRegistry }).parseAll(batchYaml);
-  record(results, "batch exporter/parser round-trips all seven types",
-    batch.length === 7 && batch.every((entry) => entry.success),
+  record(results, "batch exporter/parser round-trips all eight types",
+    batch.length === 8 && batch.every((entry) => entry.success),
     batch.map((entry) => ({ success: entry.success, errors: entry.errors, warnings: entry.warnings })));
 
   const lightweightDefaults = [
@@ -340,6 +346,13 @@ export async function runItemCoreFeatureTests(options = {}) {
       validate: (item) => item.spellLevel === 0
         && item.spellSchool === "evo"
         && item.activationType === "action"
+    },
+    {
+      type: "feat",
+      validate: (item) => item.featureType === ""
+        && item.featureSubtype === ""
+        && item.passiveTrait === false
+        && item.explicitSource?.system?.requirements === ""
     }
   ];
   for (const fixture of lightweightDefaults) {
@@ -351,7 +364,7 @@ export async function runItemCoreFeatureTests(options = {}) {
         && parsed.item?.type === fixture.type
         && fixture.validate(parsed.item)
         && foundryData?.type === fixture.type
-        && parsed.trace?.normalizedStrictTemplate?.includes("SCHEMA_VERSION: 4"),
+        && parsed.trace?.normalizedStrictTemplate?.includes("SCHEMA_VERSION: 6"),
       { parsed, foundryData });
   }
 
@@ -391,6 +404,21 @@ export async function runItemCoreFeatureTests(options = {}) {
         && item.range?.units === "ft"
         && item.duration?.value === "1"
         && item.duration?.units === "minute"
+    },
+    {
+      text: "name: Heavy Armor Master\ntype: feat\nfeatureType: General Feat\nrequirements: Level 4+, Heavy Armor proficiency\nlevel: 4\nproperties: Passive Trait",
+      validate: (item) => item.type === "feat"
+        && item.featureType === "feat"
+        && item.featureSubtype === "general"
+        && item.explicitSource?.system?.requirements === "Level 4+, Heavy Armor proficiency"
+        && item.explicitSource?.system?.prerequisites?.level === 4
+        && item.passiveTrait === true
+    },
+    {
+      text: "name: Agonizing Blast\ntype: feature\nfeatureType: invocation",
+      validate: (item) => item.type === "feat"
+        && item.featureType === "class"
+        && item.featureSubtype === "eldritchInvocation"
     }
   ].map((fixture) => {
     const parsed = parseItemText(fixture.text, { trace: true });
@@ -418,7 +446,11 @@ export async function runItemCoreFeatureTests(options = {}) {
     ["name: Nimble Gem\ntype: loot\nproperties: finesse", "not supported for loot"],
     ["name: Conflicting Price\ntype: loot\nprice: 2 gp\npriceValue: 3", "cannot be combined"],
     ["name: Psychic Components\ntype: spell\ncomponents: V, psychic", "Unsupported lightweight spell component"],
-    ["name: Bonus Gem\ntype: loot\nmagicBonus: 1", "not supported for loot"]
+    ["name: Bonus Gem\ntype: loot\nmagicBonus: 1", "not supported for loot"],
+    ["name: Priced Feature\ntype: feat\nprice: 5 gp", "not supported for feat"],
+    ["name: Two Levels\ntype: feat\nlevel: 2\nprerequisiteLevel: 3", "aliases in a feature"],
+    ["name: Trait Blade\ntype: weapon\nproperties: Passive Trait", "not supported for weapon"],
+    ["name: Maybe Repeatable\ntype: feat\nrepeatable: maybe", "must be true or false"]
   ].map(([text, expected]) => {
     const parsed = parseItemText(text, { trace: true });
     return {
@@ -551,6 +583,98 @@ export async function runItemCoreFeatureTests(options = {}) {
   record(results, "natural weapon suggestions omit equipment, tool, container, and loot defaults",
     !naturalPreview.insights?.suggestions?.some((entry) => irrelevantWeaponFields.has(entry.field)),
     naturalPreview.insights);
+
+  const naturalFeatures = [
+    {
+      name: "class feature header with short-rest limit",
+      text: "Second Wind\n1st-level Fighter feature\nYou have a limited well of stamina that you can draw on to protect yourself from harm. On your turn, you can use a bonus action to regain hit points equal to 1d10 + your fighter level.\nOnce you use this feature, you must finish a short or long rest before you can use it again.",
+      validate: (parsed) => parsed.item?.type === "feat"
+        && parsed.item.featureType === "class"
+        && parsed.item.explicitSource?.system?.requirements === "Fighter 1"
+        && parsed.item.uses?.max === 1
+        && parsed.item.recovery?.[0]?.period === "sr"
+        && parsed.item.description.startsWith("You have a limited well")
+    },
+    {
+      name: "monster trait with per-day uses",
+      text: "Legendary Resistance (3/Day)\nIf the dragon fails a saving throw, it can choose to succeed instead.",
+      validate: (parsed) => parsed.item?.type === "feat"
+        && parsed.item.name === "Legendary Resistance"
+        && parsed.item.featureType === "monster"
+        && parsed.item.uses?.max === 3
+        && parsed.item.recovery?.[0]?.period === "day"
+        && parsed.item.description.startsWith("If the dragon fails")
+    },
+    {
+      name: "single-line recharge trait maps to native recovery without a roll helper",
+      text: "Fire Breath (Recharge 5-6). The dragon exhales fire in a 60-foot cone. Each creature in that area must make a DC 21 Dexterity saving throw, taking 63 (18d6) fire damage on a failed save, or half as much damage on a successful one.",
+      validate: (parsed) => parsed.item?.type === "feat"
+        && parsed.item.name === "Fire Breath"
+        && parsed.item.featureType === "monster"
+        && parsed.item.uses?.max === 1
+        && parsed.item.recovery?.[0]?.period === "recharge"
+        && String(parsed.item.recovery?.[0]?.formula) === "5"
+        && parsed.item.description.startsWith("The dragon exhales")
+        && !parsed.trace?.automation?.pendingActivities?.some((entry) => entry.key === "ACTIVITY_UTILITY")
+    },
+    {
+      name: "feat with prerequisite line keeps requirements and level",
+      text: "Heavy Armor Master\nPrerequisite: Level 4+, Heavy Armor Proficiency\nYou have trained to master the use of heavy armor, gaining the following benefits: increase your Strength or Constitution score by 1, to a maximum of 20.",
+      validate: (parsed) => parsed.item?.type === "feat"
+        && parsed.item.explicitSource?.system?.requirements === "Level 4+, Heavy Armor Proficiency"
+        && parsed.item.explicitSource?.system?.prerequisites?.level === 4
+        && parsed.item.description.startsWith("You have trained")
+    },
+    {
+      name: "general feat header with proficiency-bonus uses",
+      text: "Weapon Master\nGeneral Feat (Prerequisite: Level 4+)\nYou have practiced extensively with a variety of weapons. You can use this feature a number of times equal to your proficiency bonus, and you regain all expended uses when you finish a long rest.",
+      validate: (parsed) => parsed.item?.type === "feat"
+        && parsed.item.featureType === "feat"
+        && parsed.item.featureSubtype === "general"
+        && parsed.item.explicitSource?.system?.requirements === "Level 4+"
+        && parsed.item.explicitSource?.system?.prerequisites?.level === 4
+        && parsed.item.uses?.max === "@prof"
+        && parsed.item.recovery?.[0]?.period === "lr"
+    },
+    {
+      name: "2024 level header becomes a class feature",
+      text: "Level 5: Extra Attack\nYou can attack twice instead of once whenever you take the Attack action on your turn.",
+      validate: (parsed) => parsed.item?.type === "feat"
+        && parsed.item.name === "Extra Attack"
+        && parsed.item.featureType === "class"
+        && parsed.item.explicitSource?.system?.requirements === "Level 5"
+        && parsed.item.description.startsWith("You can attack twice")
+    },
+    {
+      name: "wand prose stays a consumable",
+      text: "Wand of Fireballs\nWand, rare (requires attunement by a spellcaster)\nThis wand has 7 charges. It regains 1d6 + 1 expended charges daily at dawn.",
+      validate: (parsed) => parsed.item?.type === "consumable"
+    },
+    {
+      // This paste has no base weapon, so the strict pass rejects it today; the
+      // point of the check is that the feature gate does not claim it.
+      name: "stat-block weapon attack stays a weapon",
+      text: "Bite\nMelee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 7 (1d8 + 3) piercing damage.",
+      routingOnly: true,
+      validate: (parsed) => parsed.trace?.featureDetection == null
+        && /^WEAPON:/m.test(parsed.trace?.generatedStrictTemplate ?? "")
+    },
+    {
+      name: "shield header stays equipment",
+      text: "Shield of Faith\nArmor (shield), rare\nWhile holding this shield, you have a +2 bonus to AC.",
+      validate: (parsed) => parsed.item?.type === "equipment"
+    }
+  ];
+  for (const fixture of naturalFeatures) {
+    const parsed = parseItemText(fixture.text, { trace: true });
+    record(results, `natural feature detection: ${fixture.name}`,
+      (fixture.routingOnly || parsed.success) && fixture.validate(parsed),
+      { success: parsed.success, type: parsed.item?.type, errors: parsed.errors, warnings: parsed.warnings,
+        featureDetection: parsed.trace?.featureDetection, template: parsed.trace?.generatedStrictTemplate,
+        item: parsed.item ? { name: parsed.item.name, featureType: parsed.item.featureType, uses: parsed.item.uses,
+          recovery: parsed.item.recovery, requirements: parsed.item.explicitSource?.system?.requirements,
+          description: parsed.item.description } : null });
+  }
 
   clearCompendiumImageCandidateCache({ resetStats: true });
   const imageCandidates = [

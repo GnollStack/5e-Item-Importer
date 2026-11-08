@@ -1,12 +1,15 @@
-import { explicitRows, applyExplicitSource, cloneExplicit, damageDataToYaml, exactBoolean, exactNumber, formulaValue, isUnset, parseDamageData, readPath, rejectDamageShorthand, writePath } from "./explicitYamlFields.js";
+import { explicitRows, applyExplicitSource, cloneExplicit, damageDataToYaml, exactBoolean, exactNumber, formulaValue, isUnset, parseDamageData, readPath, rejectDamageShorthand, stringList, writePath } from "./explicitYamlFields.js";
 import { automationRows } from "./automationFields.js";
+import { isPhysicalItemType } from "./itemConfig.js";
 
 // Fixed, reviewed native paths. This is deliberately not an arbitrary path API.
-const ALL = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell"];
+const ALL = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell", "feat"];
 const EQUIPPABLE = ["weapon", "equipment", "consumable", "tool", "container"];
 const propertyFields = [
-  ...ALL.filter(type => type !== "spell").map(type => ({types:[type],section:"PROPERTIES",label:"NPC Equipment",code:"gear"})),
+  // dnd5e validProperties: gear (NPC Equipment) is physical-only; mgc is valid on every type except spell.
+  ...ALL.filter(isPhysicalItemType).map(type => ({types:[type],section:"PROPERTIES",label:"NPC Equipment",code:"gear"})),
   ...ALL.filter(type => type !== "spell").map(type => ({types:[type],section:"PROPERTIES",label:"Magical",code:"mgc"})),
+  {types:["feat"],section:"PROPERTIES",label:"Passive Trait",code:"trait"},
   ...[["Adamantine","ada"],["Silvered","sil"],["Returning","ret"]].map(([label,code]) => ({types:["consumable"],section:"AMMUNITION_PROPERTIES",label,code})),
   ...[["Concentration","concentration"],["Somatic","somatic"],["Vocal","vocal"],["Ritual","ritual"]].map(([label,code]) => ({types:["consumable"],section:"SCROLL_PROPERTIES",label,code}))
 ];
@@ -65,6 +68,15 @@ field(["equipment"],"ARMOR","Max Dex Modifier","system.armor.dex","integer");
 field(["equipment"],"ARMOR","Strength Requirement","system.strength","integer",{min:0});
 field(["equipment"],"VEHICLE_PROPERTIES","Vehicle Armor Class","system.armor.value","integer",{min:0});
 field(["spell"],"ITEM","School","system.school");
+// Feat (Feature): dnd5e 6.0.6 FeatData leaves not covered by the type extractor.
+field(["feat"],"ITEM","Requirements","system.requirements");
+field(["feat"],"PREREQUISITES","Level","system.prerequisites.level","integer",{min:0});
+field(["feat"],"PREREQUISITES","Items","system.prerequisites.items","identifierList");
+field(["feat"],"PREREQUISITES","Repeatable","system.prerequisites.repeatable","boolean");
+field(["feat"],"ENCHANTMENT","Max","system.enchant.max","formula");
+field(["feat"],"ENCHANTMENT","Period","system.enchant.period");
+field(["feat"],"VEHICLE_PROPERTIES","Cover","system.cover","cover");
+field(["feat"],"VEHICLE_PROPERTIES","Crewed","system.crewed","boolean");
 field(["weapon","consumable"],"ATTUNEMENT","Magic Bonus","system.magicalBonus","formula");
 field(["equipment"],"ATTUNEMENT","Magic Bonus","system.armor.magicalBonus","formula");
 export const EXPLICIT_ITEM_FIELDS = Object.freeze(fields);
@@ -93,6 +105,22 @@ function parseField(value, descriptor) {
     const labels = {none:0,half:0.5,threequarters:0.75,total:1};
     return Object.hasOwn(labels,value) ? labels[value] : exactNumber(value,location,{min:0,max:1});
   }
+  if (kind === "identifierList") {
+    // dnd5e IdentifierField with allowType: "identifier" or "type:identifier".
+    // An unquoted "type:identifier" list entry becomes a one-key mapping after
+    // YAML normalization ("- feat: alert"); fold it back into one identifier.
+    const items = value instanceof Set ? [...value] : value;
+    const folded = Array.isArray(items) ? items.map(entry => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
+      const keys = Object.keys(entry);
+      return keys.length === 1 && ["string","number"].includes(typeof entry[keys[0]]) ? keys[0] + ":" + String(entry[keys[0]]).trim() : entry;
+    }) : items;
+    const entries = isUnset(folded) ? [] : stringList(folded,location);
+    for (const entry of entries) {
+      if (!/^(?:[a-z0-9_-]+:)?[a-z0-9_-]+$/i.test(entry)) throw new Error(location + ' entries must be "identifier" or "type:identifier".');
+    }
+    return entries;
+  }
   if (kind === "formula") return formulaValue(value,location);
   if (kind === "boolean") return exactBoolean(value,location);
   if (kind === "number" || kind === "integer") return exactNumber(value,location,{...options,integer:kind === "integer"});
@@ -106,7 +134,7 @@ export function extendExplicitItemSchema(schema,type) {
     schema[section] ??= [];
     if (!schema[section].includes(label)) schema[section].push(label);
   }
-  if (type !== "spell") schema.PROPERTIES.push("NPC Equipment");
+  if (isPhysicalItemType(type)) (schema.PROPERTIES ??= []).push("NPC Equipment");
   if (type === "tool") schema.PROPERTIES.push("Focus");
   if (["weapon","consumable"].includes(type)) schema.DAMAGE = [...(schema.DAMAGE ?? []),"DAMAGE_DATA",...(type === "consumable" ? ["Replace"] : [])];
   if (type === "weapon") schema.VERSATILE_DAMAGE.push("DAMAGE_DATA");
