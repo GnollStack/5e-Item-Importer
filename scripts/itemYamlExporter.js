@@ -26,6 +26,22 @@ const WEAPON_PROPERTIES = {
   Reach: "rch", Reload: "rel", Returning: "ret", Silvered: "sil", Special: "spc",
   Thrown: "thr", "Two-Handed": "two", Versatile: "ver"
 };
+/**
+ * Property codes each Item type's template expresses as a named boolean. A stored code outside
+ * this list is exported through CUSTOM_PROPERTIES.Registered, so a property is never dropped
+ * without a trace; import then keeps it or warns that dnd5e does not register it.
+ */
+const NATIVE_PROPERTY_CODES = Object.freeze({
+  weapon: [...Object.values(WEAPON_PROPERTIES), "gear"],
+  equipment: ["mgc", "ada", "foc", "stealthDisadvantage", "gear"],
+  // "verbal" is the pre-"vocal" scroll code and exports as Vocal; hydrating and nutritious are dnd5e 6.1 food properties.
+  consumable: ["mgc", "gear", "ada", "sil", "ret", "concentration", "somatic", "vocal", "verbal", "ritual", "hydrating", "nutritious"],
+  tool: ["mgc", "foc", "gear"],
+  loot: ["mgc", "gear"],
+  container: ["mgc", "weightlessContents", "unidentifiedContents", "gear"],
+  spell: ["vocal", "somatic", "material", "concentration", "ritual"],
+  feat: ["mgc", "trait"]
+});
 const COVER_LABELS = new Map([[0, "none"], [0.5, "half"], [0.75, "threequarters"], [1, "total"]]);
 const MODULE_ID = "5e-item-importer";
 
@@ -233,7 +249,11 @@ function usageSections(item, autoDestroy = false) {
   }
   let representedMax;
   const maxNumber = typeof max === "number" ? max : Number(max);
-  if (Number.isSafeInteger(maxNumber) && maxNumber >= 0 && String(max).trim() !== "") {
+  // dnd5e stores a blank formula ("") on an Item without limited uses: sheet-made Items and the
+  // SRD compendia all have it. It means no maximum, the same as an absent value.
+  if (max === null || (typeof max === "string" && max.trim() === "")) {
+    representedMax = 0;
+  } else if (Number.isSafeInteger(maxNumber) && maxNumber >= 0) {
     representedMax = maxNumber;
   } else if (typeof max === "string"
       && max.trim()
@@ -405,7 +425,8 @@ function buildConsumable(item) {
     data.SCROLL_PROPERTIES = {
       Concentration: bool(firstDefined(item?.concentration, properties.has("concentration"))),
       Somatic: bool(firstDefined(item?.somatic, properties.has("somatic"))),
-      Vocal: bool(firstDefined(item?.vocal, properties.has("vocal"))),
+      // "verbal" is the code dnd5e used before "vocal"; current dnd5e ignores it.
+      Vocal: bool(firstDefined(item?.vocal, properties.has("vocal") || properties.has("verbal"))),
       Ritual: bool(firstDefined(item?.ritual, properties.has("ritual")))
     };
   }
@@ -785,7 +806,7 @@ function strictActivityPayload(value) {
     }
   }
   if (!isObject(source)) return null;
-  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2, 3, 4, 5].includes(source.schemaVersion)) return null;
+  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2, 3, 4, 5, 6].includes(source.schemaVersion)) return null;
   const candidates = [
     source,
     source.strictYaml,
@@ -917,7 +938,7 @@ function strictEffectPayload(value) {
     }
   }
   if (!isObject(source)) return null;
-  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2, 3, 4, 5].includes(source.schemaVersion)) return null;
+  if (source.kind?.startsWith("strict-") && source.schemaVersion !== undefined && ![1, 2, 3, 4, 5, 6].includes(source.schemaVersion)) return null;
   const candidates = [
     source,
     source.strictYaml,
@@ -995,7 +1016,7 @@ function localizedEffectExportError(effect, reason) {
 function sharedActivityEffectExportError(effectId, firstActivity, secondActivity) {
   const firstName = String(firstActivity?.name ?? firstActivity?.type ?? "Unnamed Activity");
   const secondName = String(secondActivity?.name ?? secondActivity?.type ?? "Unnamed Activity");
-  const fallback = `Cannot export Activities "${firstName}" and "${secondName}" because the available serializer embedded shared Active Effect "${effectId}" more than once. Use a compatible schema 5 Activity Importer that supports shared effect references. Export stopped to prevent data loss.`;
+  const fallback = `Cannot export Activities "${firstName}" and "${secondName}" because the available serializer embedded shared Active Effect "${effectId}" more than once. Use a compatible 5e Activity Importer that supports shared effect references. Export stopped to prevent data loss.`;
   let message = fallback;
   try {
     if (typeof globalThis.game?.i18n?.format === "function") {
@@ -1078,6 +1099,9 @@ function representedLinkedEffectIds(activity, activityPayload, item, options = {
       (isObject(reference) ? firstDefined(reference._id, reference.id) : reference) ?? ""
     );
     if (!id) continue;
+    // A profile that applies another document's effect by UUID (for example a dnd5e.effects compendium
+    // entry) has no embedded effect on this Item; the Activity block already carries the reference.
+    if (isObject(reference) && typeof reference.uuid === "string" && reference.uuid && !itemEffects.has(id)) continue;
     const effect = itemEffects.get(id) ?? (isObject(reference) ? reference : null);
     const body = strictEffectBody(effect, options);
     if (!body) continue;
@@ -1192,22 +1216,42 @@ function addAttachments(data, item, options) {
   if (effects.length) data.effects = effects;
 }
 
+/** Property codes stored on a Foundry Item or a stored-source object; ItemData keeps its own list. */
+function storedPropertyCodes(item) {
+  const stored = firstDefined(getPath(item, "_source.system.properties"), getPath(item, "system._source.properties"),
+    item?.documentName || isObject(item?.system) ? getPath(item, "system.properties") : undefined);
+  if (stored instanceof Set) return [...stored].map(String);
+  return Array.isArray(stored) ? stored.map(String) : [];
+}
+
 function addCustomProperties(data, item, options) {
+  const type = String(item?.type ?? "").toLowerCase();
   const source = options.customProperties
     ?? item?.customProperties
     ?? item?.flags?.[MODULE_ID]?.customProperties;
-  if (!source) return;
-  const input = source.Registered || source.Metadata
-    ? source
-    : { Registered: source.registered, Metadata: source.metadata };
-  const normalized = normalizeCustomProperties(input, {
-    registry: options.propertyRegistry,
-    itemType: item?.type
-  });
-  if (!normalized.registered.length && !Object.keys(normalized.metadata).length) return;
+  let registered = [];
+  let metadata = {};
+  if (source) {
+    const input = source.Registered || source.Metadata
+      ? source
+      : { Registered: source.registered, Metadata: source.metadata };
+    const normalized = normalizeCustomProperties(input, {
+      registry: options.propertyRegistry,
+      itemType: item?.type
+    });
+    registered = normalized.registered;
+    metadata = normalized.metadata;
+  }
+  // A stored property without a named YAML field leaves through CUSTOM_PROPERTIES.Registered, so it is
+  // never dropped without a trace. Import adds it back when dnd5e registers it for the Item type and
+  // otherwise warns that it was ignored (the SRD has such leftovers, which dnd5e itself does not use).
+  const native = NATIVE_PROPERTY_CODES[type] ?? [];
+  const unmapped = [...new Set(storedPropertyCodes(item))].filter(code => code && !native.includes(code) && !registered.includes(code));
+  if (unmapped.length) registered = [...new Set([...registered, ...unmapped])].sort();
+  if (!registered.length && !Object.keys(metadata).length) return;
   data.CUSTOM_PROPERTIES = {
-    Registered: normalized.registered,
-    Metadata: normalized.metadata
+    Registered: registered,
+    Metadata: metadata
   };
 }
 

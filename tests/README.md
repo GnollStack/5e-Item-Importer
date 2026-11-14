@@ -40,7 +40,7 @@ Neither suite should create Foundry world documents. Use the module's gated
 automation actions only when fixture mutation is explicitly intended.
 
 
-## Explicit YAML schema 6 regression checks
+## Explicit YAML schema 7 regression checks
 
 Run `node --experimental-vm-modules tools/Test-ExplicitYaml.mjs` for read-only parser/serializer regressions and full-template checks. Native validation also runs in the existing full Foundry suite. The fixed creation tests use the existing `runAutomation` action with `{suite:"explicit",confirmMutation:true,cleanupBefore:true,cleanupAfter:true}` and remove their marked fixtures in finally. See the [coverage checklist](../docs/explicit-yaml-v2.md) for individual fields and exclusions.
 

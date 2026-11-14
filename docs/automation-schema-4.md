@@ -1,6 +1,6 @@
 # Automation storage in schema 4
 
-Reviewed against Foundry 14.369, dnd5e 6.0.6, MIDI-QOL 14.6.8 and DAE 14.6.6.
+Reviewed against Foundry 14.370, dnd5e 6.0.6, MIDI-QOL 14.6.11 and DAE 14.6.9.
 
 Use `AUTOMATION` inside an existing Item, Activity or Effect block. This is a typed, reviewed mapping, not a raw-data escape hatch. Unknown keys fail with their exact path. Native fields keep their existing YAML sections. Do not combine canonical automation with legacy MIDI/DAE sections in the same Activity or Effect.
 
@@ -20,6 +20,8 @@ Paths are relative to the existing type block. `[*]` means each array element. S
 | --- | --- | --- | --- |
 | item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.midi-qol.flags.onUseMacroName` | string or null |
 | item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.midi-qol.flags.noProvokeReaction` | boolean |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.midi-qol.flags.rulesText.uuid` | string |
+| item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.midi-qol.flags.rulesText.match` | "exact", "otherRules", "name" |
 | item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro._id` | string or null |
 | item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro.name` | string |
 | item | weapon, equipment, consumable, tool, loot, container, spell, feat | `AUTOMATION.dae.macro.img` | string or null |

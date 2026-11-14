@@ -364,7 +364,7 @@ export async function runItemCoreFeatureTests(options = {}) {
         && parsed.item?.type === fixture.type
         && fixture.validate(parsed.item)
         && foundryData?.type === fixture.type
-        && parsed.trace?.normalizedStrictTemplate?.includes("SCHEMA_VERSION: 6"),
+        && parsed.trace?.normalizedStrictTemplate?.includes("SCHEMA_VERSION: 7"),
       { parsed, foundryData });
   }
 

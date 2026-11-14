@@ -5,7 +5,7 @@ export function withCompatibleActivityCompanion(item = Object.create(ItemData.pr
     const companion = {
         active: true,
         api: { schemaVersion: 2, capabilities: { serialization: {
-            strictActivity: { schemaVersion: 5 }, strictEffect: { schemaVersion: 5 }
+            strictActivity: { schemaVersion: 6 }, strictEffect: { schemaVersion: 6 }
         } } }
     };
     item.collectActivityResults = function(results) {

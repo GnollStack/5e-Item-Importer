@@ -131,7 +131,7 @@ export function checkTemplate({ markdown, requirements, yaml, itemModule, type }
   catch (error) { return { success: false, issues: [{ code: "invalid-main-yaml", message: error.message }], exceptions }; }
   const root = itemModule ? type.toUpperCase() : type === "effect" ? "EFFECT" : "ACTIVITY_" + type.toUpperCase();
   if (!object(main) || !object(main[root])) return { success: false, issues: [{ code: "wrong-main-root", root }], exceptions };
-  if (itemModule && main.SCHEMA_VERSION !== 6) issues.push({ code: "wrong-item-schema-version", expected: 6 });
+  if (itemModule && main.SCHEMA_VERSION !== 7) issues.push({ code: "wrong-item-schema-version", expected: 7 });
   const paths = structuralPaths(main), alternatives = itemModule ? commentedRecovery(blocks[0], root, yaml) : new Map();
   const mainRequirements = requirements.filter(entry => itemModule
     ? (entry.kind === "item" && entry.type === type) || (type === "feat" && entry.kind === "advancement")

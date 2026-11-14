@@ -1,8 +1,8 @@
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 TOOL:
   ITEM:
     Name: Alchemist's Supplies
-    Rarities: [common]
+    Rarities: []
     Tool Type: art
     Base Tool: alchemist
   INVENTORY:

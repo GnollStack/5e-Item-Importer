@@ -353,7 +353,7 @@ description: A brief arc of blue-white light.
 <div style="text-align: center;">
 <p><a href="https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/activity-Importer-5e/gifs/Import-Full-Item.gif"><img src="https://raw.githubusercontent.com/GnollStack/bakshis-bazaar-archives/main/activity-Importer-5e/gifs/Import-Full-Item.gif" alt="Importing Rimeheart as a complete spear with activities and effects" style="max-width: 100%; height: auto;" width="1280" height="536" loading="lazy" decoding="async" /></a></p>
 </div>
-<p>Activity Importer is available to <a href="https://www.patreon.com/cw/GnollStack">Bazaar Patrons</a> through Foundry Premium Content and works with 5e Item Importer 14.3.0 or later.</p>
+<p>Activity Importer is available to <a href="https://www.patreon.com/cw/GnollStack">Bazaar Patrons</a> through Foundry Premium Content and works with 5e Item Importer 14.4.0 or later.</p>
 <hr />
 
 <h3 id="more-details">More Details</h3>
@@ -427,11 +427,11 @@ If using Strict Format: Use the YAML block form <code>Description: |</code> and 
 <tbody>
 <tr>
 <td>Foundry VTT</td>
-<td>v14 only, build 14.367 or later; verified on 14.369</td>
+<td>v14 only, build 14.367 or later; verified on 14.370</td>
 </tr>
 <tr>
 <td>dnd5e</td>
-<td>6.0.6 minimum; verified on 6.0.6</td>
+<td>6.0.6 minimum; verified on 6.0.6 and 6.1.0</td>
 </tr>
 <tr>
 <td><a href="https://foundryvtt.com/packages/5e-activity-importer">5e Activity Importer</a></td>
@@ -443,9 +443,9 @@ If using Strict Format: Use the YAML block form <code>Description: |</code> and 
 <div style="text-align: center;">
 <h2 id="compatibility">Compatibility</h2>
 </div>
-<p><strong>Foundry VTT:</strong> v14 only, build 14.367 or later; verified on <strong>14.369</strong>. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.</p>
-<p><strong>Game system:</strong> <strong>dnd5e</strong> 6.0.6 minimum; verified on <strong>6.0.6</strong>.</p>
-<p><strong>Optional modules:</strong> <strong>5e Activity Importer</strong> 14.3.0 or later adds activities and effects to imported Items; Item Importer works fully without it, and an older companion shows an update message for attachments while Items still import. <strong>Token Name Lookup</strong> can make <code>[[lookup @name]]</code> text prefer token names.</p>
+<p><strong>Foundry VTT:</strong> v14 only, build 14.367 or later; verified on <strong>14.370</strong>. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.</p>
+<p><strong>Game system:</strong> <strong>dnd5e</strong> 6.0.6 minimum; verified on <strong>6.0.6</strong> and <strong>6.1.0</strong>.</p>
+<p><strong>Optional modules:</strong> <strong>5e Activity Importer</strong> 14.4.0 or later adds activities and effects to imported Items; Item Importer works fully without it, and an older companion shows an update message for attachments while Items still import. <strong>Token Name Lookup</strong> can make <code>[[lookup @name]]</code> text prefer token names.</p>
 <hr />
 <div style="text-align: center;">
 <h2 id="developer-api">Developer API</h2>
@@ -469,16 +469,16 @@ await api.downloadExport(item);
 <p><code>api.import()</code> creates one Item. A <code>CONTAINER</code> with nested <code>CONTENTS</code> returns an error that points to the import window's batch flow, and an Item with an unresolved reference (a granted item, choice pool entry, or container) returns the missing references as issues without creating anything.</p>
 <details>
 <summary><strong>Advanced: Schema versions, exports, and integration contracts</strong></summary>
-<p>Schema 6 adds feature advancement (<code>FEAT.ADVANCEMENT</code>), container contents (<code>CONTAINER.CONTENTS</code> and <code>INVENTORY.Container</code>) and document references that resolve by UUID, name or identifier, or by dragging a document onto the reference in the import window. Schema 5 added the <code>FEAT</code> root for Features and the combat recovery periods <code>initiative</code>, <code>turnStart</code>, <code>turnEnd</code> and <code>turn</code>. Schema 4 added reviewed typed automation storage (a separate contract that stays at 4) and retains <code>ITEM.Rarities</code> as a list, <code>DAMAGE_DATA.Modifiers</code> as dice modifier strings, and spell <code>DURATION.Expiry</code>. Legacy <code>ITEM.Rarity</code> and supported YAML versions 0, 1, 2, 3, 4 and 5 remain accepted; an explicit empty Rarities list means mundane.</p>
+<p>Schema 7 adds the food properties of consumables (<code>FOOD_PROPERTIES.Hydrating</code> and <code>Nutritious</code>, used by dnd5e 6.1) and <code>PROPERTIES.Unidentified Contents</code> for containers. Schema 6 added feature advancement (<code>FEAT.ADVANCEMENT</code>), container contents (<code>CONTAINER.CONTENTS</code> and <code>INVENTORY.Container</code>) and document references that resolve by UUID, name or identifier, or by dragging a document onto the reference in the import window. Schema 5 added the <code>FEAT</code> root for Features and the combat recovery periods <code>initiative</code>, <code>turnStart</code>, <code>turnEnd</code> and <code>turn</code>. Schema 4 added reviewed typed automation storage (a separate contract that stays at 4) and retains <code>ITEM.Rarities</code> as a list, <code>DAMAGE_DATA.Modifiers</code> as dice modifier strings, and spell <code>DURATION.Expiry</code>. Legacy <code>ITEM.Rarity</code> and supported YAML versions 0, 1, 2, 3, 4, 5 and 6 remain accepted; an explicit empty Rarities list means mundane.</p>
 <p>New strict YAML documents begin with visible schema metadata:</p>
-<pre><code class="language-yaml">SCHEMA_VERSION: 6
+<pre><code class="language-yaml">SCHEMA_VERSION: 7
 WEAPON:
   ITEM:
     Name: &quot;Example Weapon&quot;
 </code></pre>
 <p>The parser reports migration provenance and carries it through mixed and multi-document batches. Documents declaring a schema version newer than the installed importer supports are rejected instead of being partially imported. <code>Uses Max</code>, magic bonuses, tool bonuses, and recharge thresholds preserve compatible dnd5e formula strings; legacy <code>Uses Current</code> cannot be converted against a formula maximum and fails with an instruction to provide <code>Uses Spent</code>.</p>
 <p>The strict exporter supports Weapon, Equipment, Consumable, Tool, Loot, Container, Spell, and Feature Items. <strong>Core Item export</strong> is always available, excludes Activities and Active Effects, and is the default for <code>api.export()</code>, <code>api.exportBatch()</code>, copy, download, and Item drops when the companion serializers are unavailable. <strong>Full Item export</strong> is an explicit companion workflow exposed by <code>api.exportFull()</code>, <code>api.exportFullBatch()</code>, <code>{ mode: &quot;full&quot; }</code>, and the Full Item YAML context actions shown when Activity Importer exposes both synchronous serializers. Batch export uses <code>---</code> document separators so repeated Item types remain lossless.</p>
-<p>For full export, every live dnd5e Activity and Active Effect is serialized from its current document state through Activity Importer's <code>api.serializeActivity()</code> and <code>api.serializeEffect()</code> services, so later edits supersede stored provenance. If the companion is unavailable, the current state cannot be represented, an unreviewed third-party field is present, or the serializer cannot prove a lossless mapping, full export stops with an explicit error. Activity-specific effect application metadata is matched separately from the effect body. With the paired schema 5 serializers, multiple Activities can reference one local Active Effect: export writes one Item-level effect definition and keeps each Activity's <code>Effect ID</code> reference and application settings. Standalone <code>Effect UUID</code> references remain external links. Older or custom serializers that inline the same shared effect without reference support fail clearly; duplicate authored effect definitions are rejected during import. A linked effect is omitted from the standalone <code>effects</code> section only when its exact serialized body is embedded in its owning Activity. Low-level export options continue to accept <code>includeActivities</code> and <code>includeEffects</code>; each alias takes precedence over the older aggregate attachment options when both are supplied.</p>
+<p>For full export, every live dnd5e Activity and Active Effect is serialized from its current document state through Activity Importer's <code>api.serializeActivity()</code> and <code>api.serializeEffect()</code> services, so later edits supersede stored provenance. If the companion is unavailable, the current state cannot be represented, an unreviewed third-party field is present, or the serializer cannot prove a lossless mapping, full export stops with an explicit error. Activity-specific effect application metadata is matched separately from the effect body. With the paired schema 6 serializers, multiple Activities can reference one local Active Effect: export writes one Item-level effect definition and keeps each Activity's <code>Effect ID</code> reference and application settings. Standalone <code>Effect UUID</code> references remain external links. Older or custom serializers that inline the same shared effect without reference support fail clearly; duplicate authored effect definitions are rejected during import. A linked effect is omitted from the standalone <code>effects</code> section only when its exact serialized body is embedded in its owning Activity. Low-level export options continue to accept <code>includeActivities</code> and <code>includeEffects</code>; each alias takes precedence over the older aggregate attachment options when both are supplied.</p>
 <p>Custom properties use this strict shape:</p>
 <pre><code class="language-yaml">CUSTOM_PROPERTIES:
   Registered:

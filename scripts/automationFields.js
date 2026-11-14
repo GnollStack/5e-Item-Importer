@@ -1,7 +1,8 @@
 import { cloneExplicit, applyExplicitSource, isMapping } from "./explicitYamlFields.js";
 
 /** Reviewed authored storage, not execution. Shared by the independent importers. */
-export const AUTOMATION_REVIEW = Object.freeze({ foundry: "14.369", system: "6.0.6", midi: "14.6.8", dae: "14.6.6" });
+// MIDI-QOL 14.6.11 declares dnd5e maximum 6.0.999, so its fields are reviewed on dnd5e 6.0.6.
+export const AUTOMATION_REVIEW = Object.freeze({ foundry: "14.370", system: "6.0.6", midi: "14.6.11", dae: "14.6.9" });
 const string = { kind: "string" }, boolean = { kind: "boolean" }, number = { kind: "number" };
 const nullable = spec => ({ ...spec, nullable: true });
 const choice = (...choices) => ({ kind: typeof choices[0], choices });
@@ -34,8 +35,9 @@ const midiCommon = {
     regionBehavior: object({ enabled: boolean, dispositionFilter: choice(-1, 0, 1), excludeSource: boolean, oncePerTurn: boolean,
         wallRestriction: string, regionVisibility: number, attachToken: choice("default", "caster", "target"),
         moveDistance: range(0), moveDirection: choice("away", "choose"), moveTiming: choice("start", "end"),
-        templateOrigin: choice("default", "base", "top", "eye"), rules: array(object({
-            trigger: choice("entry", "exit", "turnStart", "turnEnd"), action: choice("useActivity", "applyEffect"), targetId: string
+        // MIDI 14.6.11 added "floor" (Floor of the level). Its rule editor also offers removeEffect.
+        templateOrigin: choice("default", "floor", "base", "top", "eye"), rules: array(object({
+            trigger: choice("entry", "exit", "turnStart", "turnEnd"), action: choice("useActivity", "applyEffect", "removeEffect"), targetId: string
         })) }),
     regionLight: object({ enabled: boolean, dim: range(0), bright: range(0), color: nullable(string), alpha: range(0, 1),
         luminosity: range(0, 1), animationType: nullable(string), animationSpeed: range(0, 10), animationIntensity: range(1, 10) })
@@ -60,7 +62,9 @@ const daeEffect = {
     stackable: choice("noneName", "none", "multi", "count", "countDeleteDecrement", "noneNameOnly"),
     applicationMode: choice("default", "dnd5e", "legacy"), expiryMode: choice("default", "delete", "suppress"), specialDuration: strings
 };
-const midiItem = { onUseMacroName: nullable(string), noProvokeReaction: boolean };
+// rulesText (MIDI 14.6.9): where MIDI copied a sample Item's rules text from. MIDI writes it; it is stored, not acted on.
+const midiItem = { onUseMacroName: nullable(string), noProvokeReaction: boolean,
+    rulesText: object({ uuid: string, match: choice("exact", "otherRules", "name") }) };
 const ownedNamespaces = new Set(["midi-qol", "dae", "core"]);
 const derived = { "midi-qol": new Set(["onUseMacroParts"]) };
 

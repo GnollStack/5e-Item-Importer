@@ -1,12 +1,29 @@
 # Strict Consumable Item authoring reference
 
+## At a glance
+
+- **Root key:** `CONSUMABLE`
+- **When to use:** Use CONSUMABLE when the source is used up or carried as a stack: a potion, elixir or oil, a spell scroll, ammunition, poison, food and drink, gear with a number of uses (a healer's kit), or a one-use wondrous item such as dust or a bead. The parser also accepts `wand` and `rod` here, for a charged wand or rod that the user wants stored as a consumable.
+- **Smallest working block:** `ITEM.Name` (the name), `ITEM.Consumable Type` (`ammo`, `food`, `poison`, `potion`, `rod`, `scroll`, `trinket` or `wand`). `ammo` also needs `AMMUNITION_PROPERTIES.Ammunition Type`; `poison` also needs `POISON_PROPERTIES.Poison Type`.
+
+**Use another template when:**
+
+- The bow, crossbow or sling that fires the ammunition: WEAPON.
+- A spell description that is not a scroll: SPELL.
+- A ring, cloak, boots or other permanent magic item: EQUIPMENT. A wand or rod fits either template; EQUIPMENT (`Equipment Type: wand` or `rod`) suits one that keeps recharging.
+- A quiver, bag or case that holds the consumables: CONTAINER.
+- A herbalism kit, poisoner's kit or other kit that gives a tool proficiency: TOOL.
+- A gem, an art object, or gear that is not used up: LOOT.
+
+**Work in this order:** find the source wording in [From source text to YAML](#from-source-text-to-yaml), copy the exact names from the [Complete field reference](#complete-field-reference), shape the answer like the [Concrete example](#concrete-example), then go through [Check before you answer](#check-before-you-answer).
+
 ## Destination and prerequisites
 
-Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 6` and the `CONSUMABLE` root.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 7` and the `CONSUMABLE` root.
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 / Foundry 14.369; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.8 and DAE 14.6.6 integrations. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 and 6.1.0 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.11 and DAE 14.6.9 integrations. Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -30,12 +47,31 @@ The first YAML block is the **native and legacy field reference**, not a ready-m
 
 Missing, `null`, `false`, `0`, `""`, `[]` and `{}` are distinct. Use `n/a` only for fields that document it as an unset marker. Never use it as a universal substitute for null or empty data. `CHANGES.Value` retains its YAML type, including the literal text `n/a`. Formula syntax acceptance does not establish that referenced variables exist.
 
-For new physical Items, ordinary defaults are quantity 1, identified true, equipped false and zero unspecified price/weight. Omit unsupplied rarity, attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+For new physical Items, ordinary defaults are quantity 1, equipped false and zero unspecified price/weight. Write `ITEM.Rarities: []` for a mundane item, because a missing `Rarities` key is stored as `common`. A missing `INVENTORY.Identified` follows the user's own setting, so write it when it matters. Omit unsupplied attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+
+## From source text to YAML
+
+Find the wording closest to the source and write the fields shown. A path such as `ITEM.Name` is the `Name` key inside the `ITEM` section of `CONSUMABLE`. A list such as `RECOVERY` takes one `-` entry per item. Leave out every section the source does not mention.
+
+| The source says | Write |
+| --- | --- |
+| "Potion, common" | `ITEM.Consumable Type: potion`; `ITEM.Rarities: [common]`; `PROPERTIES.Magical: true` |
+| "when you drink this potion" (one use, then it is gone) | `USAGE.Uses Spent: 0`; `USAGE.Uses Max: 1`; `USAGE.Destroy on Empty: true` |
+| "Arrows (20)" | `ITEM.Consumable Type: ammo`; `AMMUNITION_PROPERTIES.Ammunition Type: arrow`; `INVENTORY.Quantity: 20` |
+| "You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition" | `PROPERTIES.Magical: true`; `ATTUNEMENT.Magic Bonus: 1` |
+| "Poison (injury)" | `ITEM.Consumable Type: poison`; `POISON_PROPERTIES.Poison Type: injury` |
+| "Spell scroll" of a concentration spell with V and S components | `ITEM.Consumable Type: scroll`; `SCROLL_PROPERTIES.Vocal: true`; `SCROLL_PROPERTIES.Somatic: true`; `SCROLL_PROPERTIES.Concentration: true`; `SCROLL_PROPERTIES.Ritual: false` |
+| "Rations (1 day)" | `ITEM.Consumable Type: food`; `FOOD_PROPERTIES.Nutritious: true` |
+| "Waterskin" or another drink | `ITEM.Consumable Type: food`; `FOOD_PROPERTIES.Hydrating: true` |
+| "This wand has 7 charges" and "regains 1d6 + 1 expended charges daily at dawn" | `ITEM.Consumable Type: wand`; `USAGE.Uses Spent: 0`; `USAGE.Uses Max: 7`; `USAGE.Destroy on Empty: false`; `RECOVERY: [{Period: dawn, Type: formula, Formula: "1d6 + 1"}]` |
+| "Wondrous item" that is used up, such as dust or a bead | `ITEM.Consumable Type: wondrous` |
+| "50 gp" and "1/2 lb." | `COST_AND_WEIGHT.Price Value: 50`; `COST_AND_WEIGHT.Price Denomination: gp`; `COST_AND_WEIGHT.Weight Value: 0.5`; `COST_AND_WEIGHT.Weight Units: lb` |
+| "Arrows" or "Rations" in an equipment table (not magic, no rarity) | `ITEM.Rarities: []`; `PROPERTIES.Magical: false`; `INVENTORY.Identified: true` |
 
 ## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 CONSUMABLE:
   SOURCE:
     Book: "[text|n/a]"
@@ -51,7 +87,7 @@ CONSUMABLE:
     Sort: 0 # Integer ordering value; preserve an authored zero.
     Name: "[text]"
     Rarities: [] # Native rarity IDs: common, uncommon, rare, veryRare, legendary, artifact. [] means mundane.
-    Consumable Type: "[ammo|food|poison|potion|rod|scroll|trinket|wand]"
+    Consumable Type: "[ammo|food|poison|potion|rod|scroll|trinket|wand|wondrous]"
     Consumable Subtype: "[text|n/a]" # Native ID; match the active ammo/poison alias below.
 
   INVENTORY:
@@ -94,6 +130,11 @@ CONSUMABLE:
     Somatic: "[true|false]"
     Vocal: "[true|false]"
     Ritual: "[true|false]"
+
+  FOOD_PROPERTIES:
+    # dnd5e 6.1 or later, Consumable Type food only (rations, water). Earlier dnd5e stores them without using them.
+    Hydrating: "[true|false]"
+    Nutritious: "[true|false]"
 
   USAGE:
     # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
@@ -141,7 +182,7 @@ CONSUMABLE:
 
 ## Configuration rules
 
-For ammo/poison, the required subtype alias must agree with ITEM.Consumable Subtype. Canonical Magic Bonus belongs in ATTUNEMENT; the older ammunition label is compatibility input. DAMAGE.Replace changes how ammunition damage is used; preserve explicit false. The damage structure may be stored on other subtypes without making it active. A potion's descriptive healing is not an authored Heal activity unless a companion attachment supplies it.
+For ammo/poison, write the subtype alias (`AMMUNITION_PROPERTIES.Ammunition Type` or `POISON_PROPERTIES.Poison Type`) and leave `ITEM.Consumable Subtype` out. When both are written they are not compared, and `Consumable Subtype` is the value stored. Canonical Magic Bonus belongs in ATTUNEMENT; the older ammunition label is compatibility input. DAMAGE.Replace changes how ammunition damage is used; preserve explicit false. The damage structure may be stored on other subtypes without making it active. A potion's descriptive healing is not an authored Heal activity unless a companion attachment supplies it.
 
 
 ## Concrete example
@@ -152,7 +193,7 @@ A free/core consumable import. Preserve the complete description; it does not au
 
 <!-- AUTHORING-EXAMPLE:START -->
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 CONSUMABLE:
   ITEM:
     Name: Potion of Healing
@@ -180,6 +221,21 @@ CONSUMABLE:
 <!-- AUTHORING-EXAMPLE:END -->
 
 The [standalone YAML file](../../docs/examples/core-consumable.yaml) matches this block. See [example prerequisites and validation](../../docs/examples/README.md). Examples establish the stated stored data and validation scope; they do not certify every gameplay combination.
+
+## Check before you answer
+
+1. `ITEM.Consumable Type` is one of `ammo`, `food`, `poison`, `potion`, `rod`, `scroll`, `trinket`, `wand`, `wondrous`. `ammunition` fails. Elixirs, oils and philters are `potion`. Use `wondrous` for a wondrous item that is used up, and `trinket` for a consumable that fits no other type.
+2. `ammo` needs `AMMUNITION_PROPERTIES.Ammunition Type` and `poison` needs `POISON_PROPERTIES.Poison Type`, or the import fails. Leave `ITEM.Consumable Subtype` out: the importer fills it from those two keys. If you do write it, use the matching dnd5e id (`crossbowBolt` for `bolt`), because a value that disagrees is stored without a warning.
+3. Ammunition type words here are `arrow`, `bolt`, `needle`, `bullet`, `slingbullet` and `energycell`. They differ from the ids in the Weapon template.
+4. A one-use item (potion, scroll, dose of poison) is `USAGE.Uses Max: 1`, `USAGE.Uses Spent: 0`, `USAGE.Destroy on Empty: true`. Write `Destroy on Empty` with a lowercase `on`; `Destroy On Empty` is ignored with a warning.
+5. `INVENTORY.Quantity` is how many of the item there are. Do not put the stack size in `USAGE.Uses Max`. Ammunition has no `USAGE`: twenty arrows are `Quantity: 20`.
+6. A +1 on ammunition is `ATTUNEMENT.Magic Bonus: 1` with `PROPERTIES.Magical: true`. Do not use the old `AMMUNITION_PROPERTIES.Magic Bonus` key.
+7. `DAMAGE` is for ammunition that deals its own damage. Do not put a potion's healing or a poison's damage there.
+8. Scroll components are `SCROLL_PROPERTIES.Vocal` (V), `Somatic` (S), `Concentration` and `Ritual`; `Verbal` gives a warning. `FOOD_PROPERTIES` belongs only to `Consumable Type: food`; on another type it gives a warning. Always write `ITEM.Rarities` (`[]` for mundane arrows, food or poison; a missing key is stored as `common`) and `INVENTORY.Identified` (a missing key follows the user's setting).
+9. Start the document with `SCHEMA_VERSION: 7`, then the root key. Copy section and field names exactly as the Complete field reference spells them.
+10. Write only the sections and fields the source needs. Do not copy the whole reference, and leave no `[placeholder]` value and no `#` comment in the answer.
+11. Write formulas as quoted strings (`"1d6 + 1"`). Write `true`, `false` and plain numbers without quotes.
+12. Keep the complete rules text in `DESCRIPTION.Description`. Add `Activities` and `effects` only when the user asked for a full Item and has 5e Activity Importer; use that module's templates for those blocks.
 
 ## Compatibility and support
 
@@ -267,9 +323,9 @@ The completed examples below demonstrate array nesting for a passive +1 AC ward 
 ### **Usage & Recovery Rules**
 | Type | Uses Max | Destroy on Empty | Tracking |
 |------|----------|------------------|----------|
-| Potions | `0` | `false` | By Quantity |
-| Food | `0` | `false` | By Quantity |
-| Poison | `0` | `false` | By Quantity |
+| Potions | `1` | `true` | One use each; the quantity drops as they are used |
+| Food | `1` | `true` | One use each; the quantity drops as they are used |
+| Poison | `1` | `true` | One use each; the quantity drops as they are used |
 | Ammunition | `0` | `false` | By Quantity |
 | Wands | Charges (e.g., `7`) | `true` or `false` | By Uses |
 | Rods | Charges (e.g., `3`) | `true` or `false` | By Uses |
@@ -399,9 +455,9 @@ The completed examples below demonstrate array nesting for a passive +1 AC ward 
 ---
 
 
-## Explicit fields in Item YAML schema 6
+## Explicit fields in Item YAML schema 7
 
-Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 and 3 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6 and 6.1.0 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|
@@ -414,6 +470,6 @@ Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 an
 
 DAMAGE_DATA is the canonical damage representation for Weapon base/versatile damage and Consumable damage. It preserves Dice Count, Die Denomination, Bonus, the Damage Types list, Custom Enabled, Custom Formula, Scaling Mode, Scaling Dice Count, and Scaling Formula. Dice values are nonnegative integers or null; formulas are strings; Custom Enabled defaults false; Scaling Mode defaults none. An inactive custom formula and inactive structured damage remain stored together. Do not combine populated legacy damage shorthand with DAMAGE_DATA. Legacy formula/type labels remain accepted on input. Consumable DAMAGE.Replace defaults false; old ammunition Damage Replace remains an alias.
 
-Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
+Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; Container PROPERTIES.Unidentified Contents; Consumable FOOD_PROPERTIES.Hydrating and Nutritious (food only, dnd5e 6.1 or later); siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
 
 Spell PREPARATION.Prepared exports unprepared/prepared/always and accepts native 0/1/2 or legacy booleans. Source Item stores the spellcasting source identifier. RANGE.Special, DURATION.Special, and AREA.Stationary retain their native values. Range, duration, target count, and every area dimension/count accept formulas. Material settings remain stored when Material is false.

@@ -215,6 +215,68 @@ export async function runExplicitItemYamlTests() {
     requireValue(same([...source.system.properties].sort(),[...reparsed.item.itemData.system.properties].sort()),"Inactive consumable properties were lost.");
     requireValue(reparsed.item.itemData.system.type.subtype==="stored","Inactive subtype was lost.");
   });
+  await test("dnd5e 6 vocabulary: wondrous consumables, ring areas and base item ids",async () => {
+    // CONFIG.DND5E.consumableTypes has wondrous; an exported wondrous consumable must import again.
+    const bead={name:"Bead",type:"consumable",system:{type:{value:"wondrous",subtype:""},properties:["mgc"]}};
+    const beadDocument=itemToStrictYamlDocument(bead);
+    requireValue(beadDocument.CONSUMABLE.ITEM["Consumable Type"]==="wondrous","The wondrous consumable type was not exported.");
+    requireValue((await build(beadDocument)).item.itemData.system.type.value==="wondrous","A wondrous consumable did not import.");
+    const parseOne=document=>new YamlItemParser().parseAll(yaml.dump(document))[0];
+    const spell={SCHEMA_VERSION:7,SPELL:{ITEM:{Name:"Ring spell",Level:1,School:"evo"},ACTIVATION:{Type:"action"},AREA:{Shape:"ring",Size:20,Width:5,Height:10}}};
+    const ring=parseOne(spell);
+    requireValue(ring.success&&!ring.warnings.some(warning=>warning.includes("Area Shape")),"A ring area was reported as unknown.");
+    const odd=parseOne({...spell,SPELL:{...spell.SPELL,AREA:{Shape:"blob",Size:20}}});
+    requireValue(odd.success&&odd.warnings.some(warning=>warning.includes('"blob" is stored as written')),"An unknown area shape did not warn that it is stored as written.");
+    const weapon=base=>({SCHEMA_VERSION:7,WEAPON:{ITEM:{Name:"Probe","Weapon Type":"martialR","Base Weapon":base,Rarities:[]},DAMAGE:{DAMAGE_DATA:{"Dice Count":1,"Die Denomination":6,"Damage Types":["piercing"]}}}});
+    const folded=parseOne(weapon("Hand Crossbow"));
+    requireValue(folded.success&&folded.item.baseWeapon==="handcrossbow"&&!folded.warnings.some(warning=>warning.includes("Base Weapon")),"A spaced base weapon name was not folded to its dnd5e id.");
+    const unknown=parseOne(weapon("lightsaber"));
+    requireValue(unknown.success&&unknown.warnings.some(warning=>warning.includes('Base Weapon "lightsaber"')),"An unknown base weapon did not warn.");
+    const orphan=parseOne({SCHEMA_VERSION:7,FEAT:{ITEM:{Name:"Orphan subtype","Feature Subtype":"general"}}});
+    requireValue(orphan.success&&orphan.warnings.some(warning=>warning.includes("without a Feature Type")),"A Feature Subtype without a Feature Type did not warn.");
+  });
+  await test("Food and container properties round trip; a stored property never leaves silently",async () => {
+    // dnd5e 6.1 validProperties.consumable.food; the codes are plain Set members, so they also build on 6.0.6.
+    const food={name:"Rations",type:"consumable",system:{type:{value:"food",subtype:""},properties:["hydrating","nutritious"]}};
+    const document=itemToStrictYamlDocument(food);
+    requireValue(document.CONSUMABLE.FOOD_PROPERTIES?.Hydrating===true&&document.CONSUMABLE.FOOD_PROPERTIES?.Nutritious===true,"Food properties were not exported.");
+    requireValue(same([...(await build(document)).item.itemData.system.properties].sort(),["hydrating","nutritious"]),"Food properties were lost on import.");
+    const chest={name:"Sealed chest",type:"container",system:{properties:["unidentifiedContents","weightlessContents"]}};
+    const chestDocument=itemToStrictYamlDocument(chest);
+    requireValue(chestDocument.CONTAINER.PROPERTIES["Unidentified Contents"]===true,"Unidentified Contents was not exported.");
+    requireValue(new Set((await build(chestDocument)).item.itemData.system.properties).has("unidentifiedContents"),"Unidentified Contents was lost on import.");
+    // A stored property without a named field leaves through CUSTOM_PROPERTIES.Registered. Import keeps it when
+    // dnd5e registers it for the Item type and warns otherwise (the SRD Bag of Beans stores weightlessContents on equipment).
+    const odd={name:"Odd loot",type:"loot",system:{type:{value:"gear",subtype:""},properties:["mgc","homebrewProp"]}};
+    const exported=itemToStrictYamlDocument(odd);
+    requireValue(same(exported.LOOT.CUSTOM_PROPERTIES?.Registered,["homebrewProp"])&&exported.LOOT.PROPERTIES.Magical===true,"An unmapped stored property was dropped from the export.");
+    const reparsed=new YamlItemParser().parse(yaml.dump(exported),{propertyRegistry:{mgc:{}}});
+    requireValue(reparsed.success&&reparsed.warnings.some(w=>w.includes("homebrewProp")),"Importing an unregistered property did not warn.");
+    const scroll={name:"Old scroll",type:"consumable",system:{type:{value:"scroll",subtype:""},properties:["verbal"]}};
+    requireValue(itemToStrictYamlDocument(scroll).CONSUMABLE.SCROLL_PROPERTIES.Vocal===true,"Legacy verbal was not exported as Vocal.");
+  });
+  await test("Blank stored Uses Max exports as no limited uses",async () => {
+    // dnd5e stores "" on an Item without limited uses; sheet-made Items and the SRD compendia all have it.
+    for(const max of [""," ",null]){
+      const source={name:"Plain blade",type:"weapon",system:{type:{value:"simpleM",baseItem:"club"},properties:[],uses:{spent:0,max,recovery:[]}}};
+      const document=itemToStrictYamlDocument({...cloneExplicit(source),_source:source});
+      requireValue(document.WEAPON.USAGE["Uses Max"]===0,"Blank Uses Max did not export as 0: "+JSON.stringify(max));
+      await build(document);
+    }
+    let error;try{itemToStrictYamlDocument({name:"Dice uses",type:"weapon",system:{type:{value:"simpleM",baseItem:"club"},properties:[],uses:{spent:0,max:"1d4",recovery:[]}}});}catch(caught){error=caught;}
+    requireValue(error?.code==="ITEM_EXPORT_UNSUPPORTED_USES","A dice Uses Max was not refused.");
+  });
+  await test("An activity that applies another document's effect by UUID exports without an embedded effect",async () => {
+    const reference={_id:"RemoteProfile001",uuid:"Compendium.dnd5e.effects.ActiveEffect.UVtVRNlaslbMIsuH",level:{min:null,max:null}};
+    const source={name:"Topple",type:"feat",system:{type:{value:"class",subtype:""},properties:[],activities:[{_id:"RemoteActivity01",name:"Topple",type:"save",effects:[reference]}]},effects:[]};
+    const activityImporterApi={
+      serializeActivity:()=>({schemaVersion:6,kind:"strict-activity",serializedEffectIds:[],rawData:{ACTIVITY_SAVE:{ACTIVITY:{Name:"Topple"},APPLIED_EFFECTS:[{"Effect UUID":reference.uuid,"Effect ID":reference._id}]}}}),
+      serializeEffect:()=>{throw new Error("An effect reference was sent to the effect serializer.");}
+    };
+    const document=itemToStrictYamlDocument(source,{activityImporterApi});
+    requireValue(document.FEAT.Activities.length===1&&document.FEAT.effects===undefined,"A UUID-referenced effect was exported as an embedded effect.");
+    requireValue(document.FEAT.Activities[0].ACTIVITY_SAVE.APPLIED_EFFECTS[0]["Effect UUID"]===reference.uuid,"The effect UUID reference was lost.");
+  });
   await test("Live export reads stored activation and uses rather than prepared values",async () => {
     const source=cloneExplicit(spell);
     source.system.activation={type:"action",value:2,condition:"stored"};
@@ -242,7 +304,7 @@ export async function runExplicitItemYamlTests() {
     const sourceSpell=cloneExplicit(spell);sourceSpell.system.school="";
     requireValue((await build(itemToStrictYamlDocument(sourceSpell))).item.itemData.system.school==="","Blank spell school was lost.");
   });
-  for(const version of [1,2,3,4,5,6]) await test("Companion strict descriptor version " + version,async () => {
+  for(const version of [1,2,3,4,5,6,7]) await test("Companion strict descriptor version " + version,async () => {
     const source={name:"Descriptor fixture",type:"weapon",system:{type:{value:"simpleM",baseItem:"club"},properties:[],activities:[{
       _id:"DescriptorAct001",name:"Utility",type:"utility",effects:[],toObject(){return {_id:this._id,name:this.name,type:this.type};}
     }]},effects:[{_id:"DescriptorEff001",name:"Effect",toObject(){return {_id:this._id,name:this.name};}}]};
@@ -251,30 +313,30 @@ export async function runExplicitItemYamlTests() {
       serializeEffect:()=>({schemaVersion:version,kind:"strict-effect",rawData:{EFFECT:{DETAILS:{Name:"Effect"}}}})
     };
     let exported,error;try{exported=itemToStrictYamlDocument(source,{activityImporterApi});}catch(e){error=e;}
-    if(version===6) requireValue(error?.code==="ITEM_EXPORT_UNSUPPORTED_ACTIVITY","Future descriptor did not fail clearly.");
+    if(version===7) requireValue(error?.code==="ITEM_EXPORT_UNSUPPORTED_ACTIVITY","Future descriptor did not fail clearly.");
     else requireValue(exported.WEAPON.Activities.length===1&&exported.WEAPON.effects.length===1,"Supported companion descriptor rejected.");
   });
-  for (const version of [0,1,2,3,4,5,6]) await test("Accept Item YAML schema " + version,async () => {
+  for (const version of [0,1,2,3,4,5,6,7]) await test("Accept Item YAML schema " + version,async () => {
     const doc = itemToStrictYamlDocument(spell); doc.SCHEMA_VERSION = version;
-    requireValue((await build(doc)).item.yamlSchemaVersion === 6,"Compatibility version failed.");
+    requireValue((await build(doc)).item.yamlSchemaVersion === 7,"Compatibility version failed.");
   });
   await test("Feat unknown type and subtype warn and are stored",async () => {
-    const parsed=await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Odd Feature","Feature Type":"homebrew","Feature Subtype":"custom"}}});
+    const parsed=await build({SCHEMA_VERSION:7,FEAT:{ITEM:{Name:"Odd Feature","Feature Type":"homebrew","Feature Subtype":"custom"}}});
     requireValue(parsed.item.itemData.system.type.value==="homebrew"&&parsed.item.itemData.system.type.subtype==="custom","Unknown feature type or subtype was not stored.");
     requireValue(parsed.warnings.some(w=>w.includes('Unknown Feature Type "homebrew"')),"Unknown feature type did not warn.");
-    const mismatch=await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Odd Subtype","Feature Type":"Class","Feature Subtype":"origin"}}});
+    const mismatch=await build({SCHEMA_VERSION:7,FEAT:{ITEM:{Name:"Odd Subtype","Feature Type":"Class","Feature Subtype":"origin"}}});
     requireValue(mismatch.item.itemData.system.type.value==="class","Feature type was not canonicalised.");
     requireValue(mismatch.warnings.some(w=>w.includes('Unknown Feature Subtype "origin"')),"Subtype mismatch did not warn.");
-    const periodWarning=await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Odd Period"},ENCHANTMENT:{Max:"1",Period:"weekly"}}});
+    const periodWarning=await build({SCHEMA_VERSION:7,FEAT:{ITEM:{Name:"Odd Period"},ENCHANTMENT:{Max:"1",Period:"weekly"}}});
     requireValue(periodWarning.item.itemData.system.enchant.period==="weekly"&&periodWarning.warnings.some(w=>w.includes("ENCHANTMENT.Period")),"Unknown enchant period was rejected or silent.");
   });
   await test("Feat ignores physical sections with FeatData warnings",async () => {
-    const parsed=await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Physical Feature",Rarities:["rare"]},INVENTORY:{Quantity:3},COST_AND_WEIGHT:{"Price Value":5},UNIDENTIFIED_DESCRIPTION:{"Unidentified Name":"Hidden"},ATTUNEMENT:{Attunement:"required"}}});
+    const parsed=await build({SCHEMA_VERSION:7,FEAT:{ITEM:{Name:"Physical Feature",Rarities:["rare"]},INVENTORY:{Quantity:3},COST_AND_WEIGHT:{"Price Value":5},UNIDENTIFIED_DESCRIPTION:{"Unidentified Name":"Hidden"},ATTUNEMENT:{Attunement:"required"}}});
     requireValue(parsed.item.itemData.system.quantity===undefined&&parsed.item.itemData.system.rarities===undefined&&parsed.item.itemData.system.attunement===undefined,"Physical fields leaked into FeatData.");
     requireValue(parsed.warnings.filter(w=>w.includes("current dnd5e FeatData")).length===5,"Expected five FeatData warnings: "+parsed.warnings.join(" | "));
   });
   await test("Feat advancement registers references, validates entries and reports its summary",async () => {
-    const parse = advancement => new YamlItemParser().parse(yaml.dump({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Adv"},ADVANCEMENT:advancement}}));
+    const parse = advancement => new YamlItemParser().parse(yaml.dump({SCHEMA_VERSION:7,FEAT:{ITEM:{Name:"Adv"},ADVANCEMENT:advancement}}));
     requireValue(!parse([{HIT_POINTS:{}}]).success,"Unsupported root accepted.");
     requireValue(!parse([{TRAIT:{Grants:["skill:ath"]}}]).success,"Bad trait key accepted.");
     requireValue(!parse([{GRANT_ITEMS:{ITEMS:[{Optional:true}]}}]).success,"Grant without a reference accepted.");
@@ -292,11 +354,11 @@ export async function runExplicitItemYamlTests() {
     const references = named.item.references;
     requireValue(references.length === 2 && references[0].query.name === "Shield" && references[0].query.itemTypes.join() === "spell" && references[0].status === "pending","Name reference not registered: " + JSON.stringify(references.map(r => r.query)));
     requireValue(references[1].query.uuid === "Compendium.dnd5e.spells24.Item.phbsplAlarm00000" && references[1].path === "advancement[0].configuration.items[1].uuid","UUID reference lost its path.");
-    const built = await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Adv"},ADVANCEMENT:[{GRANT_ITEMS:{ITEMS:[{Name:"Shield",Type:"spell"},{UUID:"Compendium.dnd5e.spells24.Item.phbsplAlarm00000"}]}}]}});
+    const built = await build({SCHEMA_VERSION:7,FEAT:{ITEM:{Name:"Adv"},ADVANCEMENT:[{GRANT_ITEMS:{ITEMS:[{Name:"Shield",Type:"spell"},{UUID:"Compendium.dnd5e.spells24.Item.phbsplAlarm00000"}]}}]}});
     const entries = Object.values(built.item.itemData.system.advancement);
     requireValue(entries.length === 1 && entries[0].type === "ItemGrant" && entries[0].configuration.items[0].uuid === null && entries[0].configuration.items[1].uuid === "Compendium.dnd5e.spells24.Item.phbsplAlarm00000" && /^[A-Za-z0-9]{16}$/.test(entries[0]._id) && entries[0]._id === Object.keys(built.item.itemData.system.advancement)[0],"Built advancement lost ids or UUIDs: " + JSON.stringify(entries));
     requireValue(extractExpectedItemProps(built).some(row => row.section === "Advancement" && row.label.startsWith("Grant Items")),"Preview omits advancement.");
-    const compact = await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Adv"},ADVANCEMENT:[{ABILITY_SCORE_IMPROVEMENT:{FIXED:{str:1,dex:2}}},{CHOOSE_ITEMS:{CHOICES:{"0":{Count:1}},Type:"feat"}}]}});
+    const compact = await build({SCHEMA_VERSION:7,FEAT:{ITEM:{Name:"Adv"},ADVANCEMENT:[{ABILITY_SCORE_IMPROVEMENT:{FIXED:{str:1,dex:2}}},{CHOOSE_ITEMS:{CHOICES:{"0":{Count:1}},Type:"feat"}}]}});
     const [asi, choice] = Object.values(compact.item.itemData.system.advancement);
     requireValue(same(asi.configuration.fixed,{str:1,dex:2}) && same(choice.configuration.choices,{"0":{count:1}}) && choice.configuration.type === "feat","Compact mapping forms were not accepted.");
     let exportError;
@@ -306,7 +368,7 @@ export async function runExplicitItemYamlTests() {
   await test("Container CONTENTS flatten into a batch with placement, limits and name binding",async () => {
     const parser = () => new YamlItemParser();
     const child = (name, extra = {}) => ({LOOT:{ITEM:{Name:name,Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Identified:true},...extra}});
-    const nested = {SCHEMA_VERSION:6,CONTAINER:{ITEM:{Name:"Pack",Rarities:[]},CONTENTS:[child("Rations"),{CONTAINER:{ITEM:{Name:"Pouch",Rarities:[]},CONTENTS:[child("Flint")]}}]}};
+    const nested = {SCHEMA_VERSION:7,CONTAINER:{ITEM:{Name:"Pack",Rarities:[]},CONTENTS:[child("Rations"),{CONTAINER:{ITEM:{Name:"Pouch",Rarities:[]},CONTENTS:[child("Flint")]}}]}};
     const results = parser().parseAll(yaml.dump(nested));
     requireValue(results.length === 4 && results.every(r => r.success),"Nested contents did not flatten: " + results.flatMap(r => r.errors).join("; "));
     requireValue(results[0].item.type === "container" && results[0].item.containerRef === null,"Parent gained a container reference.");
@@ -316,24 +378,24 @@ export async function runExplicitItemYamlTests() {
     requireValue(itemToStrictYamlDocument(results[1].item).LOOT.INVENTORY.Container === "Pack","Export lost the batch container name.");
     const single = parser().parse(yaml.dump(nested));
     requireValue(!single.success && single.errors.some(e => e.includes("batch flow")),"parse() accepted nested contents.");
-    const byName = parser().parseAll([{CONTAINER:{ITEM:{Name:"Sack",Rarities:[]}}},{LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"sack"}}}].map(d => yaml.dump({SCHEMA_VERSION:6,...d})).join("\n---\n"));
+    const byName = parser().parseAll([{CONTAINER:{ITEM:{Name:"Sack",Rarities:[]}}},{LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"sack"}}}].map(d => yaml.dump({SCHEMA_VERSION:7,...d})).join("\n---\n"));
     requireValue(byName[1].success && byName[1].item.containerRef.kind === "batch" && byName[1].item.containerRef.parentOrder === 0 && byName[1].item.references.length === 0,"Batch name binding failed: " + JSON.stringify(byName[1].item?.containerRef) + byName[1].errors.join("; "));
-    const external = parser().parse(yaml.dump({SCHEMA_VERSION:6,LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"Item.worldBag00000001"}}}));
+    const external = parser().parse(yaml.dump({SCHEMA_VERSION:7,LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"Item.worldBag00000001"}}}));
     requireValue(external.success && external.item.containerRef.kind === "reference" && external.item.containerRef.uuid === "Item.worldBag00000001" && external.item.references[0].kind === "container" && external.item.references[0].query.uuid === "Item.worldBag00000001" && external.item.references[0].path === "containerRef.uuid","UUID container reference not registered.");
-    const named = parser().parse(yaml.dump({SCHEMA_VERSION:6,LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"Old Sack"}}}));
+    const named = parser().parse(yaml.dump({SCHEMA_VERSION:7,LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"Old Sack"}}}));
     requireValue(named.success && named.item.containerRef.kind === "reference" && named.item.references[0].query.name === "Old Sack" && named.item.references[0].query.itemTypes.join() === "container","Name container reference not registered.");
     requireValue(itemToStrictYamlDocument(external.item).LOOT.INVENTORY.Container === "Item.worldBag00000001","Export lost the container UUID.");
-    const conflict = parser().parseAll(yaml.dump({SCHEMA_VERSION:6,CONTAINER:{ITEM:{Name:"Pack",Rarities:[]},CONTENTS:[child("Rations",{INVENTORY:{Quantity:1,Container:"Pack"}})]}}));
+    const conflict = parser().parseAll(yaml.dump({SCHEMA_VERSION:7,CONTAINER:{ITEM:{Name:"Pack",Rarities:[]},CONTENTS:[child("Rations",{INVENTORY:{Quantity:1,Container:"Pack"}})]}}));
     requireValue(!conflict[1].success && conflict[1].errors.some(e => e.includes("one form")),"Nested item with INVENTORY.Container was accepted.");
-    const spellInside = parser().parseAll(yaml.dump({SCHEMA_VERSION:6,CONTAINER:{ITEM:{Name:"Pack",Rarities:[]},CONTENTS:[{SPELL:{ITEM:{Name:"Nope"}}}]}}));
+    const spellInside = parser().parseAll(yaml.dump({SCHEMA_VERSION:7,CONTAINER:{ITEM:{Name:"Pack",Rarities:[]},CONTENTS:[{SPELL:{ITEM:{Name:"Nope"}}}]}}));
     requireValue(!spellInside[1].success && spellInside[1].errors.some(e => e.includes("physical")),"Non-physical content was accepted.");
     let deep = child("Leaf");
     for (let i = 0; i < 6; i++) deep = {CONTAINER:{ITEM:{Name:"Box " + i,Rarities:[]},CONTENTS:[deep]}};
-    const tooDeep = parser().parseAll(yaml.dump({SCHEMA_VERSION:6,...deep}));
+    const tooDeep = parser().parseAll(yaml.dump({SCHEMA_VERSION:7,...deep}));
     requireValue(tooDeep.some(r => !r.success && r.errors.some(e => e.includes("deep"))),"Depth limit not enforced.");
-    const ambiguous = parser().parseAll([{CONTAINER:{ITEM:{Name:"Sack",Rarities:[]}}},{CONTAINER:{ITEM:{Name:"Sack",Rarities:[]}}},{LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"Sack"}}}].map(d => yaml.dump({SCHEMA_VERSION:6,...d})).join("\n---\n"));
+    const ambiguous = parser().parseAll([{CONTAINER:{ITEM:{Name:"Sack",Rarities:[]}}},{CONTAINER:{ITEM:{Name:"Sack",Rarities:[]}}},{LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"},INVENTORY:{Quantity:1,Container:"Sack"}}}].map(d => yaml.dump({SCHEMA_VERSION:7,...d})).join("\n---\n"));
     requireValue(!ambiguous[2].success && ambiguous[2].errors.some(e => e.includes("matches 2")),"Ambiguous batch container name was accepted.");
-    const selfRef = parser().parseAll(yaml.dump({SCHEMA_VERSION:6,CONTAINER:{ITEM:{Name:"Loop",Rarities:[]},INVENTORY:{Quantity:1,Container:"Loop"}}}) + "\n---\n" + yaml.dump({SCHEMA_VERSION:6,LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"}}}));
+    const selfRef = parser().parseAll(yaml.dump({SCHEMA_VERSION:7,CONTAINER:{ITEM:{Name:"Loop",Rarities:[]},INVENTORY:{Quantity:1,Container:"Loop"}}}) + "\n---\n" + yaml.dump({SCHEMA_VERSION:7,LOOT:{ITEM:{Name:"Pebble",Rarities:[],"Loot Type":"gear"}}}));
     requireValue(selfRef[0].success && selfRef[0].item.containerRef.kind === "reference","A container naming itself should fall through to a destination reference: " + JSON.stringify(selfRef[0].item?.containerRef) + selfRef[0].errors.join("; "));
     const exportedBatch = exportStrictItemYamlBatch([
       {id:"Container000001",_id:"Container000001",name:"Sack",type:"container",system:{quantity:1,properties:[],rarities:[]}},
@@ -344,9 +406,9 @@ export async function runExplicitItemYamlTests() {
     requireValue(docs[1].LOOT.INVENTORY.Container === "Sack" && docs[2].LOOT.INVENTORY.Container === "Item.Elsewhere0000001" && docs[0].CONTAINER.INVENTORY.Container === undefined,"Batch export container labels wrong: " + JSON.stringify(docs.map(d => Object.values(d)[1].INVENTORY)));
   });
   await test("Feat prerequisite items reject malformed identifiers",async () => {
-    const parsed=new YamlItemParser().parse(yaml.dump({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Bad Prereq"},PREREQUISITES:{Items:["not valid!"]}}}));
+    const parsed=new YamlItemParser().parse(yaml.dump({SCHEMA_VERSION:7,FEAT:{ITEM:{Name:"Bad Prereq"},PREREQUISITES:{Items:["not valid!"]}}}));
     requireValue(!parsed.success&&parsed.errors.some(e=>e.includes("PREREQUISITES.Items")),"Malformed prerequisite identifier was accepted.");
-    const accepted=await build({SCHEMA_VERSION:6,FEAT:{ITEM:{Name:"Good Prereq"},PREREQUISITES:{Items:["fighter","feat:alert"],Level:"n/a"}}});
+    const accepted=await build({SCHEMA_VERSION:7,FEAT:{ITEM:{Name:"Good Prereq"},PREREQUISITES:{Items:["fighter","feat:alert"],Level:"n/a"}}});
     requireValue(same(accepted.item.itemData.system.prerequisites.items,["fighter","feat:alert"])&&accepted.item.itemData.system.prerequisites.level===null,"Valid prerequisite identifiers or nullable level were lost.");
   });
   for (const [name,mutate] of [
@@ -354,7 +416,7 @@ export async function runExplicitItemYamlTests() {
     ["fractional activation",d=>d.SPELL.ACTIVATION.Value=0.5],
     ["expression in numeric field",d=>d.SPELL.ITEM.Sort="1 + 2"],
     ["unknown damage label",d=>{d.SPELL.PREPARATION.Prepared="sometimes";}],
-    ["future schema",d=>d.SCHEMA_VERSION=7]
+    ["future schema",d=>d.SCHEMA_VERSION=8]
   ]) await test("Reject " + name,async () => {
     const doc=itemToStrictYamlDocument(spell);mutate(doc);
     const parsed = new YamlItemParser().parse(yaml.dump(doc));

@@ -52,7 +52,7 @@ function syntheticEnvironment(provider) {
     class LaterExtension extends RegisteredMidiActivity {
         static defineSchema() { return { ...super.defineSchema(), laterModule: new StringField(), twiceExtended: new NumberField({ min: 4 }) }; }
     }
-    globalThis.game = { version: "14.369", release: { generation: 14 }, system: { id: "dnd5e", version: "6.0.6" },
+    globalThis.game = { version: MIDI_REVIEW.foundry, release: { generation: 14 }, system: { id: "dnd5e", version: MIDI_REVIEW.system },
         modules: new Map([["midi-qol", { id: "midi-qol", active: true, version: MIDI_REVIEW.midi }]]),
         items: { create() { calls++; throw new Error("World write"); } }, i18n: { lang: "en" } };
     globalThis.dnd5e = { documents: { activity: { NativeActivity } } };
@@ -179,7 +179,7 @@ export function runMidiFieldCatalogTests({ provider, decorate }) {
             assert(!service.getFieldDetails({ layer: "native", fieldId: find("inherited").id }).success);
             assert(!service.probeFieldValues({ fieldId: "game.items.create", values: [1] }).success);
         });
-        check("MIDI 14.6.8 follow-up, status, targeting and region movement fields carry reviewed annotations", () => {
+        check("MIDI 14.6 follow-up, status, targeting and region movement fields carry reviewed annotations", () => {
             const rules = path => midiRulesFor({ kind: "activity", type: "attack", path }, { version: MIDI_REVIEW.midi, active: true });
             for (const path of ["midiProperties.followUp", "midiProperties.followUpTargets", "midiProperties.followUpCondition", "midiProperties.targetMustBeSeen",
                 "midiProperties.statuses[*].id", "midiProperties.statuses[*].onSave", "regionBehavior.moveDistance", "regionBehavior.moveTiming", "ammunitionPerTarget"])
@@ -213,7 +213,7 @@ export function runMidiFieldCatalogTests({ provider, decorate }) {
 
 export function installMidiParserTestEnvironment() {
     if (globalThis.__fieldCatalogTestSandbox !== true) throw new Error("Parser fixtures require an isolated test VM.");
-    globalThis.game = { version: "14.369", release: { generation: 14 }, system: { id: "dnd5e", version: "6.0.6" },
+    globalThis.game = { version: MIDI_REVIEW.foundry, release: { generation: 14 }, system: { id: "dnd5e", version: MIDI_REVIEW.system },
         modules: new Map([["midi-qol", { active: true, version: MIDI_REVIEW.midi }]]), settings: { get: () => false },
         i18n: { localize: value => value, format: value => value }, packs: [] };
     globalThis.foundry = { utils: { deepClone: structuredClone, getProperty: (value, path) => path.split(".").reduce((value, key) => value?.[key], value),
@@ -229,7 +229,7 @@ export function runMidiYamlCoverageTests({ parser, serializer, decorate }) {
     };
     const yaml = (type, body) => "ACTIVITY_" + type.toUpperCase() + ":\n  ACTIVITY:\n    Name: Catalog Fixture\n" + body;
     const field = (path, type = "attack", extra = {}) => decorate([{ layer: "midi", kind: "activity", type, path, ...extra }],
-        { systemVersion: "6.0.6", foundryVersion: "14.369", midi: { active: true } })[0];
+        { systemVersion: MIDI_REVIEW.system, foundryVersion: MIDI_REVIEW.foundry, midi: { active: true } })[0];
     check("MIDI targeting and trigger mappings retain stored inactive values", () => {
         const data = parse(yaml("attack", "  MIDI CONDITIONS:\n    AoE Target Type: enemy\n    Target on Template Draw: alwaysIgnoreDefeated\n    Trigger Activity: none\n    Trigger Targets: failedSaves\n    Roll As: firstTarget\n    Trigger Consume Resources: false\n    Trigger Configure Dialog: false\n    Skip Concentration Save: true")).activityData;
         assert(data.midiProperties.autoTargetType === "enemy" && data.midiProperties.triggeredActivityId === "none");

@@ -10,7 +10,7 @@ export const ITEM_TEMPLATES = [
     {
         id: "weapon",
         label: "Magic Weapon",
-        text: `SCHEMA_VERSION: 6
+        text: `SCHEMA_VERSION: 7
 WEAPON:
   ITEM:
     Name: "Longsword +1"
@@ -57,7 +57,7 @@ WEAPON:
     {
         id: "armor",
         label: "Wondrous Item",
-        text: `SCHEMA_VERSION: 6
+        text: `SCHEMA_VERSION: 7
 EQUIPMENT:
   ITEM:
     Name: "Cloak of Protection"
@@ -88,7 +88,7 @@ EQUIPMENT:
     {
         id: "potion",
         label: "Potion",
-        text: `SCHEMA_VERSION: 6
+        text: `SCHEMA_VERSION: 7
 CONSUMABLE:
   ITEM:
     Name: "Potion of Healing"
@@ -120,7 +120,7 @@ CONSUMABLE:
     {
         id: "tool",
         label: "Tool",
-        text: `SCHEMA_VERSION: 6
+        text: `SCHEMA_VERSION: 7
 TOOL:
   ITEM:
     Name: "Alchemist's Supplies"
@@ -152,7 +152,7 @@ TOOL:
     {
         id: "container",
         label: "Container",
-        text: `SCHEMA_VERSION: 6
+        text: `SCHEMA_VERSION: 7
 CONTAINER:
   ITEM:
     Name: "Bag of Holding"
@@ -188,7 +188,7 @@ CONTAINER:
     {
         id: "loot",
         label: "Loot/Gear",
-        text: `SCHEMA_VERSION: 6
+        text: `SCHEMA_VERSION: 7
 LOOT:
   ITEM:
     Name: "Ruby"
@@ -216,7 +216,7 @@ LOOT:
         id: "spell",
         label: "Spell (Core Fields)",
         text: `# Core spell fields only. Add Activities with Activity Importer for automated rolls.
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 SPELL:
   ITEM:
     Name: "Magic Missile"
@@ -264,7 +264,7 @@ SPELL:
         label: "Feature (Core Fields)",
         text: `# Core feature fields only. Features have no rarity, price, weight, or attunement.
 # Add Activities with Activity Importer for automated rolls and effects.
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 FEAT:
   ITEM:
     Name: "Second Wind"
@@ -295,7 +295,7 @@ FEAT:
     {
         id: "batch",
         label: "Multi-Item Batch",
-        text: `SCHEMA_VERSION: 6
+        text: `SCHEMA_VERSION: 7
 WEAPON:
   ITEM:
     Name: "Shortsword +1"
@@ -379,7 +379,7 @@ FEAT:
     {
         id: "mixed-damage-weapon",
         label: "Mixed Damage Weapon",
-        text: `SCHEMA_VERSION: 6
+        text: `SCHEMA_VERSION: 7
 WEAPON:
   ITEM:
     Name: "Flame Tongue Longsword"

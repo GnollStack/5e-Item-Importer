@@ -91,7 +91,7 @@ export function discoverNativeCatalog() {
         "The manifest retains backpack for migration to container; it is not a separate editable Item type.",
         { severity: "info", kind: "item", type: "backpack", replacement: "container" });
     if (!manifest) addCatalogDiagnostic(acc, "manifest-types-unavailable",
-        "Native manifest type metadata is unavailable; the reviewed 6.0.6 type list is being used.");
+        "Native manifest type metadata is unavailable; the reviewed dnd5e 6 type list is being used.");
     const advancements = advancementTypes(system);
     const nativeActivities = Object.values(system?.documents?.activity ?? {})
         .filter(model => typeof model === "function" && typeof model.metadata?.type === "string")

@@ -925,7 +925,7 @@ export class ItemImporterTests {
             check("live Item validation accepts a complete feat source", completeFeatValidation.valid === true, completeFeatValidation);
 
             const strictFeat = parseItemText([
-                "SCHEMA_VERSION: 6",
+                "SCHEMA_VERSION: 7",
                 "FEAT:",
                 "  ITEM:",
                 "    Name: Live Feature",
@@ -967,7 +967,7 @@ export class ItemImporterTests {
             // Advancement: literal UUIDs build valid native data; an unresolvable name blocks import before any write.
             const advancementSpellUuid = "Compendium.dnd5e.spells24.Item.phbsplFireball00";
             const advancementFeat = parseItemText([
-                "SCHEMA_VERSION: 6",
+                "SCHEMA_VERSION: 7",
                 "FEAT:",
                 "  ITEM:",
                 "    Name: Live Advancement Feature",
@@ -1019,7 +1019,7 @@ export class ItemImporterTests {
             );
 
             const unresolvedFeat = parseItemText([
-                "SCHEMA_VERSION: 6",
+                "SCHEMA_VERSION: 7",
                 "FEAT:",
                 "  ITEM:",
                 "    Name: Live Unresolved Advancement Feature",
@@ -1044,7 +1044,7 @@ export class ItemImporterTests {
 
             // Container contents (read-only): nested CONTENTS take the batch path and children never import without their parent.
             const nestedYaml = [
-                "SCHEMA_VERSION: 6",
+                "SCHEMA_VERSION: 7",
                 "CONTAINER:",
                 "  ITEM:",
                 "    Name: Live Nested Pack",
@@ -1081,7 +1081,7 @@ export class ItemImporterTests {
             const existingContainer = game.items.find(item => item.type === "container" && !item.system.container);
             if (existingContainer) {
                 const worldReference = parseItemText([
-                    "SCHEMA_VERSION: 6",
+                    "SCHEMA_VERSION: 7",
                     "LOOT:",
                     "  ITEM:",
                     "    Name: Live Container Reference",

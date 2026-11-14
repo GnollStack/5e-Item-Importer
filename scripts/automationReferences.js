@@ -66,7 +66,7 @@ export async function validateAutomationReferences(results, item, { advisoryOnly
             const path = `regionBehavior.rules.${index}.targetId`;
             if (!rule.targetId) { if (activity.regionBehavior.enabled) add("An enabled area rule needs a target.", path); continue; }
             if (rule.action === "useActivity") await resolveActivity(rule.targetId, path, false, true);
-            else if (rule.action === "applyEffect" && !effects.some(effect => idOf(effect) === rule.targetId)) add("Area rule references an unavailable Item effect.", path);
+            else if (["applyEffect", "removeEffect"].includes(rule.action) && !effects.some(effect => idOf(effect) === rule.targetId)) add("Area rule references an unavailable Item effect.", path);
         }
         // Ammunition is an owned Item ID in the attack usage configuration, not an arbitrary UUID.
         if (activity.ammunition && !item?.actor?.items?.get?.(activity.ammunition))

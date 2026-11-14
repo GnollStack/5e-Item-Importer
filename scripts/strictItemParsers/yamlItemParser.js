@@ -292,7 +292,8 @@ const EQUIPMENT_COVER_MAP = {
 
 // ─── Consumable Constants ───────────────────────────────────────────────────
 
-const VALID_CONSUMABLE_TYPES = ['ammo', 'food', 'poison', 'potion', 'rod', 'scroll', 'trinket', 'wand'];
+// CONFIG.DND5E.consumableTypes in dnd5e 6.
+const VALID_CONSUMABLE_TYPES = ['ammo', 'food', 'poison', 'potion', 'rod', 'scroll', 'trinket', 'wand', 'wondrous'];
 
 const CONSUMABLE_AMMO_TYPE_MAP = {
     'arrow': 'arrow', 'bolt': 'crossbowBolt', 'crossbowbolt': 'crossbowBolt',
@@ -354,12 +355,15 @@ const VALID_SPELL_ACTIVATION_TYPES = ['action', 'bonus', 'reaction', 'minute', '
 const VALID_SPELL_RANGE_UNITS = ['self', 'touch', 'spec', 'any', 'ft', 'mi', 'm', 'km'];
 const VALID_DURATION_UNITS = ['inst', 'spec', 'turn', 'round', 'minute', 'hour', 'day', 'month', 'year', 'disp', 'dstr', 'perm'];
 const VALID_TARGET_TYPES = ['self', 'ally', 'enemy', 'creature', 'object', 'space', 'creatureOrObject', 'any', 'willing'];
-const VALID_AREA_SHAPES = ['cone', 'cube', 'cylinder', 'radius', 'line', 'sphere', 'circle', 'square', 'wall'];
+// CONFIG.DND5E.areaTargetTypes in dnd5e 6.
+const VALID_AREA_SHAPES = ['cone', 'cube', 'cylinder', 'radius', 'ring', 'line', 'sphere', 'circle', 'square', 'wall'];
 const VALID_AREA_UNITS = ['ft', 'mi', 'm', 'km'];
 
 // ─── Feat Constants ──────────────────────────────────────────────────────────
-// dnd5e 6.0.6 CONFIG.DND5E.featureTypes. The system stores unknown values
+// dnd5e 6 CONFIG.DND5E.featureTypes. The system stores unknown values
 // as-is and labels them "Feature", so these lists drive warnings, not errors.
+// The running system's registry is used when it is available (featureSubtypesFor);
+// these lists are the fallback for offline checks.
 
 const VALID_FEATURE_TYPES = [
     'background', 'class', 'monster', 'race', 'enchantment',
@@ -374,9 +378,28 @@ const FEATURE_SUBTYPES = {
     ],
     enchantment: ['artificerInfusion', 'rune'],
     feat: ['general', 'origin', 'fightingStyle', 'epicBoon'],
+    // dnd5e 6.1 added the lineage subtype for species features.
+    race: ['lineage'],
     supernaturalGift: ['blessing', 'charm', 'epicBoon']
 };
+
+/** Subtypes the running dnd5e registers for a feature type, or the reviewed list when no system is loaded. */
+function featureSubtypesFor(featureType) {
+    const registry = globalThis.CONFIG?.DND5E?.featureTypes;
+    if (registry && typeof registry === 'object') return Object.keys(registry[featureType]?.subtypes ?? {});
+    return FEATURE_SUBTYPES[featureType] || [];
+}
 const VALID_ENCHANT_PERIODS = ['sr', 'lr', 'atwill'];
+
+/**
+ * Whether the running dnd5e registers a base item id in one of its CONFIG.DND5E id maps
+ * (weaponIds, armorIds, shieldIds). False when no system is loaded, so an id outside the
+ * importer's own table is reported instead of passing unseen.
+ */
+function isRegisteredBaseItem(id, registries) {
+    const config = globalThis.CONFIG?.DND5E;
+    return registries.some(name => config?.[name] && Object.hasOwn(config[name], id));
+}
 
 const COMMON_SECTION_KEYS = {
     ITEM: ['Name', 'Rarities', 'Rarity'],
@@ -437,6 +460,7 @@ const TYPE_SECTION_KEYS = {
         AMMUNITION_PROPERTIES: ['Ammunition Type', 'Adamantine', 'Silvered', 'Returning', 'Magic Bonus', 'Damage Formula', 'Damage Type', 'Damage Replace'],
         POISON_PROPERTIES: ['Poison Type'],
         SCROLL_PROPERTIES: ['Concentration', 'Somatic', 'Vocal', 'Verbal', 'Ritual'],
+        FOOD_PROPERTIES: ['Hydrating', 'Nutritious'],
         USAGE: [...USAGE_KEYS, 'Destroy on Empty'],
         RECOVERY: RECOVERY_KEYS
     },
@@ -453,7 +477,7 @@ const TYPE_SECTION_KEYS = {
         PROPERTIES: ['Magical']
     },
     container: {
-        PROPERTIES: ['Magical', 'Weightless Contents'],
+        PROPERTIES: ['Magical', 'Weightless Contents', 'Unidentified Contents'],
         ATTUNEMENT: ATTUNEMENT_KEYS,
         CAPACITY: ['Item Count', 'Weight Capacity Value', 'Weight Capacity Units', 'Volume Capacity Value', 'Volume Capacity Units'],
         CURRENCY_CONTENTS: ['Platinum', 'Gold', 'Electrum', 'Silver', 'Copper']
@@ -1545,13 +1569,16 @@ export class YamlItemParser {
         // Base Weapon
         const baseWeaponRaw = asNullable(itemSection['Base Weapon']);
         if (baseWeaponRaw) {
-            const baseKey = String(baseWeaponRaw).trim().toLowerCase();
+            // dnd5e base weapon ids are one lowercase word ("handcrossbow"), so "Hand Crossbow" is folded.
+            const baseKey = String(baseWeaponRaw).trim().toLowerCase().replace(/\s+/g, '');
             const systemValue = BASE_WEAPON_MAP[baseKey];
             if (systemValue) {
                 item.baseWeapon = systemValue;
             } else {
                 item.baseWeapon = baseKey;
-                ItemUtils.warn(`YamlItemParser: No mapping for base weapon "${baseKey}", using as-is`);
+                if (!isRegisteredBaseItem(baseKey, ['weaponIds'])) {
+                    this.addWarning(`Base Weapon "${baseWeaponRaw}" is not a dnd5e base weapon the importer knows; it is stored as "${baseKey}".`);
+                }
             }
         }
 
@@ -1746,7 +1773,9 @@ export class YamlItemParser {
                 item.baseEquipment = systemValue;
             } else {
                 item.baseEquipment = baseKey;
-                ItemUtils.warn(`YamlItemParser: No mapping for base equipment "${baseKey}", using as-is`);
+                if (!isRegisteredBaseItem(baseKey, ['armorIds', 'shieldIds'])) {
+                    this.addWarning(`Base Equipment "${baseRaw}" is not a dnd5e base armor or shield the importer knows; it is stored as "${baseKey}".`);
+                }
             }
         }
 
@@ -1972,6 +2001,20 @@ export class YamlItemParser {
                 this.addWarning('SCROLL_PROPERTIES.Verbal is deprecated; use Vocal for current dnd5e.');
             }
             item.ritual = asBool(scrollProps['Ritual'], false);
+        }
+
+        // Food Properties (dnd5e 6.1 validProperties.consumable.food). The values are applied as
+        // explicit property states; these checks only explain when dnd5e will not use them.
+        const foodProps = data?.FOOD_PROPERTIES;
+        const foodEnabled = ['Hydrating', 'Nutritious'].filter(label => asBool(foodProps?.[label], false));
+        if (foodEnabled.length) {
+            if (conTypeRaw !== 'food') {
+                this.addWarning(`FOOD_PROPERTIES.${foodEnabled.join(' and ')} apply only to Consumable Type "food"; dnd5e ignores them on "${conTypeRaw}".`);
+            }
+            const registry = globalThis.CONFIG?.DND5E?.itemProperties;
+            if (registry && !registry.hydrating) {
+                this.addWarning('FOOD_PROPERTIES need dnd5e 6.1 or later; this dnd5e version stores the properties without using them.');
+            }
         }
 
         // Usage and Recovery (with Destroy on Empty)
@@ -2335,7 +2378,7 @@ export class YamlItemParser {
         const rangeUnitsRaw = asString(rng['Units'], 'ft').toLowerCase();
         const validRangeUnits = VALID_SPELL_RANGE_UNITS.includes(rangeUnitsRaw) ? rangeUnitsRaw : 'ft';
         if (!VALID_SPELL_RANGE_UNITS.includes(rangeUnitsRaw)) {
-            this.addWarning(`Invalid Range Units "${rng['Units']}", defaulting to "ft"`);
+            this.addWarning(`Unknown Range Units "${rng['Units']}" is stored as written. dnd5e uses: ${VALID_SPELL_RANGE_UNITS.join(', ')}`);
         }
         const rangeValueRaw = asNullable(rng['Value']);
         item.range = {
@@ -2348,7 +2391,7 @@ export class YamlItemParser {
         const durUnitsRaw = asString(dur['Units'], 'inst').toLowerCase();
         const validDurUnits = VALID_DURATION_UNITS.includes(durUnitsRaw) ? durUnitsRaw : 'inst';
         if (!VALID_DURATION_UNITS.includes(durUnitsRaw)) {
-            this.addWarning(`Invalid Duration Units "${dur['Units']}", defaulting to "inst"`);
+            this.addWarning(`Unknown Duration Units "${dur['Units']}" is stored as written. dnd5e uses: ${VALID_DURATION_UNITS.join(', ')}`);
         }
         const durValueRaw = asNullable(dur['Value']);
         item.duration = {
@@ -2364,7 +2407,7 @@ export class YamlItemParser {
             const tgtTypeStr = String(tgtTypeRaw).trim();
             const matchedType = VALID_TARGET_TYPES.find(t => t.toLowerCase() === tgtTypeStr.toLowerCase());
             if (!matchedType) {
-                this.addWarning(`Invalid Target Type "${tgtTypeRaw}". Must be one of: ${VALID_TARGET_TYPES.join(', ')}`);
+                this.addWarning(`Unknown Target Type "${tgtTypeRaw}" is stored as written. dnd5e uses: ${VALID_TARGET_TYPES.join(', ')}`);
             }
             const tgtCountRaw = asNullable(tgt['Count']);
             const tgtSpecialRaw = asNullable(tgt['Special']);
@@ -2384,7 +2427,7 @@ export class YamlItemParser {
             const areaUnitsRaw = asString(area['Units'], 'ft').toLowerCase();
 
             if (!VALID_AREA_SHAPES.includes(shapeRaw)) {
-                this.addWarning(`Invalid Area Shape "${area['Shape']}". Must be one of: ${VALID_AREA_SHAPES.join(', ')}`);
+                this.addWarning(`Unknown Area Shape "${area['Shape']}" is stored as written. dnd5e uses: ${VALID_AREA_SHAPES.join(', ')}`);
             } else {
                 const countRaw = asNullable(area['Count']);
                 const widthRaw = asNullable(area['Width']);
@@ -2441,13 +2484,13 @@ export class YamlItemParser {
         } else {
             const text = String(subtypeRaw).trim();
             const knownType = VALID_FEATURE_TYPES.includes(item.featureType);
-            const known = FEATURE_SUBTYPES[item.featureType] || [];
+            const known = featureSubtypesFor(item.featureType);
             const canonical = known.find(s => s.toLowerCase() === text.toLowerCase());
             item.featureSubtype = canonical ?? text;
-            if (!canonical && knownType) {
-                if (!item.featureType) {
-                    this.addWarning(`Feature Subtype "${text}" is set without a Feature Type; dnd5e shows no subtype label.`);
-                } else if (!known.length) {
+            if (!canonical && !item.featureType) {
+                this.addWarning(`Feature Subtype "${text}" is set without a Feature Type; dnd5e shows no subtype label.`);
+            } else if (!canonical && knownType) {
+                if (!known.length) {
                     this.addWarning(`Feature Type "${item.featureType}" has no subtypes in dnd5e; Feature Subtype "${text}" is stored but not labeled.`);
                 } else {
                     this.addWarning(`Unknown Feature Subtype "${text}" for Feature Type "${item.featureType}". Known: ${known.join(', ')}.`);

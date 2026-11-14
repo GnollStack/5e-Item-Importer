@@ -29,12 +29,17 @@ export async function runFieldCatalogChecks(moduleId) {
   const first = pages[0];
   if (!first) return { success: false, tests, warnings };
   const item = moduleId === "5e-item-importer";
-  await check("native type registry includes the complete verified 6.0.6 scope", () => {
-    if (game.system.version !== "6.0.6") {
-      warnings.push("Exact native type counts are verified for 6.0.6; current version requires review."); return;
+  // dnd5e 6.1.0 added the renown Item type (catalog-only), the antimagic activity behavior and
+  // the enchantment effect's own rider lists. Counts are exact per reviewed version.
+  const reviewedScope = { "6.0.6": { itemTypes: 13, behaviors: "applyActiveEffect,difficultTerrain", enchantmentRiders: false },
+    "6.1.0": { itemTypes: 14, behaviors: "antimagic,applyActiveEffect,difficultTerrain", enchantmentRiders: true } }[game.system.version];
+  await check("native type registry includes the complete verified scope", () => {
+    if (!reviewedScope) {
+      warnings.push("Exact native type counts are verified for dnd5e 6.0.6 and 6.1.0; current version requires review."); return;
     }
     if (item) {
-      assert(first.types.filter(type => type.kind === "item").length === 13);
+      assert(first.types.filter(type => type.kind === "item").length === reviewedScope.itemTypes);
+      if (reviewedScope.itemTypes === 14) assert(first.types.find(type => type.kind === "item" && type.type === "renown")?.importSupport === "catalog-only");
       assert(first.types.filter(type => type.kind === "advancement").length === 9);
       assert(first.types.filter(type => type.kind === "item" && type.importSupport === "supported").length === 8);
       // Feature Items author the six feat-valid advancement types; HitPoints, Size and Subclass stay catalog-only.
@@ -60,7 +65,7 @@ export async function runFieldCatalogChecks(moduleId) {
   });
   await check("coverage manifests refer to real native fields", async () => {
     const mapping = await import(item ? "../itemFieldCatalogCoverage.js" : "../activityFieldCatalogCoverage.js");
-    const audit = mapping.auditCoverageReferences(fields);
+    const audit = mapping.auditCoverageReferences(fields, first.environment);
     assert(audit.success, JSON.stringify(audit.missing));
   });
   await check("field details preserve the exact page record", () => {
@@ -165,11 +170,18 @@ export async function runFieldCatalogChecks(moduleId) {
     });
     await check("current activity behavior variants and base effect fields are native", () => {
       const config = find("attack", "behaviors[*].config");
-      assert(config.structure.complete && config.structure.variants.join(",") === "applyActiveEffect,difficultTerrain");
+      assert(config.structure.complete, "Activity behavior variants are incomplete");
+      if (reviewedScope) assert(config.structure.variants.join(",") === reviewedScope.behaviors, "Unexpected activity behavior variants: " + config.structure.variants.join(","));
       assert(fields.some(field => field.kind === "activity" && field.type === "attack"
         && field.path === "behaviors[*].config.types" && field.variant === "behaviors[*].type=difficultTerrain"));
       for (const path of ["system.origin.activity", "system.conditions", "system.magical", "system.rider.statuses", "system.changes[*]._id", "system.changes[*].conditions", "system.changes[*].replacement"])
-        assert(find("base", path, "effect").coverage.status === "declared");
+        assert(find("base", path, "effect").coverage.status === "declared", "Base effect field is not declared: " + path);
+      // dnd5e 6.1: enchantment effects store their own riders; on 6.0 the field does not exist.
+      const riderPaths = ["system.rider.activities", "system.rider.effects", "system.rider.items"];
+      if (reviewedScope?.enchantmentRiders) for (const path of riderPaths)
+        assert(find("enchantment", path, "effect").coverage.status === "declared", "Enchantment rider field is not declared: " + path);
+      else if (reviewedScope) assert(!fields.some(field => field.kind === "effect" && field.type === "enchantment" && riderPaths.includes(field.path)));
+      assert(find("condition", "system.type", "effect").coverage.status === "declared", "Condition effect type is not declared");
       for (const path of ["attack.abilities", "attack.abilities[*]"])
         assert(find("attack", path).storage.persisted === false && find("attack", path).coverage.status === "excluded");
       assert(find("save", "save.dc.bonus").coverage.status === "excluded");

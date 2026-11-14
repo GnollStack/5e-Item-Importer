@@ -4,7 +4,7 @@ MIDI-QOL discovery is available through the same actions with layer: "midi"; the
 
 The importers expose a read-only catalog for inspecting native Foundry and D&D5e fields before extending an explicit YAML template. It combines discovered schemas, reviewed sheet annotations, and the importers' declared YAML mappings. It can also test supplied values and produce offline references and version comparisons.
 
-The reviewed runtime is **Foundry 14.369 / D&D5e 6.0.6**. The catalog records the actual runtime and module configuration on every response. No system upgrade, migration, world-document creation, new YAML root, or importer UI is introduced.
+The reviewed runtimes are **Foundry 14.369 and 14.370 with D&D5e 6.0.6 or 6.1.0**. The catalog records the actual runtime and module configuration on every response. No system upgrade, migration, world-document creation, new YAML root, or importer UI is introduced.
 
 ## What is cataloged
 

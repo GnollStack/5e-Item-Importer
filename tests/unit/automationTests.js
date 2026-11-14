@@ -140,8 +140,10 @@ export async function runAutomationContractTests({ itemModule = false } = {}) {
         const { itemToStrictYamlDocument } = await import("../../scripts/itemYamlExporter.js");
         const { extractExpectedItemProps, extractActualItemProps } = await import("../../scripts/ui/itemComparisonExtractor.js");
         for (const type of types) await test(`${type}: full Item integration import/export without companion`, async () => {
-            const input = { SCHEMA_VERSION: 6, [type.toUpperCase()]: { ITEM: { Name: "Automation fixture" },
-                AUTOMATION: { "midi-qol": { flags: { onUseMacroName: "[postActiveEffects]Canary", noProvokeReaction: false } },
+            const input = { SCHEMA_VERSION: 7, [type.toUpperCase()]: { ITEM: { Name: "Automation fixture" },
+                // rulesText is written by MIDI 14.6.9+ when it fills a sample Item's rules text; it must survive export.
+                AUTOMATION: { "midi-qol": { flags: { onUseMacroName: "[postActiveEffects]Canary", noProvokeReaction: false,
+                    rulesText: { uuid: "Compendium.dnd5e.spells24.Item.phbsplAlarm00000", match: "otherRules" } } },
                     dae: { macro: { name: "Stored name", command: "// stored only", type: "script", scope: "global" } } } } };
             if (type === "tool") input.TOOL.ABILITY_CHECK = { Proficient: 1.5 };
             const root = input[type.toUpperCase()];
@@ -157,7 +159,7 @@ export async function runAutomationContractTests({ itemModule = false } = {}) {
             const source = result.item.itemData;
             if (type === "tool") assert(source.system.proficient === 1.5, "Fractional proficiency lost.");
             const output = itemToStrictYamlDocument(source);
-            assert(output.SCHEMA_VERSION === 6, "Wrong output version.");
+            assert(output.SCHEMA_VERSION === 7, "Wrong output version.");
             assert(same(input[type.toUpperCase()].AUTOMATION, output[type.toUpperCase()].AUTOMATION), "Item integration data lost.");
             const rows = automationRows(source, "item", type);
             assert(same(rows, extractExpectedItemProps(result).filter(row => row.section === "Automation")), "Item expected comparison lost automation.");
@@ -191,12 +193,13 @@ export async function runAutomationContractTests({ itemModule = false } = {}) {
             for (const path of ["macroData", "otherActivityId", "isOverTimeFlag", "overTimeProperties", "regionLight"])
                 assert(same(readPath(source, path), readPath(parsed.activityData, path)), "Lost " + path);
         });
-        for (const type of types) await test(`${type}: MIDI 14.6.8 follow-up, status, region movement and teleport settings survive strict export`, () => {
+        for (const type of types) await test(`${type}: MIDI 14.6 follow-up, status, region movement and teleport settings survive strict export`, () => {
             const source = explicitActivitySource(type);
-            // MIDI 14.6.8 stores these defaults on every activity; strict export failed on them before review.
+            // MIDI 14.6.8 and later store these defaults on every activity; strict export failed on them before review.
             source.midiProperties = { ...(source.midiProperties ?? {}), followUp: false, followUpTargets: "default", followUpCondition: "",
                 targetMustBeSeen: false, statuses: [{ id: "poisoned", specialDuration: ["turnEnd"], onSave: true }] };
-            source.regionBehavior = { enabled: false, moveDistance: 0, moveDirection: "away", moveTiming: "start" };
+            // templateOrigin "floor" was added by MIDI 14.6.11.
+            source.regionBehavior = { enabled: false, moveDistance: 0, moveDirection: "away", moveTiming: "start", templateOrigin: "floor" };
             if (type === "attack") source.ammunitionPerTarget = "default";
             if (type === "teleport") source.midiTeleport = { movers: "default", plan: "button", blocked: "refuse", requireSight: false };
             const descriptor = serializeActivityToStrictYaml(source, { includeLinkedEffects: false });

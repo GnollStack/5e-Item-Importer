@@ -8,7 +8,7 @@ const requirement = (path, options = {}) => ({
   representations: [], aliases: [], stages: { template: "declared" }, ...options
 });
 const item = (body, requirements, extra = "") => checkTemplate({
-  markdown: fence("SCHEMA_VERSION: 6\nWEAPON:\n" + body) + extra, requirements, yaml, itemModule: true, type: "weapon"
+  markdown: fence("SCHEMA_VERSION: 7\nWEAPON:\n" + body) + extra, requirements, yaml, itemModule: true, type: "weapon"
 });
 const activity = (body, requirements, type = "attack") => checkTemplate({
   markdown: fence("ACTIVITY_" + type.toUpperCase() + ":\n" + body), requirements, yaml, itemModule: false, type

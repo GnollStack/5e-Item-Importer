@@ -1,12 +1,28 @@
 # Strict Tool Item authoring reference
 
+## At a glance
+
+- **Root key:** `TOOL`
+- **When to use:** Use TOOL when the source is a set of artisan's tools, a gaming set, a musical instrument, or one of the six other tools dnd5e knows: disguise kit, forgery kit, herbalism kit, navigator's tools, poisoner's kit, thieves' tools. A magic version, such as a magic lute, is still a TOOL.
+- **Smallest working block:** `ITEM.Name` (the name), `ITEM.Base Tool` (the importer id of the tool; `ITEM.Tool Type` is filled in from it).
+
+**Use another template when:**
+
+- A healer's kit, climber's kit, mess kit or other gear that is not a dnd5e tool. `Base Tool` rejects it: CONSUMABLE if it has uses, otherwise LOOT (`Loot Type: gear`).
+- A worn item that only gives a bonus to a tool or skill check (gloves, goggles): EQUIPMENT.
+- A hammer, sickle or other tool-like object with weapon damage: WEAPON.
+- A pack or case that holds tools: CONTAINER.
+- A feat or class feature that grants a tool proficiency: FEAT.
+
+**Work in this order:** find the source wording in [From source text to YAML](#from-source-text-to-yaml), copy the exact names from the [Complete field reference](#complete-field-reference), shape the answer like the [Concrete example](#concrete-example), then go through [Check before you answer](#check-before-you-answer).
+
 ## Destination and prerequisites
 
-Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 6` and the `TOOL` root.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 7` and the `TOOL` root.
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 / Foundry 14.369; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.8 and DAE 14.6.6 integrations. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 and 6.1.0 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.11 and DAE 14.6.9 integrations. Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -30,12 +46,31 @@ The first YAML block is the **native and legacy field reference**, not a ready-m
 
 Missing, `null`, `false`, `0`, `""`, `[]` and `{}` are distinct. Use `n/a` only for fields that document it as an unset marker. Never use it as a universal substitute for null or empty data. `CHANGES.Value` retains its YAML type, including the literal text `n/a`. Formula syntax acceptance does not establish that referenced variables exist.
 
-For new physical Items, ordinary defaults are quantity 1, identified true, equipped false and zero unspecified price/weight. Omit unsupplied rarity, attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+For new physical Items, ordinary defaults are quantity 1, equipped false and zero unspecified price/weight. Write `ITEM.Rarities: []` for a mundane item, because a missing `Rarities` key is stored as `common`. A missing `INVENTORY.Identified` follows the user's own setting, so write it when it matters. Omit unsupplied attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+
+## From source text to YAML
+
+Find the wording closest to the source and write the fields shown. A path such as `ITEM.Name` is the `Name` key inside the `ITEM` section of `TOOL`. A list such as `RECOVERY` takes one `-` entry per item. Leave out every section the source does not mention.
+
+| The source says | Write |
+| --- | --- |
+| "Thieves' Tools" | `ITEM.Base Tool: thief` |
+| "Smith's Tools" (artisan's tools) | `ITEM.Tool Type: art`; `ITEM.Base Tool: smith` |
+| "Lute" (musical instrument) | `ITEM.Tool Type: music`; `ITEM.Base Tool: lute` |
+| "Dice Set" (gaming set) | `ITEM.Tool Type: game`; `ITEM.Base Tool: dice` |
+| "Herbalism Kit" | `ITEM.Base Tool: herb` |
+| "Ability: Dexterity" | `ABILITY_CHECK.Ability: dex`; `ABILITY_CHECK.Proficient: Automatic` |
+| "+2 bonus to ability checks made with these tools" | `PROPERTIES.Tool Bonus: 2` |
+| "uncommon (requires attunement by a bard)" | `ITEM.Rarities: [uncommon]`; `PROPERTIES.Magical: true`; `ATTUNEMENT.Attunement: required`; `ATTUNEMENT.Attunement By: a bard` |
+| "can be used as a spellcasting focus" | `PROPERTIES.Focus: true` |
+| "It has 3 charges" and "regains all expended charges daily at dawn" | `USAGE.Uses Spent: 0`; `USAGE.Uses Max: 3`; `RECOVERY: [{Period: dawn, Type: recoverAll}]` |
+| "25 gp" and "1 lb." | `COST_AND_WEIGHT.Price Value: 25`; `COST_AND_WEIGHT.Price Denomination: gp`; `COST_AND_WEIGHT.Weight Value: 1`; `COST_AND_WEIGHT.Weight Units: lb` |
+| "Thieves' Tools" in an equipment table (not magic, no rarity) | `ITEM.Rarities: []`; `PROPERTIES.Magical: false`; `INVENTORY.Identified: true` |
 
 ## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 TOOL:
   SOURCE:
     Book: "[text|n/a]"
@@ -125,11 +160,11 @@ A free/core tool import. Preserve the complete description; it does not automati
 
 <!-- AUTHORING-EXAMPLE:START -->
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 TOOL:
   ITEM:
     Name: Alchemist's Supplies
-    Rarities: [common]
+    Rarities: []
     Tool Type: art
     Base Tool: alchemist
   INVENTORY:
@@ -153,6 +188,19 @@ TOOL:
 <!-- AUTHORING-EXAMPLE:END -->
 
 The [standalone YAML file](../../docs/examples/core-tool.yaml) matches this block. See [example prerequisites and validation](../../docs/examples/README.md). Examples establish the stated stored data and validation scope; they do not certify every gameplay combination.
+
+## Check before you answer
+
+1. `ITEM.Base Tool` is required and takes the importer id, not the printed name: `thief` for thieves' tools, `smith`, `alchemist`, `lute`, `dice`. The six kits use `disg`, `forg`, `herb`, `navg`, `pois` and `thief`. Any other word fails.
+2. `ITEM.Tool Type` must match the base tool: `art` for artisan's tools, `game` for gaming sets, `music` for instruments. For the six kits leave it out or write `n/a`. A mismatch fails. When unsure, leave `Tool Type` out; the importer fills it in.
+3. A bonus to checks made with the tool is `PROPERTIES.Tool Bonus`. It is not an `ABILITY_CHECK` key, and a tool has no `ATTUNEMENT.Magic Bonus` (the importer drops that key without a warning). `Tool Bonus` may hold dice: `"1d4"`.
+4. `ABILITY_CHECK.Ability` is a three-letter id: `str`, `dex`, `con`, `int`, `wis` or `cha`. `ABILITY_CHECK.Proficient` is `Automatic`, `0`, `0.5`, `1`, `1.5` or `2`. `Dexterity` or `expertise` is dropped with a warning. Use `Automatic` unless the source fixes the proficiency.
+5. A mundane tool has no `USAGE` or `RECOVERY`. Add them only when a magic tool has charges, with `USAGE.Uses Spent: 0` for a full item.
+6. Set `PROPERTIES.Magical: true` on a magic tool; `ATTUNEMENT.Attunement: required` does not set it. Always write `ITEM.Rarities` (`[]` for a mundane tool; a missing key is stored as `common`) and `INVENTORY.Identified` (a missing key follows the user's setting).
+7. Start the document with `SCHEMA_VERSION: 7`, then the root key. Copy section and field names exactly as the Complete field reference spells them.
+8. Write only the sections and fields the source needs. Do not copy the whole reference, and leave no `[placeholder]` value and no `#` comment in the answer.
+9. Write formulas as quoted strings (`"1d6 + 1"`). Write `true`, `false` and plain numbers without quotes.
+10. Keep the complete rules text in `DESCRIPTION.Description`. Add `Activities` and `effects` only when the user asked for a full Item and has 5e Activity Importer; use that module's templates for those blocks.
 
 ## Compatibility and support
 
@@ -416,9 +464,9 @@ These are the accepted YAML proficiency values, including the native 1.5 multipl
 ---
 
 
-## Explicit fields in Item YAML schema 6
+## Explicit fields in Item YAML schema 7
 
-Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 and 3 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6 and 6.1.0 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|
@@ -431,6 +479,6 @@ Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 an
 
 DAMAGE_DATA is the canonical damage representation for Weapon base/versatile damage and Consumable damage. It preserves Dice Count, Die Denomination, Bonus, the Damage Types list, Custom Enabled, Custom Formula, Scaling Mode, Scaling Dice Count, and Scaling Formula. Dice values are nonnegative integers or null; formulas are strings; Custom Enabled defaults false; Scaling Mode defaults none. An inactive custom formula and inactive structured damage remain stored together. Do not combine populated legacy damage shorthand with DAMAGE_DATA. Legacy formula/type labels remain accepted on input. Consumable DAMAGE.Replace defaults false; old ammunition Damage Replace remains an alias.
 
-Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
+Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; Container PROPERTIES.Unidentified Contents; Consumable FOOD_PROPERTIES.Hydrating and Nutritious (food only, dnd5e 6.1 or later); siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
 
 Spell PREPARATION.Prepared exports unprepared/prepared/always and accepts native 0/1/2 or legacy booleans. Source Item stores the spellcasting source identifier. RANGE.Special, DURATION.Special, and AREA.Stationary retain their native values. Range, duration, target count, and every area dimension/count accept formulas. Material settings remain stored when Material is false.

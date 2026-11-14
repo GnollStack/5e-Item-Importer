@@ -1,12 +1,27 @@
 # Strict Container Item authoring reference
 
+## At a glance
+
+- **Root key:** `CONTAINER`
+- **When to use:** Use CONTAINER when the source is an item that holds other items or coins: a backpack, sack, pouch, chest, quiver, case, bag of holding or portable hole. The items inside go under `CONTENTS`, each as its own Item.
+- **Smallest working block:** `ITEM.Name` (the name). Nothing else is required.
+
+**Use another template when:**
+
+- The items inside the container. Each one is its own WEAPON, EQUIPMENT, CONSUMABLE, TOOL, LOOT or CONTAINER entry under `CONTENTS`.
+- A flask, vial or waterskin, where the liquid is the item: CONSUMABLE.
+- A worn item with no storage rules (belt, cloak): EQUIPMENT.
+- A spell that creates a storage space: SPELL.
+
+**Work in this order:** find the source wording in [From source text to YAML](#from-source-text-to-yaml), copy the exact names from the [Complete field reference](#complete-field-reference), shape the answer like the [Concrete example](#concrete-example), then go through [Check before you answer](#check-before-you-answer).
+
 ## Destination and prerequisites
 
-Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 6` and the `CONTAINER` root.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 7` and the `CONTAINER` root.
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 / Foundry 14.369; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.8 and DAE 14.6.6 integrations. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 and 6.1.0 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.11 and DAE 14.6.9 integrations. Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -30,12 +45,28 @@ The first YAML block is the **native and legacy field reference**, not a ready-m
 
 Missing, `null`, `false`, `0`, `""`, `[]` and `{}` are distinct. Use `n/a` only for fields that document it as an unset marker. Never use it as a universal substitute for null or empty data. `CHANGES.Value` retains its YAML type, including the literal text `n/a`. Formula syntax acceptance does not establish that referenced variables exist.
 
-For new physical Items, ordinary defaults are quantity 1, identified true, equipped false and zero unspecified price/weight. Omit unsupplied rarity, attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+For new physical Items, ordinary defaults are quantity 1, equipped false and zero unspecified price/weight. Write `ITEM.Rarities: []` for a mundane item, because a missing `Rarities` key is stored as `common`. A missing `INVENTORY.Identified` follows the user's own setting, so write it when it matters. Omit unsupplied attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+
+## From source text to YAML
+
+Find the wording closest to the source and write the fields shown. A path such as `ITEM.Name` is the `Name` key inside the `ITEM` section of `CONTAINER`. A list such as `RECOVERY` takes one `-` entry per item. Leave out every section the source does not mention.
+
+| The source says | Write |
+| --- | --- |
+| "can hold up to 30 pounds of gear" or "1 cubic foot" | `CAPACITY.Weight Capacity Value: 30`; `CAPACITY.Weight Capacity Units: lb`; `CAPACITY.Volume Capacity Value: 1`; `CAPACITY.Volume Capacity Units: cubicFoot` |
+| "holds up to 20 arrows" | `CAPACITY.Item Count: 20` |
+| "weighs 15 pounds, regardless of its contents" | `PROPERTIES.Weightless Contents: true`; `COST_AND_WEIGHT.Weight Value: 15`; `COST_AND_WEIGHT.Weight Units: lb` |
+| "contains 120 gp and 45 sp" | `CURRENCY_CONTENTS.Platinum: 0`; `CURRENCY_CONTENTS.Gold: 120`; `CURRENCY_CONTENTS.Electrum: 0`; `CURRENCY_CONTENTS.Silver: 45`; `CURRENCY_CONTENTS.Copper: 0` |
+| "contains a crowbar" (items inside) | `CONTENTS: [{LOOT: {ITEM: {Name: Crowbar, Rarities: [], Loot Type: gear}}}]` |
+| "Wondrous item, uncommon (requires attunement)" | `ITEM.Rarities: [uncommon]`; `PROPERTIES.Magical: true`; `ATTUNEMENT.Attunement: required` |
+| "2 gp" and "5 lb." | `COST_AND_WEIGHT.Price Value: 2`; `COST_AND_WEIGHT.Price Denomination: gp`; `COST_AND_WEIGHT.Weight Value: 5`; `COST_AND_WEIGHT.Weight Units: lb` |
+| "its contents cannot be seen until it is identified" | `PROPERTIES.Unidentified Contents: true`; `INVENTORY.Identified: false` |
+| "Backpack" in an equipment table (not magic, no rarity) | `ITEM.Rarities: []`; `PROPERTIES.Magical: false`; `INVENTORY.Identified: true` |
 
 ## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 CONTAINER:
   SOURCE:
     Book: "[text|n/a]"
@@ -74,6 +105,7 @@ CONTAINER:
     NPC Equipment: false # Native gear property; shown for NPC inventory.
     Magical: "[true|false]"
     Weightless Contents: "[true|false]"
+    Unidentified Contents: "[true|false]" # Players cannot see the contents while the container is unidentified.
 
   ATTUNEMENT:
     Attuned: false # Current state, independent of Attunement requirement.
@@ -125,7 +157,7 @@ A free/core container import. Preserve the complete description; it does not aut
 
 <!-- AUTHORING-EXAMPLE:START -->
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 CONTAINER:
   ITEM:
     Name: Bag of Holding
@@ -157,6 +189,20 @@ CONTAINER:
 
 The [standalone YAML file](../../docs/examples/core-container.yaml) matches this block. See [example prerequisites and validation](../../docs/examples/README.md). Examples establish the stated stored data and validation scope; they do not certify every gameplay combination.
 
+## Check before you answer
+
+1. A container has no type key: `ITEM` holds `Name` and `Rarities`. `Container Type`, `USAGE` and `RECOVERY` are ignored with a warning, and a container never has `Activities`.
+2. `CURRENCY_CONTENTS` needs all five keys (`Platinum`, `Gold`, `Electrum`, `Silver`, `Copper`) as whole numbers, with `0` for coins that are absent. A missing key fails. Leave the whole section out when there are no coins.
+3. Write only the capacity limits the source gives and leave the other `CAPACITY` keys out. `0` gives a warning. Values are plain numbers: `500`, not `500 lb`. `CAPACITY.Volume Capacity Units` is `cubicFoot` or `liter`.
+4. `COST_AND_WEIGHT.Weight Value` is the weight of the empty container. Do not add the contents.
+5. Each `CONTENTS` entry is one full Item under exactly one root key: `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT` or `CONTAINER`. Do not list bare names, do not repeat `SCHEMA_VERSION` inside an entry, and do not write `INVENTORY.Container` on a nested Item. Each of these fails.
+6. A container always has quantity 1. A higher `INVENTORY.Quantity` is changed to 1 without a warning.
+7. Set `PROPERTIES.Magical: true` on a magic container; `ATTUNEMENT.Attunement: required` does not set it. Always write `ITEM.Rarities` (`[]` for a mundane container; a missing key is stored as `common`) and `INVENTORY.Identified` (a missing key follows the user's setting).
+8. Start the document with `SCHEMA_VERSION: 7`, then the root key. Copy section and field names exactly as the Complete field reference spells them.
+9. Write only the sections and fields the source needs. Do not copy the whole reference, and leave no `[placeholder]` value and no `#` comment in the answer.
+10. Write formulas as quoted strings (`"1d6 + 1"`). Write `true`, `false` and plain numbers without quotes.
+11. Keep the complete rules text in `DESCRIPTION.Description`. Add `Activities` and `effects` only when the user asked for a full Item and has 5e Activity Importer; use that module's templates for those blocks.
+
 ## Compatibility and support
 
 Use canonical keys in new YAML. Legacy aliases in the reference tables are compatibility input; never combine conflicting aliases with canonical fields. Native schema choices, sheet choices and importer coverage can differ. Unknown fields are not generic YAML extension points.
@@ -169,7 +215,7 @@ Full Item export needs companion serializers for its attachments; unsupported at
 
 The core Item fields and description import without `5e-activity-importer`. Description enrichers create clickable text; they do not construct roll activities or passive bonuses. Strict YAML description text does not generate automation.
 
-Loot and Container items do not expose `system.activities` in dnd5e 6.0.6. Never emit an `Activities` section for either type. Keep active mechanics in the description for manual use. A different, activity-capable Item type is appropriate only when it fits the source and the requested workflow; do not silently change the Item type to add automation.
+Loot and Container items do not expose `system.activities` in dnd5e 6. Never emit an `Activities` section for either type. Keep active mechanics in the description for manual use. A different, activity-capable Item type is appropriate only when it fits the source and the requested workflow; do not silently change the Item type to add automation.
 
 If the source grants a passive effect and premium/full mode is selected, append `effects` at the same indentation as `DESCRIPTION` and `CHAT_FLAVOR`, beneath the Item type key. This requires the companion module to be active at import time. Use the complete Effect template from `modules/5e-activity-importer/templates/Base Activity Templates/`, or its MIDI variant when that automation is intended. Preserve source mechanics; never invent bonuses, UUIDs, macros, or module-specific effect keys. Without companion support, omit `effects` and retain the complete rules in the description.
 
@@ -211,6 +257,7 @@ This completed example demonstrates array nesting for a passive +1 AC ward. Incl
 | `Weight Capacity` | Maximum weight the container can hold |
 | `Volume Capacity` | Maximum volume the container can hold |
 | `Weightless Contents` | If `true`, contents don't add to carried weight |
+| `Unidentified Contents` | If `true`, players cannot see what is inside while the container is unidentified (`INVENTORY.Identified: false`) |
 
 ### **Volume Units**
 | Value | Description |
@@ -301,9 +348,9 @@ This completed example demonstrates array nesting for a passive +1 AC ward. Incl
 ---
 
 
-## Explicit fields in Item YAML schema 6
+## Explicit fields in Item YAML schema 7
 
-Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 and 3 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6 and 6.1.0 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|
@@ -316,6 +363,6 @@ Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 an
 
 DAMAGE_DATA is the canonical damage representation for Weapon base/versatile damage and Consumable damage. It preserves Dice Count, Die Denomination, Bonus, the Damage Types list, Custom Enabled, Custom Formula, Scaling Mode, Scaling Dice Count, and Scaling Formula. Dice values are nonnegative integers or null; formulas are strings; Custom Enabled defaults false; Scaling Mode defaults none. An inactive custom formula and inactive structured damage remain stored together. Do not combine populated legacy damage shorthand with DAMAGE_DATA. Legacy formula/type labels remain accepted on input. Consumable DAMAGE.Replace defaults false; old ammunition Damage Replace remains an alias.
 
-Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
+Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; Container PROPERTIES.Unidentified Contents; Consumable FOOD_PROPERTIES.Hydrating and Nutritious (food only, dnd5e 6.1 or later); siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
 
 Spell PREPARATION.Prepared exports unprepared/prepared/always and accepts native 0/1/2 or legacy booleans. Source Item stores the spellcasting source identifier. RANGE.Special, DURATION.Special, and AREA.Stationary retain their native values. Range, duration, target count, and every area dimension/count accept formulas. Material settings remain stored when Material is false.

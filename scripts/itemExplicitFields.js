@@ -10,6 +10,10 @@ const propertyFields = [
   ...ALL.filter(isPhysicalItemType).map(type => ({types:[type],section:"PROPERTIES",label:"NPC Equipment",code:"gear"})),
   ...ALL.filter(type => type !== "spell").map(type => ({types:[type],section:"PROPERTIES",label:"Magical",code:"mgc"})),
   {types:["feat"],section:"PROPERTIES",label:"Passive Trait",code:"trait"},
+  // dnd5e validProperties.container: players cannot see the contents of an unidentified container.
+  {types:["container"],section:"PROPERTIES",label:"Unidentified Contents",code:"unidentifiedContents"},
+  // dnd5e 6.1 validProperties.consumable.food. Earlier dnd5e stores the codes without using them.
+  ...[["Hydrating","hydrating"],["Nutritious","nutritious"]].map(([label,code]) => ({types:["consumable"],section:"FOOD_PROPERTIES",label,code})),
   ...[["Adamantine","ada"],["Silvered","sil"],["Returning","ret"]].map(([label,code]) => ({types:["consumable"],section:"AMMUNITION_PROPERTIES",label,code})),
   ...[["Concentration","concentration"],["Somatic","somatic"],["Vocal","vocal"],["Ritual","ritual"]].map(([label,code]) => ({types:["consumable"],section:"SCROLL_PROPERTIES",label,code}))
 ];
@@ -173,7 +177,7 @@ export function parseExplicitItemFields(item,data,warn = () => {}) {
   }
   if (item.type === "weapon" && !isUnset(data.RELOAD?.["Reload Amount"])) {
     writePath(source,"flags.5e-item-importer.reloadAmount",exactNumber(data.RELOAD["Reload Amount"],"RELOAD.Reload Amount",{integer:true,min:1,nullable:false}));
-    warn("Reload Amount is stored as flags.5e-item-importer.reloadAmount metadata. D&D5e 6.0.6 has no native reload amount field or automation.");
+    warn("Reload Amount is stored as flags.5e-item-importer.reloadAmount metadata. dnd5e has no native reload amount field or automation.");
   }
   item.explicitPropertyStates = {};
   for (const {types,section,label,code} of propertyFields.filter(f => f.types.includes(item.type))) {
@@ -219,7 +223,8 @@ export function exportExplicitItemFields(data,item) {
   if (source.system?.properties !== undefined) {
     const properties = new Set(source.system.properties);
     for (const {section,label,code} of propertyFields.filter(f => f.types.includes(type))) {
-      (data[section] ??= {})[label] = properties.has(code);
+      // "verbal" is the scroll code dnd5e used before "vocal"; it exports as Vocal so it is not lost.
+      (data[section] ??= {})[label] = properties.has(code) || (code === "vocal" && type === "consumable" && properties.has("verbal"));
     }
   }
   if (type === "tool") {

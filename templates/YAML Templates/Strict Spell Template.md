@@ -1,12 +1,27 @@
 # Strict Spell Item authoring reference
 
+## At a glance
+
+- **Root key:** `SPELL`
+- **When to use:** Use SPELL when the source is a spell description: a level and school line, casting time, range, components and duration. A cantrip is a spell of level 0.
+- **Smallest working block:** `ITEM.Name` (the name), `ITEM.Level` (0 to 9; 0 is a cantrip), `ITEM.School` (three-letter id), `ACTIVATION.Type` (the casting time unit). Without `RANGE` the importer stores range units `ft` with no value, and without `DURATION` it stores `inst`, so write both for a real spell.
+
+**Use another template when:**
+
+- A spell scroll: CONSUMABLE (`Consumable Type: scroll`).
+- A magic item that casts a spell (wand, staff, ring): EQUIPMENT or WEAPON, with the spell named in the description.
+- A class feature, feat, invocation, maneuver or psionic power with no spell level and school: FEAT.
+- A monster trait or action, even a magical one (breath weapon, innate ability): FEAT.
+
+**Work in this order:** find the source wording in [From source text to YAML](#from-source-text-to-yaml), copy the exact names from the [Complete field reference](#complete-field-reference), shape the answer like the [Concrete example](#concrete-example), then go through [Check before you answer](#check-before-you-answer).
+
 ## Destination and prerequisites
 
-Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 6` and the `SPELL` root.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 7` and the `SPELL` root.
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 / Foundry 14.369; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.8 and DAE 14.6.6 integrations. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 and 6.1.0 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.11 and DAE 14.6.9 integrations. Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -30,12 +45,31 @@ The first YAML block is the **native and legacy field reference**, not a ready-m
 
 Missing, `null`, `false`, `0`, `""`, `[]` and `{}` are distinct. Use `n/a` only for fields that document it as an unset marker. Never use it as a universal substitute for null or empty data. `CHANGES.Value` retains its YAML type, including the literal text `n/a`. Formula syntax acceptance does not establish that referenced variables exist.
 
-For new physical Items, ordinary defaults are quantity 1, identified true, equipped false and zero unspecified price/weight. Omit unsupplied rarity, attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+Omit optional resources the source does not give rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+
+## From source text to YAML
+
+Find the wording closest to the source and write the fields shown. A path such as `ITEM.Name` is the `Name` key inside the `ITEM` section of `SPELL`. A list such as `RECOVERY` takes one `-` entry per item. Leave out every section the source does not mention.
+
+| The source says | Write |
+| --- | --- |
+| "3rd-level evocation" or "Level 3 Evocation" | `ITEM.Level: 3`; `ITEM.School: evo` |
+| "Casting Time: 1 action" | `ACTIVATION.Type: action`; `ACTIVATION.Value: 1` |
+| "Casting Time: 1 reaction, which you take when you are hit by an attack" | `ACTIVATION.Type: reaction`; `ACTIVATION.Value: 1`; `ACTIVATION.Condition: "which you take when you are hit by an attack"` |
+| "Range: 150 feet" | `RANGE.Units: ft`; `RANGE.Value: 150` |
+| "Range: Self (15-foot cone)" | `RANGE.Units: self`; `AREA.Shape: cone`; `AREA.Size: 15`; `AREA.Units: ft` |
+| "Components: V, S, M (a tiny ball of bat guano and sulfur)" | `COMPONENTS.Vocal: true`; `COMPONENTS.Somatic: true`; `COMPONENTS.Material: true`; `COMPONENTS.Ritual: false`; `MATERIALS.Value: "a tiny ball of bat guano and sulfur"`; `MATERIALS.Consumed: false` |
+| "M (a diamond worth 300+ gp, which the spell consumes)" | `COMPONENTS.Material: true`; `MATERIALS.Value: "a diamond worth 300+ gp, which the spell consumes"`; `MATERIALS.Cost: 300`; `MATERIALS.Consumed: true` |
+| "Duration: Concentration, up to 1 minute" | `DURATION.Units: minute`; `DURATION.Value: 1`; `DURATION.Concentration: true` |
+| "(ritual)" after the school, or "Casting Time: 1 action or Ritual" | `COMPONENTS.Ritual: true`; `PREPARATION.Method: spell` |
+| "each creature in a 20-foot-radius sphere" | `TARGETS.Type: creature`; `AREA.Shape: sphere`; `AREA.Size: 20`; `AREA.Units: ft` |
+| "one creature you can see within range" | `TARGETS.Type: creature`; `TARGETS.Count: 1` |
+| "you can cast it once without a spell slot" and "you regain the ability when you finish a long rest" | `PREPARATION.Method: innate`; `USAGE.Uses Spent: 0`; `USAGE.Uses Max: 1`; `RECOVERY: [{Period: lr, Type: recoverAll}]` |
 
 ## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 SPELL:
   SOURCE:
     Book: "[text|n/a]"
@@ -100,7 +134,7 @@ SPELL:
   AREA:
     Stationary: false
     # Used when Shape selects an area; retain dimensions and booleans with no shape.
-    Shape: "[cone|cube|cylinder|radius|line|sphere|circle|square|wall|n/a]"
+    Shape: "[cone|cube|cylinder|radius|ring|line|sphere|circle|square|wall|n/a]"
     Size: "[formula|n/a]"
     Units: "[ft|mi|m|km]"
     Count: "[formula|n/a]"
@@ -145,7 +179,7 @@ A free/core spell import. Preserve the complete description; it does not automat
 
 <!-- AUTHORING-EXAMPLE:START -->
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 SPELL:
   ITEM:
     Name: Magic Missile
@@ -159,7 +193,7 @@ SPELL:
     Ritual: false
   PREPARATION:
     Method: spell
-    Prepared: true
+    Prepared: prepared
   ACTIVATION:
     Type: action
     Value: 1
@@ -195,6 +229,21 @@ SPELL:
 <!-- AUTHORING-EXAMPLE:END -->
 
 The [standalone YAML file](../../docs/examples/core-spell.yaml) matches this block. See [example prerequisites and validation](../../docs/examples/README.md). Examples establish the stated stored data and validation scope; they do not certify every gameplay combination.
+
+## Check before you answer
+
+1. `ITEM.School` is a three-letter id: `abj`, `con`, `div`, `enc`, `evo`, `ill`, `nec` or `trs`. `evocation` fails. `ITEM.Level` is a number from 0 to 9. A cantrip is `0`; `cantrip` or `3rd` fails.
+2. V is `COMPONENTS.Vocal`, not `Verbal`. Concentration is `DURATION.Concentration`, not a `COMPONENTS` key. The wrong key is ignored with a warning, so the spell loses that property.
+3. A ritual spell is `COMPONENTS.Ritual: true` with `PREPARATION.Method: spell`. Do not write `Method: ritual` for it. `PREPARATION.Prepared` is `unprepared`, `prepared` or `always`.
+4. `ACTIVATION.Type` is one id: `action`, `bonus`, `reaction`, `minute`, `hour`, `day` or `special`. `ACTIVATION.Value` is a whole number. "10 minutes" is `Type: minute` and `Value: 10`. `bonus action` fails.
+5. Units are ids: `ft`, not `feet`; `minute`, not `minutes`; `inst`, not `instantaneous`. "Until dispelled" is `disp`. An unknown unit gives a warning.
+6. "Self (15-foot cone)" is `RANGE.Units: self` plus an `AREA` section. Do not put the area size in `RANGE.Value`. Write `AREA` only when the spell has an area. A 2024 Emanation is `AREA.Shape: radius`.
+7. The material text goes in `MATERIALS.Value`. A gp price goes in `MATERIALS.Cost` as a plain number: `300`, not `300 gp`. "Which the spell consumes" is `MATERIALS.Consumed: true`. Set `COMPONENTS.Material: true` as well.
+8. A spell has no rarity, price, weight, quantity or attunement. `ITEM.Rarities`, `INVENTORY`, `COST_AND_WEIGHT`, `UNIDENTIFIED_DESCRIPTION` and `ATTUNEMENT` are ignored with a warning. Leave `USAGE` and `RECOVERY` out for a spell that is cast with spell slots.
+9. Start the document with `SCHEMA_VERSION: 7`, then the root key. Copy section and field names exactly as the Complete field reference spells them.
+10. Write only the sections and fields the source needs. Do not copy the whole reference, and leave no `[placeholder]` value and no `#` comment in the answer.
+11. Write formulas as quoted strings (`"1d6 + 1"`). Write `true`, `false` and plain numbers without quotes.
+12. Keep the complete rules text in `DESCRIPTION.Description`. Add `Activities` and `effects` only when the user asked for a full Item and has 5e Activity Importer; use that module's templates for those blocks.
 
 ## Compatibility and support
 
@@ -385,7 +434,8 @@ New YAML must state `COMPONENTS.Ritual` explicitly. An explicit boolean takes pr
 | `cone` | Cone |
 | `cube` | Cube |
 | `cylinder` | Cylinder |
-| `radius` | Radius/burst |
+| `radius` | Emanation around the caster |
+| `ring` | Ring; `Width` is its thickness |
 | `line` | Line |
 | `sphere` | Sphere |
 | `circle` | Circle |
@@ -550,9 +600,9 @@ These fields are optional and only needed for spells with unusual area geometry.
 ---
 
 
-## Explicit fields in Item YAML schema 6
+## Explicit fields in Item YAML schema 7
 
-Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 and 3 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6 and 6.1.0 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|
@@ -565,6 +615,6 @@ Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 an
 
 DAMAGE_DATA is the canonical damage representation for Weapon base/versatile damage and Consumable damage. It preserves Dice Count, Die Denomination, Bonus, the Damage Types list, Custom Enabled, Custom Formula, Scaling Mode, Scaling Dice Count, and Scaling Formula. Dice values are nonnegative integers or null; formulas are strings; Custom Enabled defaults false; Scaling Mode defaults none. An inactive custom formula and inactive structured damage remain stored together. Do not combine populated legacy damage shorthand with DAMAGE_DATA. Legacy formula/type labels remain accepted on input. Consumable DAMAGE.Replace defaults false; old ammunition Damage Replace remains an alias.
 
-Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
+Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; Container PROPERTIES.Unidentified Contents; Consumable FOOD_PROPERTIES.Hydrating and Nutritious (food only, dnd5e 6.1 or later); siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
 
 Spell PREPARATION.Prepared exports unprepared/prepared/always and accepts native 0/1/2 or legacy booleans. Source Item stores the spellcasting source identifier. RANGE.Special, DURATION.Special, and AREA.Stationary retain their native values. Range, duration, target count, and every area dimension/count accept formulas. Material settings remain stored when Material is false.

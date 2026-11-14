@@ -1,12 +1,27 @@
 # Strict Feat Item authoring reference
 
+## At a glance
+
+- **Root key:** `FEAT`
+- **When to use:** Use FEAT when the source is something a creature has, not something it carries: a feat, a class or subclass feature, a species trait, a background feature, a monster trait or action, a boon, blessing or charm, a fighting style, an eldritch invocation, a metamagic option or a maneuver.
+- **Smallest working block:** `ITEM.Name` (the name). Nothing else is required, but write `ITEM.Feature Type` so the sheet shows the right kind of feature.
+
+**Use another template when:**
+
+- A whole class, subclass, species or background. These templates do not cover them; FEAT holds one feature at a time.
+- A spell, even one granted by a feat or a species: SPELL.
+- A monster's weapon attack (Bite, Claw, Longsword): WEAPON (`Weapon Type: natural` for a bite or claw).
+- A magic item: EQUIPMENT, WEAPON, CONSUMABLE, TOOL or CONTAINER.
+
+**Work in this order:** find the source wording in [From source text to YAML](#from-source-text-to-yaml), copy the exact names from the [Complete field reference](#complete-field-reference), shape the answer like the [Concrete example](#concrete-example), then go through [Check before you answer](#check-before-you-answer).
+
 ## Destination and prerequisites
 
-Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 6` and the `FEAT` root.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 7` and the `FEAT` root.
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Features accept activities and passive effects.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 / Foundry 14.369; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.8 and DAE 14.6.6 integrations. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 and 6.1.0 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.11 and DAE 14.6.9 integrations. Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -32,10 +47,29 @@ Missing, `null`, `false`, `0`, `""`, `[]` and `{}` are distinct. Use `n/a` only 
 
 A feature is not a physical Item: it has no quantity, price, weight, rarity, attunement or unidentified text. Omit unsupplied prerequisites, enchantment limits and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
 
+## From source text to YAML
+
+Find the wording closest to the source and write the fields shown. A path such as `ITEM.Name` is the `Name` key inside the `ITEM` section of `FEAT`. A list such as `RECOVERY` takes one `-` entry per item. Leave out every section the source does not mention.
+
+| The source says | Write |
+| --- | --- |
+| "2nd-level fighter feature" | `ITEM.Feature Type: class`; `ITEM.Requirements: Fighter 2` |
+| "General Feat (Prerequisite: Level 4+)" | `ITEM.Feature Type: feat`; `ITEM.Feature Subtype: general`; `ITEM.Requirements: Level 4+`; `PREREQUISITES.Level: 4` |
+| "Eldritch Invocation" | `ITEM.Feature Type: class`; `ITEM.Feature Subtype: eldritchInvocation` |
+| A species or lineage trait, such as "Darkvision" in a species entry | `ITEM.Feature Type: race`; `PROPERTIES.Passive Trait: true` |
+| A monster trait, such as "Pack Tactics" in a stat block | `ITEM.Feature Type: monster`; `PROPERTIES.Passive Trait: true` |
+| "Once you use this feature, you must finish a short or long rest before you can use it again" | `USAGE.Uses Spent: 0`; `USAGE.Uses Max: 1`; `RECOVERY: [{Period: sr, Type: recoverAll}]` |
+| "a number of times equal to your Proficiency Bonus" and "you regain all expended uses when you finish a Long Rest" | `USAGE.Uses Spent: 0`; `USAGE.Uses Max: "@prof"`; `RECOVERY: [{Period: lr, Type: recoverAll}]` |
+| "(Recharge 5-6)" | `USAGE.Uses Spent: 0`; `USAGE.Uses Max: 1`; `RECOVERY: [{Period: recharge, Type: recoverAll, Formula: "5"}]` |
+| "Repeatable" or "You can take this feat more than once" | `PREREQUISITES.Repeatable: true` |
+| "Increase your Constitution score by 1, to a maximum of 20" | `ADVANCEMENT: [{ABILITY_SCORE_IMPROVEMENT: {Points: 0, FIXED: [{Ability: con, Value: 1}]}}]` |
+| "You gain proficiency in the Athletics skill" | `ADVANCEMENT: [{TRAIT: {Grants: ["skills:ath"]}}]` |
+| "You always have the Thunderwave spell prepared" | `ADVANCEMENT: [{GRANT_ITEMS: {ITEMS: [{Name: Thunderwave, Type: spell}], SPELL: {Method: spell, Prepared: always}}}]` |
+
 ## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 FEAT:
   SOURCE:
     Book: "[text|n/a]"
@@ -51,7 +85,7 @@ FEAT:
     Sort: 0 # Integer ordering value; preserve an authored zero.
     Name: "[text]"
     Feature Type: "[background|class|monster|race|enchantment|feat|pietyTrait|supernaturalGift|vehicle|n/a]" # n/a stores a blank type.
-    Feature Subtype: "[subtype identifier|n/a]" # Only class, enchantment, feat and supernaturalGift define subtypes.
+    Feature Subtype: "[subtype identifier|n/a]" # Only class, enchantment, feat, supernaturalGift and (dnd5e 6.1 or later) race define subtypes.
     Requirements: "[text|n/a]" # Free text shown on the sheet, for example "Fighter 1" or "Level 4+".
 
   PREREQUISITES:
@@ -233,7 +267,7 @@ A free/core class feature import. Preserve the complete description; it does not
 
 <!-- AUTHORING-EXAMPLE:START -->
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 FEAT:
   ITEM:
     Name: Second Wind
@@ -267,6 +301,21 @@ FEAT:
 <!-- AUTHORING-EXAMPLE:END -->
 
 The [standalone YAML file](../../docs/examples/core-feat.yaml) matches this block. See [example prerequisites and validation](../../docs/examples/README.md). Examples establish the stated stored data and validation scope; they do not certify every gameplay combination.
+
+## Check before you answer
+
+1. A feature has no rarity, price, weight, quantity, attunement or unidentified text. `ITEM.Rarities`, `INVENTORY`, `COST_AND_WEIGHT`, `UNIDENTIFIED_DESCRIPTION` and `ATTUNEMENT` are ignored with a warning.
+2. `ITEM.Feature Type` is a dnd5e id: `background`, `class`, `monster`, `race`, `enchantment`, `feat`, `pietyTrait`, `supernaturalGift` or `vehicle`. A species or lineage trait is `race`. `species`, `racial` or `Class Feature` is stored as an unknown type with a warning.
+3. `ITEM.Feature Subtype` takes only the listed subtype ids, such as `fightingStyle`, `eldritchInvocation`, `metamagic`, `maneuver`, `channelDivinity`, `general`, `origin` and `epicBoon`. Do not put the class name there. Class and level go in `ITEM.Requirements`, for example `Fighter 2`.
+4. "Level 4+" is two fields: the text in `ITEM.Requirements` and the number in `PREREQUISITES.Level`. `PREREQUISITES.Level: 4+` fails. `PREREQUISITES.Items` takes dnd5e identifiers such as `"feat:alert"`, not display names.
+5. A passive feature has no `USAGE` or `RECOVERY`. For limited uses, `USAGE.Uses Max` is a whole number or a quoted formula without dice, such as `"@prof"` or `"max(1, @abilities.wis.mod)"`, and `USAGE.Uses Spent` is `0` for a fresh feature.
+6. "Short or long rest" is one `RECOVERY` entry with `Period: sr`. "3/Day" is `Period: day`. "Recharge 5-6" is `Period: recharge` with `Formula: "5"`; `"5-6"` is dropped with a warning.
+7. `ADVANCEMENT` is one list for the whole feature. Each entry has exactly one root key: `ABILITY_SCORE_IMPROVEMENT`, `GRANT_ITEMS`, `CHOOSE_ITEMS`, `MODIFY_ITEMS`, `SCALE_VALUE` or `TRAIT`. A mapping in place of the list fails.
+8. Trait keys use dnd5e ids: `skills:ath`, not `skills:athletics` (the importer does not catch that one); `weapon:mar`; `armor:hvy`. A granted Item is a reference to an Item that already exists in the world or a compendium: give `Name` and `Type`, and do not make up a `UUID`. The import waits until every reference is resolved.
+9. Start the document with `SCHEMA_VERSION: 7`, then the root key. Copy section and field names exactly as the Complete field reference spells them.
+10. Write only the sections and fields the source needs. Do not copy the whole reference, and leave no `[placeholder]` value and no `#` comment in the answer.
+11. Write formulas as quoted strings (`"1d6 + 1"`). Write `true`, `false` and plain numbers without quotes.
+12. Keep the complete rules text in `DESCRIPTION.Description`. Add `Activities` and `effects` only when the user asked for a full Item and has 5e Activity Importer; use that module's templates for those blocks.
 
 ## Compatibility and support
 
@@ -356,6 +405,7 @@ The completed examples below demonstrate array nesting for a passive +1 AC featu
 | `class` | `arcaneShot`, `artificerInfusion`, `channelDivinity`, `defensiveTactic`, `eldritchInvocation`, `elementalDiscipline`, `fightingStyle`, `huntersPrey`, `ki`, `maneuver`, `metamagic`, `multiattack`, `pact`, `psionicPower`, `rune`, `superiorHuntersDefense` |
 | `enchantment` | `artificerInfusion`, `rune` |
 | `feat` | `general`, `origin`, `fightingStyle`, `epicBoon` |
+| `race` | `lineage` (dnd5e 6.1 or later; earlier versions store it without a label) |
 | `supernaturalGift` | `blessing`, `charm`, `epicBoon` |
 
 ### **Requirements and Prerequisites**
@@ -382,7 +432,7 @@ The completed examples below demonstrate array nesting for a passive +1 AC featu
 | Field | Description | Accepted values |
 |---|---|---|
 | `VEHICLE_PROPERTIES.Cover` | Cover granted to crew by a vehicle feature. | `none`, `half`, `threequarters`, `total`, a number from 0 to 1, or `n/a`. |
-| `VEHICLE_PROPERTIES.Crewed` | Stored native flag; dnd5e 6.0.6 has no sheet control for it. | `true` or `false`. |
+| `VEHICLE_PROPERTIES.Crewed` | Stored native flag; dnd5e 6 has no sheet control for it. | `true` or `false`. |
 
 ### **Advancement**
 `ADVANCEMENT` is a list; each entry has exactly one root key. Entries share the common keys below and are stored under `system.advancement`, keyed by their ID.
@@ -500,9 +550,9 @@ The completed examples below demonstrate array nesting for a passive +1 AC featu
 ---
 
 
-## Explicit fields in Item YAML schema 6
+## Explicit fields in Item YAML schema 7
 
-Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2, 3, 4 and 5 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6 and 6.1.0 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|

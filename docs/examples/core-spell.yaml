@@ -1,4 +1,4 @@
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 SPELL:
   ITEM:
     Name: Magic Missile
@@ -12,7 +12,7 @@ SPELL:
     Ritual: false
   PREPARATION:
     Method: spell
-    Prepared: true
+    Prepared: prepared
   ACTIVATION:
     Type: action
     Value: 1

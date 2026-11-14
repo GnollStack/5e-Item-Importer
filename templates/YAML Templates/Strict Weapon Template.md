@@ -1,12 +1,30 @@
 # Strict Weapon Item authoring reference
 
+## At a glance
+
+- **Root key:** `WEAPON`
+- **When to use:** Use WEAPON when the source is something a creature attacks with and it has weapon damage: a mundane or magic sword, bow or other weapon, a monster's natural weapon (bite, claw), an improvised weapon or a siege weapon. A magic staff that can be swung as a quarterstaff is a weapon even when it is mainly a spellcasting focus: write `ITEM.Base Weapon: quarterstaff`, and `PROPERTIES.Focus: true` if the source says it can be a focus.
+- **Smallest working block:** `ITEM.Name` (the name), `ITEM.Weapon Type` (one of `simpleM`, `simpleR`, `martialM`, `martialR`, `natural`, `improv`, `siege`), `ITEM.Base Weapon` (required for the first four types; leave it out for `natural`, `improv` and `siege`), `DAMAGE.DAMAGE_DATA` (all ten keys; `Dice Count`, `Die Denomination` and `Damage Types` hold the weapon die).
+
+**Use another template when:**
+
+- Arrows, bolts, sling bullets and other ammunition: CONSUMABLE (`Consumable Type: ammo`).
+- A shield: EQUIPMENT (`Equipment Type: shield`).
+- A wand or rod. It has no weapon damage: EQUIPMENT (`Equipment Type: wand` or `rod`).
+- A worn item that only improves attacks (bracers, gloves, a ring): EQUIPMENT.
+- A spell that makes an attack: SPELL.
+- A monster ability with no weapon attack (breath weapon, aura, Multiattack): FEAT.
+- Poison or oil that is applied to a weapon: CONSUMABLE.
+
+**Work in this order:** find the source wording in [From source text to YAML](#from-source-text-to-yaml), copy the exact names from the [Complete field reference](#complete-field-reference), shape the answer like the [Concrete example](#concrete-example), then go through [Check before you answer](#check-before-you-answer).
+
 ## Destination and prerequisites
 
-Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 6` and the `WEAPON` root.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 7` and the `WEAPON` root.
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 / Foundry 14.369; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.8 and DAE 14.6.6 integrations. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 and 6.1.0 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.11 and DAE 14.6.9 integrations. Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -30,12 +48,31 @@ The first YAML block is the **native and legacy field reference**, not a ready-m
 
 Missing, `null`, `false`, `0`, `""`, `[]` and `{}` are distinct. Use `n/a` only for fields that document it as an unset marker. Never use it as a universal substitute for null or empty data. `CHANGES.Value` retains its YAML type, including the literal text `n/a`. Formula syntax acceptance does not establish that referenced variables exist.
 
-For new physical Items, ordinary defaults are quantity 1, identified true, equipped false and zero unspecified price/weight. Omit unsupplied rarity, attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+For new physical Items, ordinary defaults are quantity 1, equipped false and zero unspecified price/weight. Write `ITEM.Rarities: []` for a mundane item, because a missing `Rarities` key is stored as `common`. A missing `INVENTORY.Identified` follows the user's own setting, so write it when it matters. Omit unsupplied attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+
+## From source text to YAML
+
+Find the wording closest to the source and write the fields shown. A path such as `ITEM.Name` is the `Name` key inside the `ITEM` section of `WEAPON`. A list such as `RECOVERY` takes one `-` entry per item. Leave out every section the source does not mention.
+
+| The source says | Write |
+| --- | --- |
+| "Weapon (longsword)" or "martial melee weapon" | `ITEM.Weapon Type: martialM`; `ITEM.Base Weapon: longsword` |
+| "1d8 slashing" | `DAMAGE.DAMAGE_DATA.Dice Count: 1`; `DAMAGE.DAMAGE_DATA.Die Denomination: 8`; `DAMAGE.DAMAGE_DATA.Damage Types: [slashing]` |
+| "versatile (1d10)" | `PROPERTIES.Versatile: true`; `VERSATILE_DAMAGE.DAMAGE_DATA.Dice Count: 1`; `VERSATILE_DAMAGE.DAMAGE_DATA.Die Denomination: 10`; `VERSATILE_DAMAGE.DAMAGE_DATA.Damage Types: [slashing]` |
+| "finesse, light, thrown (range 20/60)" | `PROPERTIES.Finesse: true`; `PROPERTIES.Light: true`; `PROPERTIES.Thrown: true`; `RANGE.Range Normal: 20`; `RANGE.Range Long: 60`; `RANGE.Range Units: ft` |
+| "ammunition (range 150/600), heavy, two-handed" | `PROPERTIES.Ammunition: true`; `AMMUNITION.Ammunition Type: arrow`; `PROPERTIES.Heavy: true`; `PROPERTIES.Two-Handed: true`; `RANGE.Range Normal: 150`; `RANGE.Range Long: 600`; `RANGE.Range Units: ft` |
+| "reach" (10 feet instead of 5) | `PROPERTIES.Reach: true`; `RANGE.Reach: 10` |
+| "Mastery: Sap" | `MASTERY.Mastery: sap` |
+| "You have a +1 bonus to attack and damage rolls made with this magic weapon" | `PROPERTIES.Magical: true`; `ATTUNEMENT.Magic Bonus: 1` |
+| "rare (requires attunement by a paladin)" | `ITEM.Rarities: [rare]`; `PROPERTIES.Magical: true`; `ATTUNEMENT.Attunement: required`; `ATTUNEMENT.Attunement By: a paladin` |
+| "15 gp" and "3 lb." | `COST_AND_WEIGHT.Price Value: 15`; `COST_AND_WEIGHT.Price Denomination: gp`; `COST_AND_WEIGHT.Weight Value: 3`; `COST_AND_WEIGHT.Weight Units: lb` |
+| "It has 7 charges" and "regains 1d6 + 1 expended charges daily at dawn" | `USAGE.Uses Spent: 0`; `USAGE.Uses Max: 7`; `RECOVERY: [{Period: dawn, Type: formula, Formula: "1d6 + 1"}]` |
+| "Longsword" in an equipment table (not magic, no rarity) | `ITEM.Rarities: []`; `PROPERTIES.Magical: false`; `INVENTORY.Identified: true` |
 
 ## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 WEAPON:
   SOURCE:
     Book: "[text|n/a]"
@@ -196,7 +233,7 @@ A free/core weapon import. Preserve the complete description; it does not automa
 
 <!-- AUTHORING-EXAMPLE:START -->
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 WEAPON:
   ITEM:
     Name: Longsword +1
@@ -254,6 +291,21 @@ WEAPON:
 <!-- AUTHORING-EXAMPLE:END -->
 
 The [standalone YAML file](../../docs/examples/core-weapon.yaml) matches this block. See [example prerequisites and validation](../../docs/examples/README.md). Examples establish the stated stored data and validation scope; they do not certify every gameplay combination.
+
+## Check before you answer
+
+1. Write `ITEM.Weapon Type` with exact case: `simpleM`, `simpleR`, `martialM`, `martialR`. `martialm` or `Martial Melee` fails.
+2. Write `ITEM.Base Weapon` as the mundane weapon in one lowercase word: `longsword`, `lightcrossbow`, `handcrossbow`, `warpick`. Use it for magic weapons too. Spaces are removed (`hand crossbow` becomes `handcrossbow`), and an id dnd5e does not know gives a warning.
+3. Write all ten `DAMAGE_DATA` keys. For a plain weapon the other seven are `Bonus: ""`, `Modifiers: []`, `Custom Enabled: false`, `Custom Formula: ""`, `Scaling Mode: none`, `Scaling Dice Count: 0`, `Scaling Formula: ""`.
+4. Put only the weapon's own die in `DAMAGE.DAMAGE_DATA`. Leave `Bonus` empty: do not write the ability modifier or the magic bonus there. Extra damage that depends on a condition (for example 2d6 fire while the blade burns) does not belong in `DAMAGE_DATA`.
+5. `PROPERTIES.Versatile: true` needs `VERSATILE_DAMAGE.DAMAGE_DATA`, and `PROPERTIES.Ammunition: true` needs `AMMUNITION.Ammunition Type`. The import fails without them. Ammunition ids are case-sensitive: `arrow`, `crossbowBolt`, `firearmBullet`, `slingBullet`, `energyCell`, `blowgunNeedle`.
+6. `PROPERTIES.Reach` is `true` or `false`; the distance is the number in `RANGE.Reach`. `RANGE.Range Normal` and `RANGE.Range Long` are separate numbers: write `20` and `60`, never `20/60`.
+7. Write damage types in lowercase (`slashing`, not `Slashing`) and property keys exactly as in the reference (`Two-Handed` has a hyphen). A wrong damage type fails. A wrong property key is ignored with a warning.
+8. Set `PROPERTIES.Magical: true` on every magic weapon; `ATTUNEMENT.Attunement: required` does not set it. `ATTUNEMENT.Magic Bonus` is a number such as `1`, never dice. Always write `ITEM.Rarities` (`[]` for a mundane weapon; a missing key is stored as `common`) and `INVENTORY.Identified` (a missing key follows the user's setting).
+9. Start the document with `SCHEMA_VERSION: 7`, then the root key. Copy section and field names exactly as the Complete field reference spells them.
+10. Write only the sections and fields the source needs. Do not copy the whole reference, and leave no `[placeholder]` value and no `#` comment in the answer.
+11. Write formulas as quoted strings (`"1d6 + 1"`). Write `true`, `false` and plain numbers without quotes.
+12. Keep the complete rules text in `DESCRIPTION.Description`. Add `Activities` and `effects` only when the user asked for a full Item and has 5e Activity Importer; use that module's templates for those blocks.
 
 ## Compatibility and support
 
@@ -503,9 +555,9 @@ The completed examples below demonstrate array nesting for a passive +1 AC ward 
 ---
 
 
-## Explicit fields in Item YAML schema 6
+## Explicit fields in Item YAML schema 7
 
-Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 and 3 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6 and 6.1.0 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|
@@ -518,6 +570,6 @@ Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 an
 
 DAMAGE_DATA is the canonical damage representation for Weapon base/versatile damage and Consumable damage. It preserves Dice Count, Die Denomination, Bonus, the Damage Types list, Custom Enabled, Custom Formula, Scaling Mode, Scaling Dice Count, and Scaling Formula. Dice values are nonnegative integers or null; formulas are strings; Custom Enabled defaults false; Scaling Mode defaults none. An inactive custom formula and inactive structured damage remain stored together. Do not combine populated legacy damage shorthand with DAMAGE_DATA. Legacy formula/type labels remain accepted on input. Consumable DAMAGE.Replace defaults false; old ammunition Damage Replace remains an alias.
 
-Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
+Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; Container PROPERTIES.Unidentified Contents; Consumable FOOD_PROPERTIES.Hydrating and Nutritious (food only, dnd5e 6.1 or later); siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
 
 Spell PREPARATION.Prepared exports unprepared/prepared/always and accepts native 0/1/2 or legacy booleans. Source Item stores the spellcasting source identifier. RANGE.Special, DURATION.Special, and AREA.Stationary retain their native values. Range, duration, target count, and every area dimension/count accept formulas. Material settings remain stored when Material is false.

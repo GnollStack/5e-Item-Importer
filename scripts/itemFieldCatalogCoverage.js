@@ -7,7 +7,12 @@ import { ADVANCEMENT_TYPE_ROOTS, SUPPORTED_ADVANCEMENT_TYPES, MULTI_LEVEL_ADVANC
  * These declarations are not validation results and never enable importer support.
  */
 const OWNER = "5e-item-importer";
-const VERIFIED_VERSION = "6.0.6";
+// Runtimes the mappings below were reviewed against. dnd5e 6.1.0 added the renown Item type
+// (catalog-only) and the food properties; no stored field of the eight supported types changed.
+const REVIEWED_SYSTEM_VERSIONS = ["6.0.6", "6.1.0"];
+const REVIEWED_FOUNDRY_VERSIONS = ["14.369", "14.370"];
+const VERIFIED_VERSION = REVIEWED_SYSTEM_VERSIONS.at(-1);
+const REVIEWED_LABEL = "Foundry " + REVIEWED_FOUNDRY_VERSIONS.join(" / ") + " and dnd5e " + REVIEWED_SYSTEM_VERSIONS.join(" / ");
 const SUPPORTED = ["weapon", "equipment", "consumable", "tool", "loot", "container", "spell", "feat"];
 const PHYSICAL = SUPPORTED.filter(isPhysicalItemType);
 const EQUIPPABLE = PHYSICAL.filter(type => type !== "loot");
@@ -181,7 +186,7 @@ add(["consumable"], "system.type.subtype", "ITEM.Consumable Subtype", "native su
 const PROPERTY_LABELS = {
   weapon: { ada: "Adamantine", amm: "Ammunition", fin: "Finesse", fir: "Firearm", foc: "Focus", hvy: "Heavy", lgt: "Light", lod: "Loading", rch: "Reach", rel: "Reload", ret: "Returning", sil: "Silvered", spc: "Special", thr: "Thrown", two: "Two-Handed", ver: "Versatile" },
   equipment: { ada: "Adamantine", foc: "Focus", stealthDisadvantage: "Stealth Disadvantage" },
-  tool: { foc: "Focus" }, loot: {}, container: { weightlessContents: "Weightless Contents" }, consumable: {}
+  tool: { foc: "Focus" }, loot: {}, container: { weightlessContents: "Weightless Contents", unidentifiedContents: "Unidentified Contents" }, consumable: {}
 };
 for (const type of PHYSICAL) {
   const labels = { ...PROPERTY_LABELS[type], mgc: "Magical", gear: "NPC Equipment" };
@@ -196,6 +201,11 @@ add(["consumable"], "system.properties", ["AMMUNITION_PROPERTIES.Adamantine", "A
   aliases: ["SCROLL_PROPERTIES.Verbal"],
   conversions: ["Legacy Verbal maps to Vocal with a warning."],
   evidence: [{ file: EXPLICIT_TESTS, test: "Consumable stored properties survive a subtype change", status: "referenced" }]
+});
+// dnd5e 6.1 validProperties.consumable.food. The Set field accepts the codes on 6.0.6 too, where nothing reads them.
+add(["consumable"], "system.properties", ["FOOD_PROPERTIES.Hydrating", "FOOD_PROPERTIES.Nutritious"], "independent property booleans", {
+  members: [{id:"hydrating",yaml:"FOOD_PROPERTIES.Hydrating"},{id:"nutritious",yaml:"FOOD_PROPERTIES.Nutritious"}],
+  conditions: ["dnd5e 6.1 or later shows these for Consumable Type food only; the parser warns on other types and on earlier dnd5e."]
 });
 add(["spell"], "system.properties", ["COMPONENTS.Vocal", "COMPONENTS.Somatic", "COMPONENTS.Material", "COMPONENTS.Ritual", "DURATION.Concentration"], "independent booleans mapped to Set membership", {
   members: [{id:"vocal",yaml:"COMPONENTS.Vocal"},{id:"somatic",yaml:"COMPONENTS.Somatic"},{id:"material",yaml:"COMPONENTS.Material"},{id:"ritual",yaml:"COMPONENTS.Ritual"},{id:"concentration",yaml:"DURATION.Concentration"}]
@@ -244,8 +254,10 @@ function runningOptions(key) {
       : Object.keys(registry);
   return { source: "CONFIG.DND5E." + key, ids, kind: "running-config", complete: true, note: "Running configuration may include module additions; these are not inferred native constraints." };
 }
-function sheetFor(field, entries, current) {
+function sheetFor(field, entries, current, environment = {}) {
   const path = pathKey(field.path);
+  // The reviewed option lists below are identical in dnd5e 6.0.6 and 6.1.0; the label names the running one.
+  const systemLabel = REVIEWED_SYSTEM_VERSIONS.includes(environment.systemVersion) ? environment.systemVersion : VERIFIED_VERSION;
   const sheet = {
     status: "needs-review", verifiedVersion: null, options: [], conditions: [],
     inactiveBehavior: "Not reviewed for this field.", references: []
@@ -257,15 +269,15 @@ function sheetFor(field, entries, current) {
   sheet.inactiveBehavior = "Mapping preserves supplied stored values; control-specific visibility still needs review.";
   const reviewed = (reference, conditions = [], inactive = "Stored inactive values are retained without enabling their controlling checkbox.") => {
     sheet.status = current ? "reviewed" : "needs-review";
-    sheet.verifiedVersion = VERIFIED_VERSION;
-    sheet.verifiedFoundryVersion = "14.369";
+    sheet.verifiedVersion = current ? environment.systemVersion : VERIFIED_VERSION;
+    sheet.verifiedFoundryVersion = current ? environment.foundryVersion : REVIEWED_FOUNDRY_VERSIONS.at(-1);
     sheet.references.push(reference);
     sheet.conditions.push(...conditions);
     sheet.inactiveBehavior = inactive;
   };
   if (field.type === "spell" && path === "system.prepared") {
     reviewed("systems/dnd5e/templates/items/details/details-spell.hbs", ["Preparation dropdown appears only when canPrepare is true for the current spellcasting method."]);
-    sheet.options.push(reviewedOption("DND5E.spellPreparationStates (6.0.6)", [0, 1, 2]), runningOptions("spellPreparationStates"));
+    sheet.options.push(reviewedOption("DND5E.spellPreparationStates (" + systemLabel + ")", [0, 1, 2]), runningOptions("spellPreparationStates"));
   }
   if (field.type === "spell" && path === "system.sourceItem")
     reviewed("systems/dnd5e/templates/items/details/details-spell.hbs", ["Shown for actor-owned spells; options depend on the actor's spellcasting classes and may be locked."], "Stored source identifier is retained; this catalog does not enumerate world actor/item documents.");
@@ -278,9 +290,9 @@ function sheetFor(field, entries, current) {
     if (field.type === "consumable") sheet.conditions.push("Native consumable damage controls appear for ammo subtype; YAML retains damage for other subtypes.");
     if (/\.(number|denomination|bonus)$/.test(path) && !path.includes(".scaling.")) sheet.conditions.push("Structured controls are active when custom.enabled is false; stored structured values remain when it is true.");
     if (path.endsWith(".custom.formula")) sheet.conditions.push("Custom formula control is active when custom.enabled is true; its stored value remains when false.");
-    if (path.endsWith(".denomination")) sheet.options.push(reviewedOption("Native sheet blank + DND5E.dieSteps (6.0.6)", ["", 4, 6, 8, 10, 12, 20, 100]), runningOptions("dieSteps"));
-    if (/\.types(?:\[\])?$/.test(path)) sheet.options.push(reviewedOption("Native " + field.type + " damage choices (6.0.6)", field.type === "weapon" ? [...DAMAGE_TYPES, "maximum"] : [...DAMAGE_TYPES]), runningOptions("damageTypes"));
-    if (path.endsWith(".scaling.mode")) sheet.options.push(reviewedOption("DND5E.damageScalingModes (6.0.6)", ["", "whole", "half"]), runningOptions("damageScalingModes"));
+    if (path.endsWith(".denomination")) sheet.options.push(reviewedOption("Native sheet blank + DND5E.dieSteps (" + systemLabel + ")", ["", 4, 6, 8, 10, 12, 20, 100]), runningOptions("dieSteps"));
+    if (/\.types(?:\[\])?$/.test(path)) sheet.options.push(reviewedOption("Native " + field.type + " damage choices (" + systemLabel + ")", field.type === "weapon" ? [...DAMAGE_TYPES, "maximum"] : [...DAMAGE_TYPES]), runningOptions("damageTypes"));
+    if (path.endsWith(".scaling.mode")) sheet.options.push(reviewedOption("DND5E.damageScalingModes (" + systemLabel + ")", ["", "whole", "half"]), runningOptions("damageScalingModes"));
     if (path.includes(".scaling.")) sheet.conditions.push("Damage scaling is stored by DamageField; item sheets may omit scaling controls. Activity and resource scaling are separate.");
   }
   if (samePath(path, "system.properties")) sheet.options.push(runningOptions("itemProperties"));
@@ -288,7 +300,7 @@ function sheetFor(field, entries, current) {
     reviewed("systems/dnd5e/templates/items/details/details-spell.hbs", ["Units, target type and area shape control displayed inputs; formulas and inactive dimensions are retained."]);
   if (field.type === "spell" && path === "system.duration.expiry") {
     sheet.references.push("systems/dnd5e/templates/shared/fields/field-duration.hbs");
-    sheet.options.push(reviewedOption("ActiveEffect5e expiry options (6.0.6)", [null, "turnStart", "turnEnd", "roundStart", "roundEnd", "combatStart", "combatEnd", "longRest", "shortRest", "sourceStart", "sourceEnd", "targetStart", "targetEnd"]));
+    sheet.options.push(reviewedOption("ActiveEffect5e expiry options (" + systemLabel + ")", [null, "turnStart", "turnEnd", "roundStart", "roundEnd", "combatStart", "combatEnd", "longRest", "shortRest", "sourceStart", "sourceEnd", "targetStart", "targetEnd"]));
   }
   if (["weapon", "equipment"].includes(field.type) && /^system\.(crew|speed|hp|cover|armor)\b/.test(path)) {
     reviewed("systems/dnd5e/templates/items/details/details-" + field.type + ".hbs", ["Mountable/siege/vehicle and armor controls depend on item category; hidden stored values remain importable."]);
@@ -300,7 +312,7 @@ function sheetFor(field, entries, current) {
   if (field.type === "feat" && path === "system.cover")
     reviewed("systems/dnd5e/templates/items/details/details-feat.hbs", ["Cover is shown only for vehicle features (type.value vehicle)."]);
   if (field.type === "feat" && path === "system.crewed")
-    reviewed("systems/dnd5e/templates/items/details/details-feat.hbs", ["dnd5e 6.0.6 has no sheet control for this field."], "Stored value is retained; no native control reads it.");
+    reviewed("systems/dnd5e/templates/items/details/details-feat.hbs", ["dnd5e 6.0.6 and 6.1.0 have no sheet control for this field."], "Stored value is retained; no native control reads it.");
   return sheet;
 }
 function excludedReason(field, path) {
@@ -322,7 +334,7 @@ function decorate(field, environment) {
   const output = clone(field);
   const path = pathKey(field.path);
   const version = environment?.systemVersion ?? "";
-  const current = version === VERIFIED_VERSION && environment?.foundryVersion === "14.369";
+  const current = REVIEWED_SYSTEM_VERSIONS.includes(version) && REVIEWED_FOUNDRY_VERSIONS.includes(environment?.foundryVersion);
   const kind = field.kind === "advancement" ? "advancement" : "item";
   const applicable = mappings.filter(entry => (entry.kind ?? "item") === kind && entry.types.includes(field.type) && samePath(path, entry.path));
   const coverage = { status: "needs-review", owner: OWNER, yamlLocations: [], aliases: [], acceptedRepresentations: [], conversions: [], stages: stages("needs-review"), evidence: [] };
@@ -347,7 +359,7 @@ function decorate(field, environment) {
       acceptedRepresentations: ["list of one-root entries (ABILITY_SCORE_IMPROVEMENT, GRANT_ITEMS, CHOOSE_ITEMS, MODIFY_ITEMS, SCALE_VALUE, TRAIT)"],
       conversions: ["Entries are keyed by Advancement ID at build time; omitted IDs are allocated. Each type's configuration leaves are mapped in the advancement catalog."],
       references: [REFERENCE, ADVANCEMENT_PARSER, "scripts/itemData.js", "scripts/itemYamlExporter.js", "scripts/itemAdvancement.js"],
-      reviewedSystemVersion: VERIFIED_VERSION, reviewedFoundryVersion: "14.369"
+      reviewedSystemVersion: current ? version : VERIFIED_VERSION, reviewedFoundryVersion: current ? environment.foundryVersion : REVIEWED_FOUNDRY_VERSIONS.at(-1)
     });
     else Object.assign(coverage, { status: "unsupported", stages: stages("unsupported"), reason: "Advancement is authored on Feature Items only; this Item type has no supported YAML root for it.", relatedCatalog: "advancement" });
   } else if (applicable.length) {
@@ -361,8 +373,8 @@ function decorate(field, environment) {
       stages: stages("declared"),
       evidence: applicable.flatMap(entry => entry.evidence ?? []).map(entry => ({...entry, test: entry.test.replace("<item type>", field.type)})),
       references: uniq([REFERENCE, PARSER, "scripts/itemData.js", "scripts/itemYamlExporter.js", ...applicable.map(entry => entry.implementation).filter(Boolean)]),
-      reviewedSystemVersion: VERIFIED_VERSION,
-      reviewedFoundryVersion: "14.369"
+      reviewedSystemVersion: current ? version : VERIFIED_VERSION,
+      reviewedFoundryVersion: current ? environment.foundryVersion : REVIEWED_FOUNDRY_VERSIONS.at(-1)
     });
     const members = applicable.flatMap(entry => entry.members ?? []);
     if (members.length) coverage.members = members.map(entry => ({ ...entry, yaml: prefix + entry.yaml }));
@@ -371,7 +383,7 @@ function decorate(field, environment) {
       coverage.evidence = [0, 1, 2, false, true, "unprepared", "prepared", "always"].map(input => ({file:EXPLICIT_TESTS,test:"Preparation " + JSON.stringify(input),status:"referenced"}));
     }
     if (!coverage.evidence.length) coverage.evidence.push({file:"tests/unit/itemCoreFeatureTests.js",test:"strict exporter round-trips " + field.type,status:"referenced",limitation:"Type fixture reference; individual leaf assertions have not been audited."});
-    if (!current) coverage.reason = "Mapping reviewed for Foundry 14.369 / dnd5e 6.0.6; compare the discovered contract before treating it as supported on this runtime.";
+    if (!current) coverage.reason = "Mapping reviewed for " + REVIEWED_LABEL + "; compare the discovered contract before treating it as supported on this runtime.";
     if (field.type === "container" && path === "system.quantity") coverage.stages = { ...stages("declared"), build: "unsupported", export: "unsupported" };
   } else {
     const children = mappings.some(entry => (entry.kind ?? "item") === kind && entry.types.includes(field.type) && (entry.path.startsWith(path + ".") || entry.path.startsWith(path + "[]")));
@@ -379,7 +391,7 @@ function decorate(field, environment) {
     else coverage.reason = "No reviewed YAML or sheet mapping exists for this discovered native field.";
   }
   output.coverage = coverage;
-  output.sheet = sheetFor(field, field.kind === "item" ? applicable : [], current);
+  output.sheet = sheetFor(field, field.kind === "item" ? applicable : [], current, environment ?? {});
   return output;
 }
 export function decorateCatalogFields(fields, environment = {}) {

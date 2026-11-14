@@ -9,6 +9,21 @@ The first YAML block in each explicit template remains the native field referenc
 
 5e Item Importer is free and works standalone. The forthcoming optional premium 5e Activity Importer adds authored activity/effect import and full Item YAML export when installed. It is not included in this free release. Premium examples below apply only when companion availability is explicitly confirmed or premium output is requested. The same strict Item format supports both workflows.
 
+## Pick the template
+
+| The source is | Root key | Template |
+| --- | --- | --- |
+| Something a creature attacks with: a sword, a bow, a natural weapon, a siege weapon | `WEAPON` | Strict Weapon |
+| Armor, a shield, clothing, or a worn or held magic item that is not used up | `EQUIPMENT` | Strict Equipment |
+| Something used up or carried as a stack: a potion, scroll, ammunition, poison, food | `CONSUMABLE` | Strict Consumable |
+| Artisan's tools, a gaming set, a musical instrument or another tool | `TOOL` | Strict Tool |
+| Treasure, gems, art objects, trade goods, or plain gear with nothing to activate | `LOOT` | Strict Loot |
+| A bag, chest, quiver or other holder of items | `CONTAINER` | Strict Container |
+| A spell | `SPELL` | Strict Spell |
+| A class feature, species trait, monster ability or feat | `FEAT` | Strict Feat |
+
+Every template opens with **At a glance** (when to use it, when to use another template, and the smallest document that works). **From source text to YAML** maps rules wording to the fields to write. The complete field reference and one concrete example follow, and **Check before you answer** lists the mistakes to look for before returning YAML.
+
 ## Use the generated output
 
 Paste the result into the importer's main source field and click **Preview**. Templates, recipes and saved presets share one picker; **Manage** opens preset controls. Read the [import-window guide](../docs/import-window.md) for reference checks, optional History and restoring window defaults.
@@ -45,7 +60,7 @@ Activity Importer must be active when attachments are imported. If it is absent,
 Free imports retain normal dnd5e Item fields and system behavior. Description enrichers provide clickable text but do not generate source-specific activities. Loot and Container support passive `effects` only and must never include `Activities`. MIDI-QOL and DAE are separate optional integrations; select their fields only when that automation is intended and available.
 
 
-## Explicit YAML schema 6 reference
+## Explicit YAML schema 7 reference
 
 See the [native field coverage and value rules](../docs/explicit-yaml-v2.md). The first YAML block in each of the eight full reference templates shows its supported Item controls. Optional recovery entries have an adjacent commented list schema. The later attachment examples illustrate nesting and canonical syntax; use the companion's full reference when authoring an activity or effect. Quick-start examples remain compact.
 
@@ -64,7 +79,7 @@ The existing window selector includes editable recipes. Selecting one stages YAM
 3. Click **Preview** and inspect warnings and references. For a direct Activity/Effect import, use **Check import** before adding it. Enable **Compare after import** beforehand if you want to review the written result.
 4. Check intended gameplay in the relevant actor, combat, area or calendar context.
 
-Full typed automation fields are documented in [Automation storage in schema 4](../docs/automation-schema-4.md). Older YAML remains readable; Item exports use Item YAML schema 6 and keep the schema 4 automation storage.
+Full typed automation fields are documented in [Automation storage in schema 4](../docs/automation-schema-4.md). Older YAML remains readable; Item exports use Item YAML schema 7 and keep the schema 4 automation storage.
 
 | Recipe | Availability | Starting behavior |
 | --- | --- | --- |

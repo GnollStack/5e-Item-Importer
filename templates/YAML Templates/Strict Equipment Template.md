@@ -1,12 +1,29 @@
 # Strict Equipment Item authoring reference
 
+## At a glance
+
+- **Root key:** `EQUIPMENT`
+- **When to use:** Use EQUIPMENT when the source is armor, a shield, clothing, or a magic item that is worn or held and is not used up: a ring, rod, wand, cloak, boots, amulet or other wondrous item, a holy symbol or other trinket, or vehicle equipment. `ITEM.Equipment Type` says which: `light`, `medium`, `heavy`, `natural`, `shield`, `clothing`, `ring`, `rod`, `wand`, `trinket`, `wondrous` or `vehicle`.
+- **Smallest working block:** `ITEM.Name` (the name), `ITEM.Equipment Type` (one id from the list). For `light`, `medium`, `heavy`, `natural` and `shield` also `ARMOR.Armor Class` (required) and `ITEM.Base Equipment` (the importer warns without it, except for `natural`).
+
+**Use another template when:**
+
+- A weapon, including a magic staff that can be swung as a quarterstaff: WEAPON.
+- A potion, scroll, ammunition, or a wondrous item that is used up (dust, a bead): CONSUMABLE.
+- A bag, pack, chest or quiver that holds items: CONTAINER.
+- Artisan's tools, a kit, a gaming set or a musical instrument: TOOL.
+- A gem, an art object, or gear with no rules to run: LOOT.
+- A class feature or feat that changes AC: FEAT.
+
+**Work in this order:** find the source wording in [From source text to YAML](#from-source-text-to-yaml), copy the exact names from the [Complete field reference](#complete-field-reference), shape the answer like the [Concrete example](#concrete-example), then go through [Check before you answer](#check-before-you-answer).
+
 ## Destination and prerequisites
 
-Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 6` and the `EQUIPMENT` root.
+Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 7` and the `EQUIPMENT` root.
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 / Foundry 14.369; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.8 and DAE 14.6.6 integrations. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 and 6.1.0 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.11 and DAE 14.6.9 integrations. Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -30,12 +47,31 @@ The first YAML block is the **native and legacy field reference**, not a ready-m
 
 Missing, `null`, `false`, `0`, `""`, `[]` and `{}` are distinct. Use `n/a` only for fields that document it as an unset marker. Never use it as a universal substitute for null or empty data. `CHANGES.Value` retains its YAML type, including the literal text `n/a`. Formula syntax acceptance does not establish that referenced variables exist.
 
-For new physical Items, ordinary defaults are quantity 1, identified true, equipped false and zero unspecified price/weight. Omit unsupplied rarity, attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+For new physical Items, ordinary defaults are quantity 1, equipped false and zero unspecified price/weight. Write `ITEM.Rarities: []` for a mundane item, because a missing `Rarities` key is stored as `common`. A missing `INVENTORY.Identified` follows the user's own setting, so write it when it matters. Omit unsupplied attunement restrictions and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.
+
+## From source text to YAML
+
+Find the wording closest to the source and write the fields shown. A path such as `ITEM.Name` is the `Name` key inside the `ITEM` section of `EQUIPMENT`. A list such as `RECOVERY` takes one `-` entry per item. Leave out every section the source does not mention.
+
+| The source says | Write |
+| --- | --- |
+| "Plate Armor", "Heavy Armor", "AC 18" | `ITEM.Equipment Type: heavy`; `ITEM.Base Equipment: plate`; `ARMOR.Armor Class: 18`; `ARMOR.Max Dex Modifier: 0` |
+| "AC 14 + Dex modifier (max 2)" (medium armor) | `ITEM.Equipment Type: medium`; `ITEM.Base Equipment: breastplate`; `ARMOR.Armor Class: 14`; `ARMOR.Max Dex Modifier: 2` |
+| "AC 11 + Dex modifier" (light armor) | `ITEM.Equipment Type: light`; `ITEM.Base Equipment: leather`; `ARMOR.Armor Class: 11` |
+| "Strength 15" and "Stealth: Disadvantage" | `ARMOR.Strength Requirement: 15`; `PROPERTIES.Stealth Disadvantage: true` |
+| "Shield", "+2 AC" | `ITEM.Equipment Type: shield`; `ITEM.Base Equipment: shield`; `ARMOR.Armor Class: 2` |
+| "You have a +1 bonus to AC while wearing this armor" | `PROPERTIES.Magical: true`; `ATTUNEMENT.Magic Bonus: 1` |
+| "Wondrous item, uncommon (requires attunement by a spellcaster)" | `ITEM.Equipment Type: wondrous`; `ITEM.Rarities: [uncommon]`; `PROPERTIES.Magical: true`; `ATTUNEMENT.Attunement: required`; `ATTUNEMENT.Attunement By: a spellcaster` |
+| "Ring, rare" | `ITEM.Equipment Type: ring`; `ITEM.Rarities: [rare]`; `PROPERTIES.Magical: true` |
+| "can be used as a holy symbol" or "as a spellcasting focus" | `PROPERTIES.Focus: true` |
+| "It has 3 charges" and "regains all expended charges daily at dawn" | `USAGE.Uses Spent: 0`; `USAGE.Uses Max: 3`; `RECOVERY: [{Period: dawn, Type: recoverAll}]` |
+| "1,500 gp" and "65 lb." | `COST_AND_WEIGHT.Price Value: 1500`; `COST_AND_WEIGHT.Price Denomination: gp`; `COST_AND_WEIGHT.Weight Value: 65`; `COST_AND_WEIGHT.Weight Units: lb` |
+| "Chain Mail" in an equipment table (not magic, no rarity) | `ITEM.Rarities: []`; `PROPERTIES.Magical: false`; `INVENTORY.Identified: true` |
 
 ## Complete field reference
 
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 EQUIPMENT:
   SOURCE:
     Book: "[text|n/a]"
@@ -144,7 +180,7 @@ A free/core equipment import. Preserve the complete description; it does not aut
 
 <!-- AUTHORING-EXAMPLE:START -->
 ```yaml
-SCHEMA_VERSION: 6
+SCHEMA_VERSION: 7
 EQUIPMENT:
   ITEM:
     Name: Cloak of Protection
@@ -171,6 +207,21 @@ EQUIPMENT:
 <!-- AUTHORING-EXAMPLE:END -->
 
 The [standalone YAML file](../../docs/examples/core-equipment.yaml) matches this block. See [example prerequisites and validation](../../docs/examples/README.md). Examples establish the stated stored data and validation scope; they do not certify every gameplay combination.
+
+## Check before you answer
+
+1. `light`, `medium`, `heavy`, `natural` and `shield` need an `ARMOR` section with `ARMOR.Armor Class`, or the import fails. Leave `ARMOR` out for rings, rods, wands, clothing, trinkets and wondrous items.
+2. `ARMOR.Armor Class` is a whole number: the armor's base AC (`18` for plate, `14` for a breastplate) or a shield's bonus (`2`). Text such as `14 + Dex modifier (max 2)` fails. For +1 armor keep the base AC and write `ATTUNEMENT.Magic Bonus: 1`; do not write `19`.
+3. Write the Dexterity cap in `ARMOR.Max Dex Modifier`: `2` for medium armor, `0` for heavy armor. Leave it out for light armor. Heavy armor without `Max Dex Modifier: 0` is stored with no cap.
+4. "Stealth: Disadvantage" is `PROPERTIES.Stealth Disadvantage: true`. It is not an `ARMOR` key; there it is ignored with a warning. The Strength score is `ARMOR.Strength Requirement`.
+5. `ATTUNEMENT.Magic Bonus` is the AC bonus of magic armor or a magic shield. Do not use it for a ring, cloak or other wondrous item that grants +1 AC. That bonus is not an Item field.
+6. `ITEM.Equipment Type` is one id: `wondrous`, not `wondrous item`. `ITEM.Base Equipment` is only for armor and shields, as one lowercase word: `studdedleather`, `chainshirt`, `scalemail`, `halfplate`, `ringmail`, `chainmail`. Leave it out for everything else.
+7. Set `PROPERTIES.Magical: true` on every magic item; `ATTUNEMENT.Attunement: required` does not set it. `ATTUNEMENT.Attunement` is `required`, `optional` or `none`, never `true`. Always write `ITEM.Rarities` (`[]` for mundane gear; a missing key is stored as `common`) and `INVENTORY.Identified` (a missing key follows the user's setting).
+8. `USAGE.Uses Spent` counts charges already used, so a full item is `Uses Spent: 0`. `USAGE.Uses Max` is a whole number or a formula without dice. `RECOVERY` is dropped when `Uses Max` is `0` or missing. Use the period ids (`dawn`, `dusk`, `day`, `lr`, `sr`), not words such as `long rest`.
+9. Start the document with `SCHEMA_VERSION: 7`, then the root key. Copy section and field names exactly as the Complete field reference spells them.
+10. Write only the sections and fields the source needs. Do not copy the whole reference, and leave no `[placeholder]` value and no `#` comment in the answer.
+11. Write formulas as quoted strings (`"1d6 + 1"`). Write `true`, `false` and plain numbers without quotes.
+12. Keep the complete rules text in `DESCRIPTION.Description`. Add `Activities` and `effects` only when the user asked for a full Item and has 5e Activity Importer; use that module's templates for those blocks.
 
 ## Compatibility and support
 
@@ -414,9 +465,9 @@ The completed examples below demonstrate array nesting for a passive +1 AC ward 
 ---
 
 
-## Explicit fields in Item YAML schema 6
+## Explicit fields in Item YAML schema 7
 
-Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 and 3 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6 and 6.1.0 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|
@@ -429,6 +480,6 @@ Verification target: D&D5e 6.0.6 / Foundry 14.369. Item YAML versions 0, 1, 2 an
 
 DAMAGE_DATA is the canonical damage representation for Weapon base/versatile damage and Consumable damage. It preserves Dice Count, Die Denomination, Bonus, the Damage Types list, Custom Enabled, Custom Formula, Scaling Mode, Scaling Dice Count, and Scaling Formula. Dice values are nonnegative integers or null; formulas are strings; Custom Enabled defaults false; Scaling Mode defaults none. An inactive custom formula and inactive structured damage remain stored together. Do not combine populated legacy damage shorthand with DAMAGE_DATA. Legacy formula/type labels remain accepted on input. Consumable DAMAGE.Replace defaults false; old ammunition Damage Replace remains an alias.
 
-Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
+Additional controls apply by item type: Tool PROPERTIES.Focus; Loot ITEM.Loot Subtype; Container PROPERTIES.Unidentified Contents; Consumable FOOD_PROPERTIES.Hydrating and Nutritious (food only, dnd5e 6.1 or later); siege/vehicle Crew Capacity, Speed, Speed Units, and Speed Conditions. Weapon reach and ranges accept native decimals. RELOAD.Reload Amount is private metadata in flags.5e-item-importer.reloadAmount, with no native reload automation.
 
 Spell PREPARATION.Prepared exports unprepared/prepared/always and accepts native 0/1/2 or legacy booleans. Source Item stores the spellcasting source identifier. RANGE.Special, DURATION.Special, and AREA.Stationary retain their native values. Range, duration, target count, and every area dimension/count accept formulas. Material settings remain stored when Material is false.
