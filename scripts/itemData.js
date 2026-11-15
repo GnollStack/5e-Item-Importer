@@ -1945,7 +1945,9 @@ export class ItemData {
               preParsedActivityBlockingIssues
             );
           }
-          if (baseline && activityResults.issues.length === 0) {
+          // A failed or rolled-back batch keeps the generated default; warnings (an unknown key,
+          // a value Foundry normalizes) do not, or a weapon would end up with two attacks.
+          if (baseline && activityResults.failed === false) {
             const cleanupIssue = await ItemData.removeReplacedBaseline(createdItem, baseline, activityResults);
             if (cleanupIssue) activityResults.issues.push(cleanupIssue);
           }
@@ -2167,7 +2169,8 @@ export class ItemData {
 
   /** Remove a captured baseline only after its authored replacement exists. */
   static async removeReplacedBaseline(item, baseline, result) {
-    if (!baseline || result.issues?.length) return null;
+    // `failed` comes from applyActivitiesSafely; a result without it falls back to "any issue keeps it".
+    if (!baseline || (typeof result.failed === "boolean" ? result.failed : result.issues?.length > 0)) return null;
     const replaced = result.createdActivityIds?.some(id => id !== baseline.id
       && item.system.activities.get(id)?.type === baseline.type);
     if (!replaced) return null;
@@ -2468,7 +2471,8 @@ export class ItemData {
         issues: ItemData.dedupeInlineIssues([
           ...inheritedIssues,
           "Skipped the entire inline attachment batch because one or more attachments could not be parsed."
-        ])
+        ]),
+        failed: true
       };
     }
     try {
@@ -2478,7 +2482,8 @@ export class ItemData {
         issues: ItemData.dedupeInlineIssues([
           ...inheritedIssues,
           ...(Array.isArray(result?.issues) ? result.issues : [])
-        ])
+        ]),
+        failed: result?.failed !== false
       };
     } catch (error) {
       ItemUtils.error("Unexpected error applying inline attachments after Item creation", error);
@@ -2490,7 +2495,8 @@ export class ItemData {
         issues: ItemData.dedupeInlineIssues([
           ...inheritedIssues,
           `Item was created, but inline attachment processing failed unexpectedly: ${error?.message || String(error)}`
-        ])
+        ]),
+        failed: true
       };
     }
   }
@@ -2912,6 +2918,8 @@ export class ItemData {
     let addedEffects = 0;
     const createdActivityIds = [];
     const createdEffectIds = [];
+    // `issues` mixes parser warnings with failures; `failed` marks a batch that was refused or rolled back.
+    let failed = false;
 
     const prepared = await this.collectActivityResults(parsedResults);
     issues.push(...prepared.issues);
@@ -2919,7 +2927,7 @@ export class ItemData {
       if (prepared.results && prepared.blockingIssues.length > 0) {
         issues.push("Skipped the entire inline attachment batch because one or more attachments could not be parsed.");
       }
-      return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues };
+      return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues, failed: true };
     }
 
     const allResults = prepared.results;
@@ -2939,7 +2947,7 @@ export class ItemData {
     const planned = await this.planInlineActivityResults(missingResults, createdItem);
     issues.push(...planned.issues);
     if (planned.supported && !planned.success) {
-      return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues };
+      return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues, failed: true };
     }
     const plannedResults = planned.results;
 
@@ -2947,7 +2955,7 @@ export class ItemData {
     const preflightIssues = await this.preflightInlineActivityPlan(plannedResults, createdItem);
     if (preflightIssues.length > 0) {
       issues.push(...preflightIssues);
-      return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues };
+      return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues, failed: true };
     }
 
     const importPlan = this.prepareInlineAttachmentPlan(plannedResults, createdItem);
@@ -3064,6 +3072,7 @@ export class ItemData {
           addedEffects += effectsToCreate.length;
         }
       } catch (err) {
+        failed = true;
         issues.push(`Error applying activity: ${err.message}`);
         const rollbackFailures = await this.rollbackInlineDocuments(
           createdItem,
@@ -3104,7 +3113,7 @@ export class ItemData {
       ItemUtils.log(`Applied ${parts.join(' and ')} to ${createdItem.name}`);
     }
 
-    return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues };
+    return { addedActivities, addedEffects, createdActivityIds, createdEffectIds, issues, failed };
   }
 
   /**

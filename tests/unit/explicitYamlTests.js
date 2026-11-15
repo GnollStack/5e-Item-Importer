@@ -91,6 +91,8 @@ export async function runExplicitItemYamlTests() {
     requireValue(ItemData.captureGeneratedBaseline(source,item)===null,"Multiple existing activities were treated as one baseline.");
     await ItemData.removeReplacedBaseline(item,capture,{...success,issues:["Attachment failed"]});
     requireValue(activities.has(baseline.id),"Failed attachment import removed the baseline.");
+    await ItemData.removeReplacedBaseline(item,capture,{...success,issues:["Error applying activity: fixture"],failed:true});
+    requireValue(activities.has(baseline.id),"A failed batch removed the baseline.");
     baseline._source.name="Changed during import";
     requireValue(await ItemData.removeReplacedBaseline(item,capture,success),"Modified baseline was silently removed.");
     requireValue(activities.has(baseline.id),"Modified baseline was deleted.");
@@ -98,7 +100,8 @@ export async function runExplicitItemYamlTests() {
     item.deleteActivity=async()=>{throw new Error("Fixture delete failure");};
     requireValue((await ItemData.removeReplacedBaseline(item,capture,success))?.includes("Fixture delete failure"),"Cleanup failure was not reported.");
     item.deleteActivity=async id=>activities.delete(id);
-    requireValue(await ItemData.removeReplacedBaseline(item,capture,success)===null&&!activities.has(baseline.id)&&activities.has("Replacement00001"),"Successful replacement did not remove only the captured baseline.");
+    // A batch that imported with warnings only (an unknown key, a value Foundry trims) still replaces the default.
+    requireValue(await ItemData.removeReplacedBaseline(item,capture,{...success,issues:["Viper's Fang Poison: an import warning"],failed:false})===null&&!activities.has(baseline.id)&&activities.has("Replacement00001"),"Successful replacement with warnings did not remove only the captured baseline.");
   });
   const spell = {name:"Explicit Spell",type:"spell",img:"icons/svg/book.svg",system:{
     level:2,school:"evo",method:"spell",prepared:2,properties:[],

@@ -205,7 +205,10 @@ export function buildTemplates(root, { write = false } = {}) {
   // A source file no page reads, or a template no page writes, is a leftover that would drift unnoticed.
   const unused = listFiles(sourceRoot).filter(file => !used.has(file)).sort();
   const outputs = new Set(pages.map(page => page.output));
-  const strays = [...new Set(pages.map(page => path.posix.dirname(page.output)))].flatMap(folder =>
-    fs.readdirSync(path.join(root, folder)).filter(name => name.endsWith(".md")).map(name => folder + "/" + name).filter(file => !outputs.has(file))).sort();
+  // A stray is a file of an output's kind (same folder, same extension) that no page writes, so a hand-written
+  // README.md next to a generated .txt is not one.
+  const kinds = [...new Set(pages.map(page => path.posix.dirname(page.output) + "|" + path.posix.extname(page.output)))].map(kind => kind.split("|"));
+  const strays = [...new Set(kinds.flatMap(([folder, extension]) =>
+    fs.readdirSync(path.join(root, folder)).filter(name => path.posix.extname(name) === extension).map(name => folder + "/" + name).filter(file => !outputs.has(file))))].sort();
   return { pages: results, unused, strays };
 }

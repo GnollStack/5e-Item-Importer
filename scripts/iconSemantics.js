@@ -921,7 +921,8 @@ async function getIconsFromFolder(folderPath) {
     ItemUtils.log(`Found ${imageFiles.length} icons in ${folderPath}`);
     return imageFiles;
   } catch (error) {
-    ItemUtils.warn(`Error browsing folder ${folderPath}: ${error.message}`);
+    // The icon search tries several folders; one that this Foundry build does not ship is normal, not a user-facing problem.
+    ItemUtils.log(`Icon folder ${folderPath} could not be browsed: ${error.message}`);
     return [];
   }
 }
