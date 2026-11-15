@@ -1,0 +1,69 @@
+{
+  "useWhen": "Use TOOL when the source is a set of artisan's tools, a gaming set, a musical instrument, or one of the six other tools dnd5e knows: disguise kit, forgery kit, herbalism kit, navigator's tools, poisoner's kit, thieves' tools. A magic version, such as a magic lute, is still a TOOL.",
+  "smallest": "`ITEM.Name` (the name), `ITEM.Base Tool` (the importer id of the tool; `ITEM.Tool Type` is filled in from it).",
+  "notFor": [
+    "A healer's kit, climber's kit, mess kit or other gear that is not a dnd5e tool. `Base Tool` rejects it: CONSUMABLE if it has uses, otherwise LOOT (`Loot Type: gear`).",
+    "A worn item that only gives a bonus to a tool or skill check (gloves, goggles): EQUIPMENT.",
+    "A hammer, sickle or other tool-like object with weapon damage: WEAPON.",
+    "A pack or case that holds tools: CONTAINER.",
+    "A feat or class feature that grants a tool proficiency: FEAT."
+  ],
+  "sourceRows": [
+    {
+      "says": "\"Thieves' Tools\"",
+      "write": "`ITEM.Base Tool: thief`"
+    },
+    {
+      "says": "\"Smith's Tools\" (artisan's tools)",
+      "write": "`ITEM.Tool Type: art`; `ITEM.Base Tool: smith`"
+    },
+    {
+      "says": "\"Lute\" (musical instrument)",
+      "write": "`ITEM.Tool Type: music`; `ITEM.Base Tool: lute`"
+    },
+    {
+      "says": "\"Dice Set\" (gaming set)",
+      "write": "`ITEM.Tool Type: game`; `ITEM.Base Tool: dice`"
+    },
+    {
+      "says": "\"Herbalism Kit\"",
+      "write": "`ITEM.Base Tool: herb`"
+    },
+    {
+      "says": "\"Ability: Dexterity\"",
+      "write": "`ABILITY_CHECK.Ability: dex`; `ABILITY_CHECK.Proficient: Automatic`"
+    },
+    {
+      "says": "\"+2 bonus to ability checks made with these tools\"",
+      "write": "`PROPERTIES.Tool Bonus: 2`"
+    },
+    {
+      "says": "\"uncommon (requires attunement by a bard)\"",
+      "write": "`ITEM.Rarities: [uncommon]`; `PROPERTIES.Magical: true`; `ATTUNEMENT.Attunement: required`; `ATTUNEMENT.Attunement By: a bard`"
+    },
+    {
+      "says": "\"can be used as a spellcasting focus\"",
+      "write": "`PROPERTIES.Focus: true`"
+    },
+    {
+      "says": "\"It has 3 charges\" and \"regains all expended charges daily at dawn\"",
+      "write": "`USAGE.Uses Spent: 0`; `USAGE.Uses Max: 3`; `RECOVERY: [{Period: dawn, Type: recoverAll}]`"
+    },
+    {
+      "says": "\"25 gp\" and \"1 lb.\"",
+      "write": "`COST_AND_WEIGHT.Price Value: 25`; `COST_AND_WEIGHT.Price Denomination: gp`; `COST_AND_WEIGHT.Weight Value: 1`; `COST_AND_WEIGHT.Weight Units: lb`"
+    },
+    {
+      "says": "\"Thieves' Tools\" in an equipment table (not magic, no rarity)",
+      "write": "`ITEM.Rarities: []`; `PROPERTIES.Magical: false`; `INVENTORY.Identified: true`"
+    }
+  ],
+  "checks": [
+    "`ITEM.Base Tool` is required and takes the importer id, not the printed name: `thief` for thieves' tools, `smith`, `alchemist`, `lute`, `dice`. The six kits use `disg`, `forg`, `herb`, `navg`, `pois` and `thief`. Any other word fails.",
+    "`ITEM.Tool Type` must match the base tool: `art` for artisan's tools, `game` for gaming sets, `music` for instruments. For the six kits leave it out or write `n/a`. A mismatch fails. When unsure, leave `Tool Type` out; the importer fills it in.",
+    "A bonus to checks made with the tool is `PROPERTIES.Tool Bonus`. It is not an `ABILITY_CHECK` key, and a tool has no `ATTUNEMENT.Magic Bonus` (the importer drops that key without a warning). `Tool Bonus` may hold dice: `\"1d4\"`.",
+    "`ABILITY_CHECK.Ability` is a three-letter id: `str`, `dex`, `con`, `int`, `wis` or `cha`. `ABILITY_CHECK.Proficient` is `Automatic`, `0`, `0.5`, `1`, `1.5` or `2`. `Dexterity` or `expertise` is dropped with a warning. Use `Automatic` unless the source fixes the proficiency.",
+    "A mundane tool has no `USAGE` or `RECOVERY`. Add them only when a magic tool has charges, with `USAGE.Uses Spent: 0` for a full item.",
+    "Set `PROPERTIES.Magical: true` on a magic tool; `ATTUNEMENT.Attunement: required` does not set it. Always write `ITEM.Rarities` (`[]` for a mundane tool; a missing key is stored as `common`) and `INVENTORY.Identified` (a missing key follows the user's setting)."
+  ]
+}

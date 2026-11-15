@@ -1,0 +1,5 @@
+  COST_AND_WEIGHT:
+    Price Value: "[number]"
+    Price Denomination: "[pp|gp|ep|sp|cp]"
+    Weight Value: "[number]"
+    Weight Units: "[lb|tn|kg|Mg]"

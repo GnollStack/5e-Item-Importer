@@ -1,0 +1,2 @@
+This is a native Spell Item, not a physical inventory item: rarity, quantity, price, weight and unidentified-description fields are not current spell authoring controls. Use Prepared:unprepared/prepared/always for native 0/1/2 state. COMPONENTS.Ritual is independent of Method; use Method:spell for an ordinary ritual-capable prepared spell. Preserve material cost/supply, consumed state and inactive components independently. Source-specific attacks, saves, healing and effects require companion attachments in full output.
+

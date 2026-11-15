@@ -1,0 +1,1 @@
+Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Features accept activities and passive effects.

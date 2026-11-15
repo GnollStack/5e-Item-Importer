@@ -1,0 +1,7 @@
+  SOURCE:
+    Book: "[text|n/a]"
+    Page: "[text|n/a]"
+    Custom: "[text|n/a]"
+    License: "[text|n/a]"
+    Rules: "[2014|2024|text]"
+    Revision: 1 # Finite number, including decimals; native default 1.

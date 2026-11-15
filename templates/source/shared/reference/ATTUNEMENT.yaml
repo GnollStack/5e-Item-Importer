@@ -1,0 +1,6 @@
+  ATTUNEMENT:
+    Attuned: false # Current state, independent of Attunement requirement.
+    # Store independently of Magical; a bonus does not enable an explicit false property.
+    Attunement: "[none|required|optional]"
+    Attunement By: "[text|n/a]" # Importer metadata; ignored when Attunement is none.
+    Magic Bonus: "[formula|n/a]" # Deterministic formula, e.g. "@prof"; no dice.

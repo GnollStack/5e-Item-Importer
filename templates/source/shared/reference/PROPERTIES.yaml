@@ -1,0 +1,3 @@
+  PROPERTIES:
+    NPC Equipment: false # Native gear property; shown for NPC inventory.
+    Magical: "[true|false]"

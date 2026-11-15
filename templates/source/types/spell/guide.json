@@ -1,0 +1,70 @@
+{
+  "useWhen": "Use SPELL when the source is a spell description: a level and school line, casting time, range, components and duration. A cantrip is a spell of level 0.",
+  "smallest": "`ITEM.Name` (the name), `ITEM.Level` (0 to 9; 0 is a cantrip), `ITEM.School` (three-letter id), `ACTIVATION.Type` (the casting time unit). Without `RANGE` the importer stores range units `ft` with no value, and without `DURATION` it stores `inst`, so write both for a real spell.",
+  "notFor": [
+    "A spell scroll: CONSUMABLE (`Consumable Type: scroll`).",
+    "A magic item that casts a spell (wand, staff, ring): EQUIPMENT or WEAPON, with the spell named in the description.",
+    "A class feature, feat, invocation, maneuver or psionic power with no spell level and school: FEAT.",
+    "A monster trait or action, even a magical one (breath weapon, innate ability): FEAT."
+  ],
+  "sourceRows": [
+    {
+      "says": "\"3rd-level evocation\" or \"Level 3 Evocation\"",
+      "write": "`ITEM.Level: 3`; `ITEM.School: evo`"
+    },
+    {
+      "says": "\"Casting Time: 1 action\"",
+      "write": "`ACTIVATION.Type: action`; `ACTIVATION.Value: 1`"
+    },
+    {
+      "says": "\"Casting Time: 1 reaction, which you take when you are hit by an attack\"",
+      "write": "`ACTIVATION.Type: reaction`; `ACTIVATION.Value: 1`; `ACTIVATION.Condition: \"which you take when you are hit by an attack\"`"
+    },
+    {
+      "says": "\"Range: 150 feet\"",
+      "write": "`RANGE.Units: ft`; `RANGE.Value: 150`"
+    },
+    {
+      "says": "\"Range: Self (15-foot cone)\"",
+      "write": "`RANGE.Units: self`; `AREA.Shape: cone`; `AREA.Size: 15`; `AREA.Units: ft`"
+    },
+    {
+      "says": "\"Components: V, S, M (a tiny ball of bat guano and sulfur)\"",
+      "write": "`COMPONENTS.Vocal: true`; `COMPONENTS.Somatic: true`; `COMPONENTS.Material: true`; `COMPONENTS.Ritual: false`; `MATERIALS.Value: \"a tiny ball of bat guano and sulfur\"`; `MATERIALS.Consumed: false`"
+    },
+    {
+      "says": "\"M (a diamond worth 300+ gp, which the spell consumes)\"",
+      "write": "`COMPONENTS.Material: true`; `MATERIALS.Value: \"a diamond worth 300+ gp, which the spell consumes\"`; `MATERIALS.Cost: 300`; `MATERIALS.Consumed: true`"
+    },
+    {
+      "says": "\"Duration: Concentration, up to 1 minute\"",
+      "write": "`DURATION.Units: minute`; `DURATION.Value: 1`; `DURATION.Concentration: true`"
+    },
+    {
+      "says": "\"(ritual)\" after the school, or \"Casting Time: 1 action or Ritual\"",
+      "write": "`COMPONENTS.Ritual: true`; `PREPARATION.Method: spell`"
+    },
+    {
+      "says": "\"each creature in a 20-foot-radius sphere\"",
+      "write": "`TARGETS.Type: creature`; `AREA.Shape: sphere`; `AREA.Size: 20`; `AREA.Units: ft`"
+    },
+    {
+      "says": "\"one creature you can see within range\"",
+      "write": "`TARGETS.Type: creature`; `TARGETS.Count: 1`"
+    },
+    {
+      "says": "\"you can cast it once without a spell slot\" and \"you regain the ability when you finish a long rest\"",
+      "write": "`PREPARATION.Method: innate`; `USAGE.Uses Spent: 0`; `USAGE.Uses Max: 1`; `RECOVERY: [{Period: lr, Type: recoverAll}]`"
+    }
+  ],
+  "checks": [
+    "`ITEM.School` is a three-letter id: `abj`, `con`, `div`, `enc`, `evo`, `ill`, `nec` or `trs`. `evocation` fails. `ITEM.Level` is a number from 0 to 9. A cantrip is `0`; `cantrip` or `3rd` fails.",
+    "V is `COMPONENTS.Vocal`, not `Verbal`. Concentration is `DURATION.Concentration`, not a `COMPONENTS` key. The wrong key is ignored with a warning, so the spell loses that property.",
+    "A ritual spell is `COMPONENTS.Ritual: true` with `PREPARATION.Method: spell`. Do not write `Method: ritual` for it. `PREPARATION.Prepared` is `unprepared`, `prepared` or `always`.",
+    "`ACTIVATION.Type` is one id: `action`, `bonus`, `reaction`, `minute`, `hour`, `day` or `special`. `ACTIVATION.Value` is a whole number. \"10 minutes\" is `Type: minute` and `Value: 10`. `bonus action` fails.",
+    "Units are ids: `ft`, not `feet`; `minute`, not `minutes`; `inst`, not `instantaneous`. \"Until dispelled\" is `disp`. An unknown unit gives a warning.",
+    "\"Self (15-foot cone)\" is `RANGE.Units: self` plus an `AREA` section. Do not put the area size in `RANGE.Value`. Write `AREA` only when the spell has an area. A 2024 Emanation is `AREA.Shape: radius`.",
+    "The material text goes in `MATERIALS.Value`. A gp price goes in `MATERIALS.Cost` as a plain number: `300`, not `300 gp`. \"Which the spell consumes\" is `MATERIALS.Consumed: true`. Set `COMPONENTS.Material: true` as well.",
+    "A spell has no rarity, price, weight, quantity or attunement. `ITEM.Rarities`, `INVENTORY`, `COST_AND_WEIGHT`, `UNIDENTIFIED_DESCRIPTION` and `ATTUNEMENT` are ignored with a warning. Leave `USAGE` and `RECOVERY` out for a spell that is cast with spell slots."
+  ]
+}

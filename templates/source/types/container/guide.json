@@ -1,0 +1,57 @@
+{
+  "useWhen": "Use CONTAINER when the source is an item that holds other items or coins: a backpack, sack, pouch, chest, quiver, case, bag of holding or portable hole. The items inside go under `CONTENTS`, each as its own Item.",
+  "smallest": "`ITEM.Name` (the name). Nothing else is required.",
+  "notFor": [
+    "The items inside the container. Each one is its own WEAPON, EQUIPMENT, CONSUMABLE, TOOL, LOOT or CONTAINER entry under `CONTENTS`.",
+    "A flask, vial or waterskin, where the liquid is the item: CONSUMABLE.",
+    "A worn item with no storage rules (belt, cloak): EQUIPMENT.",
+    "A spell that creates a storage space: SPELL."
+  ],
+  "sourceRows": [
+    {
+      "says": "\"can hold up to 30 pounds of gear\" or \"1 cubic foot\"",
+      "write": "`CAPACITY.Weight Capacity Value: 30`; `CAPACITY.Weight Capacity Units: lb`; `CAPACITY.Volume Capacity Value: 1`; `CAPACITY.Volume Capacity Units: cubicFoot`"
+    },
+    {
+      "says": "\"holds up to 20 arrows\"",
+      "write": "`CAPACITY.Item Count: 20`"
+    },
+    {
+      "says": "\"weighs 15 pounds, regardless of its contents\"",
+      "write": "`PROPERTIES.Weightless Contents: true`; `COST_AND_WEIGHT.Weight Value: 15`; `COST_AND_WEIGHT.Weight Units: lb`"
+    },
+    {
+      "says": "\"contains 120 gp and 45 sp\"",
+      "write": "`CURRENCY_CONTENTS.Platinum: 0`; `CURRENCY_CONTENTS.Gold: 120`; `CURRENCY_CONTENTS.Electrum: 0`; `CURRENCY_CONTENTS.Silver: 45`; `CURRENCY_CONTENTS.Copper: 0`"
+    },
+    {
+      "says": "\"contains a crowbar\" (items inside)",
+      "write": "`CONTENTS: [{LOOT: {ITEM: {Name: Crowbar, Rarities: [], Loot Type: gear}}}]`"
+    },
+    {
+      "says": "\"Wondrous item, uncommon (requires attunement)\"",
+      "write": "`ITEM.Rarities: [uncommon]`; `PROPERTIES.Magical: true`; `ATTUNEMENT.Attunement: required`"
+    },
+    {
+      "says": "\"2 gp\" and \"5 lb.\"",
+      "write": "`COST_AND_WEIGHT.Price Value: 2`; `COST_AND_WEIGHT.Price Denomination: gp`; `COST_AND_WEIGHT.Weight Value: 5`; `COST_AND_WEIGHT.Weight Units: lb`"
+    },
+    {
+      "says": "\"its contents cannot be seen until it is identified\"",
+      "write": "`PROPERTIES.Unidentified Contents: true`; `INVENTORY.Identified: false`"
+    },
+    {
+      "says": "\"Backpack\" in an equipment table (not magic, no rarity)",
+      "write": "`ITEM.Rarities: []`; `PROPERTIES.Magical: false`; `INVENTORY.Identified: true`"
+    }
+  ],
+  "checks": [
+    "A container has no type key: `ITEM` holds `Name` and `Rarities`. `Container Type`, `USAGE` and `RECOVERY` are ignored with a warning, and a container never has `Activities`.",
+    "`CURRENCY_CONTENTS` needs all five keys (`Platinum`, `Gold`, `Electrum`, `Silver`, `Copper`) as whole numbers, with `0` for coins that are absent. A missing key fails. Leave the whole section out when there are no coins.",
+    "Write only the capacity limits the source gives and leave the other `CAPACITY` keys out. `0` gives a warning. Values are plain numbers: `500`, not `500 lb`. `CAPACITY.Volume Capacity Units` is `cubicFoot` or `liter`.",
+    "`COST_AND_WEIGHT.Weight Value` is the weight of the empty container. Do not add the contents.",
+    "Each `CONTENTS` entry is one full Item under exactly one root key: `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT` or `CONTAINER`. Do not list bare names, do not repeat `SCHEMA_VERSION` inside an entry, and do not write `INVENTORY.Container` on a nested Item. Each of these fails.",
+    "A container always has quantity 1. A higher `INVENTORY.Quantity` is changed to 1 without a warning.",
+    "Set `PROPERTIES.Magical: true` on a magic container; `ATTUNEMENT.Attunement: required` does not set it. Always write `ITEM.Rarities` (`[]` for a mundane container; a missing key is stored as `common`) and `INVENTORY.Identified` (a missing key follows the user's setting)."
+  ]
+}

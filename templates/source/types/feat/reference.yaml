@@ -1,0 +1,168 @@
+SCHEMA_VERSION: 7
+FEAT:
+@@include reference/SOURCE.yaml
+
+  ITEM:
+    Icon: "[filepath|n/a]"
+    Identifier: "[text|n/a]"
+    Sort: 0 # Integer ordering value; preserve an authored zero.
+    Name: "[text]"
+    Feature Type: "[background|class|monster|race|enchantment|feat|pietyTrait|supernaturalGift|vehicle|n/a]" # n/a stores a blank type.
+    Feature Subtype: "[subtype identifier|n/a]" # Only class, enchantment, feat, supernaturalGift and (dnd5e 6.1 or later) race define subtypes.
+    Requirements: "[text|n/a]" # Free text shown on the sheet, for example "Fighter 1" or "Level 4+".
+
+  PREREQUISITES:
+    Level: "[integer|n/a]" # Minimum character level for the feat picker; n/a stores null.
+    Items: [] # List of "identifier" or "type:identifier" entries, for example [fighter, "feat:alert"].
+    Repeatable: "[true|false]"
+
+  PROPERTIES:
+    Magical: "[true|false]"
+    Passive Trait: "[true|false]"
+
+  ENCHANTMENT:
+    # Stored for every feature; the sheet shows these controls only for an
+    # enchantment source (artificerInfusion or rune subtype).
+    Max: "[formula|n/a]" # Deterministic maximum number of active enchantments.
+    Period: "[sr|lr|atwill|n/a]" # Replacement period; n/a stores Never.
+
+  VEHICLE_PROPERTIES:
+    # Cover is shown only for vehicle features; both values are retained otherwise.
+    Cover: "[none|half|threequarters|total|0..1|n/a]"
+    Crewed: "[true|false]"
+
+  USAGE:
+    # Uses Spent = number of uses ALREADY CONSUMED (0 means all uses are available).
+    # Uses Max = maximum count or deterministic formula, e.g. "@prof" (no dice).
+    # Example: A feature usable twice per rest with one use spent → Uses Spent: 1, Uses Max: 2
+    Uses Spent: "[integer|n/a]"
+    Uses Max: "[integer|formula|n/a]"
+
+@@include reference/RECOVERY.yaml
+
+  # Optional, repeatable. One root key per entry; omit the list when the feature
+  # grants nothing. Referenced documents resolve by UUID, Name or Identifier; the
+  # import window shows a drop zone for anything missing or ambiguous, and import
+  # waits until every reference resolves. HitPoints, Size and Subclass belong to
+  # classes and species and are rejected here.
+  ADVANCEMENT:
+    - ABILITY_SCORE_IMPROVEMENT:
+        Advancement ID: n/a # Optional 16-character stable ID; omit to allocate one.
+        Level: 0 # 0 = any level (the feat default).
+        Name: "[text|n/a]"
+        Hint: "[text|n/a]"
+        Icon: "[filepath|n/a]"
+        Class Restriction: "[primary|secondary|n/a]"
+        Points: "[integer]" # Free points the player assigns.
+        Cap: "[integer]" # Maximum increase to one ability (native default 2).
+        Max: "[integer|n/a]" # Maximum resulting score; n/a keeps the native 20.
+        Locked: [] # Ability identifiers that cannot receive points.
+        FIXED:
+          - Ability: "[str|dex|con|int|wis|cha]"
+            Value: "[integer]"
+        RECOMMENDATION: # Optional recommended feat (epic boon boons).
+          UUID: "[uuid|n/a]"
+          Name: "[text|n/a]"
+          Identifier: "[text|n/a]"
+    - GRANT_ITEMS:
+        Advancement ID: n/a
+        Level: 0
+        Name: "[text|n/a]"
+        Hint: "[text|n/a]"
+        Icon: "[filepath|n/a]"
+        Class Restriction: "[primary|secondary|n/a]"
+        Optional: "[true|false]" # Let the player decline the grant.
+        Sorting: "[a|m]" # a = alphabetical, m = manual (Sort values).
+        ITEMS:
+          - UUID: "[uuid|n/a]"
+            Name: "[text|n/a]"
+            Identifier: "[text|n/a]"
+            Type: "[feat|spell|consumable|container|equipment|loot|tool|weapon|n/a]"
+            Optional: "[true|false]"
+            Sort: 0
+        SPELL: # Optional spell configuration for granted spells.
+          Ability: [] # Spellcasting ability identifiers.
+          Method: "[atwill|innate|ritual|pact|spell|n/a]"
+          Prepared: "[unprepared|prepared|always]"
+          Uses Max: "[formula|n/a]"
+          Uses Per: "[lr|sr|day|dawn|dusk|recharge|initiative|turnStart|turnEnd|turn|n/a]"
+          Require Slot: "[true|false]"
+    - CHOOSE_ITEMS:
+        Advancement ID: n/a
+        Name: "[text|n/a]"
+        Hint: "[text|n/a]"
+        Icon: "[filepath|n/a]"
+        Class Restriction: "[primary|secondary|n/a]"
+        Allow Drops: "[true|false]"
+        Sorting: "[a|m]"
+        Type: "[feat|spell|consumable|container|equipment|loot|tool|weapon|n/a]"
+        CHOICES:
+          - Level: "[integer]"
+            Count: "[integer]"
+            Replacement: "[true|false]"
+        POOL:
+          - UUID: "[uuid|n/a]"
+            Name: "[text|n/a]"
+            Identifier: "[text|n/a]"
+            Type: "[feat|spell|consumable|container|equipment|loot|tool|weapon|n/a]"
+            Sort: 0
+        RESTRICTION:
+          Level: "[text|n/a]" # Spell level restriction such as available or 1.
+          List: [] # Spell list identifiers such as class:wizard.
+          School: [] # Spell school identifiers.
+          Type: "[text|n/a]"
+          Subtype: "[text|n/a]"
+        SPELL:
+          Ability: []
+          Method: "[atwill|innate|ritual|pact|spell|n/a]"
+          Prepared: "[unprepared|prepared|always]"
+          Uses Max: "[formula|n/a]"
+          Uses Per: "[lr|sr|day|dawn|dusk|recharge|initiative|turnStart|turnEnd|turn|n/a]"
+          Require Slot: "[true|false]"
+    - MODIFY_ITEMS:
+        Advancement ID: n/a
+        Level: 0
+        Name: "[text|n/a]"
+        Hint: "[text|n/a]"
+        Icon: "[filepath|n/a]"
+        Class Restriction: "[primary|secondary|n/a]"
+        CHANGES:
+          - Effect ID: n/a # An enchantment effect defined in this feature's effects list.
+            EFFECT: # Or a standalone compendium ActiveEffect.
+              UUID: "[uuid|n/a]"
+              Name: "[text|n/a]"
+            Identifiers: [] # Item identifiers the change applies to, e.g. ["weapon:longsword"].
+    - SCALE_VALUE:
+        Advancement ID: n/a
+        Name: "[text|n/a]"
+        Hint: "[text|n/a]"
+        Icon: "[filepath|n/a]"
+        Class Restriction: "[primary|secondary|n/a]"
+        Identifier: "[text]" # The @scale key, e.g. storm-dice.
+        Type: "[string|number|cr|dice|distance|usage]"
+        Distance Units: "[ft|mi|m|km|n/a]" # distance type only.
+        SCALE:
+          - Level: "[integer]"
+            Value: "[text|number|n/a]" # string, number, cr, distance and usage types.
+            Dice Count: "[integer|null|n/a]" # dice type.
+            Die Denomination: "[integer|n/a]" # dice type.
+            Modifiers: [] # dice type, e.g. [min2].
+            Period: "[lr|sr|day|dawn|dusk|recharge|initiative|turnStart|turnEnd|turn|n/a]" # usage type.
+    - TRAIT:
+        Advancement ID: n/a
+        Level: 0
+        Name: "[text|n/a]"
+        Hint: "[text|n/a]"
+        Icon: "[filepath|n/a]"
+        Class Restriction: "[primary|secondary|n/a]"
+        Mode: "[default|expertise|forcedExpertise|upgrade|mastery]"
+        Allow Replacements: "[true|false]"
+        Grants: [] # Trait keys such as skills:ath, weapon:mar, armor:hvy, languages:*.
+        CHOICES:
+          - Count: "[integer]"
+            Pool: [] # Trait keys the player may choose from; empty = any.
+
+@@include reference/DESCRIPTION.yaml
+
+@@include reference/CHAT_FLAVOR.yaml
+

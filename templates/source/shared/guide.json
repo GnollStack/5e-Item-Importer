@@ -1,0 +1,16 @@
+{
+  "sharedChecks": [
+    {
+      "text": "Start the document with `SCHEMA_VERSION: 7`, then the root key. Copy section and field names exactly as the Complete field reference spells them."
+    },
+    {
+      "text": "Write only the sections and fields the source needs. Do not copy the whole reference, and leave no `[placeholder]` value and no `#` comment in the answer."
+    },
+    {
+      "text": "Write formulas as quoted strings (`\"1d6 + 1\"`). Write `true`, `false` and plain numbers without quotes."
+    },
+    {
+      "text": "Keep the complete rules text in `DESCRIPTION.Description`. Add `Activities` and `effects` only when the user asked for a full Item and has 5e Activity Importer; use that module's templates for those blocks."
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "useWhen": "Use EQUIPMENT when the source is armor, a shield, clothing, or a magic item that is worn or held and is not used up: a ring, rod, wand, cloak, boots, amulet or other wondrous item, a holy symbol or other trinket, or vehicle equipment. `ITEM.Equipment Type` says which: `light`, `medium`, `heavy`, `natural`, `shield`, `clothing`, `ring`, `rod`, `wand`, `trinket`, `wondrous` or `vehicle`.",
+  "smallest": "`ITEM.Name` (the name), `ITEM.Equipment Type` (one id from the list). For `light`, `medium`, `heavy`, `natural` and `shield` also `ARMOR.Armor Class` (required) and `ITEM.Base Equipment` (the importer warns without it, except for `natural`).",
+  "notFor": [
+    "A weapon, including a magic staff that can be swung as a quarterstaff: WEAPON.",
+    "A potion, scroll, ammunition, or a wondrous item that is used up (dust, a bead): CONSUMABLE.",
+    "A bag, pack, chest or quiver that holds items: CONTAINER.",
+    "Artisan's tools, a kit, a gaming set or a musical instrument: TOOL.",
+    "A gem, an art object, or gear with no rules to run: LOOT.",
+    "A class feature or feat that changes AC: FEAT."
+  ],
+  "sourceRows": [
+    {
+      "says": "\"Plate Armor\", \"Heavy Armor\", \"AC 18\"",
+      "write": "`ITEM.Equipment Type: heavy`; `ITEM.Base Equipment: plate`; `ARMOR.Armor Class: 18`; `ARMOR.Max Dex Modifier: 0`"
+    },
+    {
+      "says": "\"AC 14 + Dex modifier (max 2)\" (medium armor)",
+      "write": "`ITEM.Equipment Type: medium`; `ITEM.Base Equipment: breastplate`; `ARMOR.Armor Class: 14`; `ARMOR.Max Dex Modifier: 2`"
+    },
+    {
+      "says": "\"AC 11 + Dex modifier\" (light armor)",
+      "write": "`ITEM.Equipment Type: light`; `ITEM.Base Equipment: leather`; `ARMOR.Armor Class: 11`"
+    },
+    {
+      "says": "\"Strength 15\" and \"Stealth: Disadvantage\"",
+      "write": "`ARMOR.Strength Requirement: 15`; `PROPERTIES.Stealth Disadvantage: true`"
+    },
+    {
+      "says": "\"Shield\", \"+2 AC\"",
+      "write": "`ITEM.Equipment Type: shield`; `ITEM.Base Equipment: shield`; `ARMOR.Armor Class: 2`"
+    },
+    {
+      "says": "\"You have a +1 bonus to AC while wearing this armor\"",
+      "write": "`PROPERTIES.Magical: true`; `ATTUNEMENT.Magic Bonus: 1`"
+    },
+    {
+      "says": "\"Wondrous item, uncommon (requires attunement by a spellcaster)\"",
+      "write": "`ITEM.Equipment Type: wondrous`; `ITEM.Rarities: [uncommon]`; `PROPERTIES.Magical: true`; `ATTUNEMENT.Attunement: required`; `ATTUNEMENT.Attunement By: a spellcaster`"
+    },
+    {
+      "says": "\"Ring, rare\"",
+      "write": "`ITEM.Equipment Type: ring`; `ITEM.Rarities: [rare]`; `PROPERTIES.Magical: true`"
+    },
+    {
+      "says": "\"can be used as a holy symbol\" or \"as a spellcasting focus\"",
+      "write": "`PROPERTIES.Focus: true`"
+    },
+    {
+      "says": "\"It has 3 charges\" and \"regains all expended charges daily at dawn\"",
+      "write": "`USAGE.Uses Spent: 0`; `USAGE.Uses Max: 3`; `RECOVERY: [{Period: dawn, Type: recoverAll}]`"
+    },
+    {
+      "says": "\"1,500 gp\" and \"65 lb.\"",
+      "write": "`COST_AND_WEIGHT.Price Value: 1500`; `COST_AND_WEIGHT.Price Denomination: gp`; `COST_AND_WEIGHT.Weight Value: 65`; `COST_AND_WEIGHT.Weight Units: lb`"
+    },
+    {
+      "says": "\"Chain Mail\" in an equipment table (not magic, no rarity)",
+      "write": "`ITEM.Rarities: []`; `PROPERTIES.Magical: false`; `INVENTORY.Identified: true`"
+    }
+  ],
+  "checks": [
+    "`light`, `medium`, `heavy`, `natural` and `shield` need an `ARMOR` section with `ARMOR.Armor Class`, or the import fails. Leave `ARMOR` out for rings, rods, wands, clothing, trinkets and wondrous items.",
+    "`ARMOR.Armor Class` is a whole number: the armor's base AC (`18` for plate, `14` for a breastplate) or a shield's bonus (`2`). Text such as `14 + Dex modifier (max 2)` fails. For +1 armor keep the base AC and write `ATTUNEMENT.Magic Bonus: 1`; do not write `19`.",
+    "Write the Dexterity cap in `ARMOR.Max Dex Modifier`: `2` for medium armor, `0` for heavy armor. Leave it out for light armor. Heavy armor without `Max Dex Modifier: 0` is stored with no cap.",
+    "\"Stealth: Disadvantage\" is `PROPERTIES.Stealth Disadvantage: true`. It is not an `ARMOR` key; there it is ignored with a warning. The Strength score is `ARMOR.Strength Requirement`.",
+    "`ATTUNEMENT.Magic Bonus` is the AC bonus of magic armor or a magic shield. Do not use it for a ring, cloak or other wondrous item that grants +1 AC. That bonus is not an Item field.",
+    "`ITEM.Equipment Type` is one id: `wondrous`, not `wondrous item`. `ITEM.Base Equipment` is only for armor and shields, as one lowercase word: `studdedleather`, `chainshirt`, `scalemail`, `halfplate`, `ringmail`, `chainmail`. Leave it out for everything else.",
+    "Set `PROPERTIES.Magical: true` on every magic item; `ATTUNEMENT.Attunement: required` does not set it. `ATTUNEMENT.Attunement` is `required`, `optional` or `none`, never `true`. Always write `ITEM.Rarities` (`[]` for mundane gear; a missing key is stored as `common`) and `INVENTORY.Identified` (a missing key follows the user's setting).",
+    "`USAGE.Uses Spent` counts charges already used, so a full item is `Uses Spent: 0`. `USAGE.Uses Max` is a whole number or a formula without dice. `RECOVERY` is dropped when `Uses Max` is `0` or missing. Use the period ids (`dawn`, `dusk`, `day`, `lr`, `sr`), not words such as `long rest`."
+  ]
+}

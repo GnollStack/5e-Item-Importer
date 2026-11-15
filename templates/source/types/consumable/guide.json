@@ -1,0 +1,72 @@
+{
+  "useWhen": "Use CONSUMABLE when the source is used up or carried as a stack: a potion, elixir or oil, a spell scroll, ammunition, poison, food and drink, gear with a number of uses (a healer's kit), or a one-use wondrous item such as dust or a bead. The parser also accepts `wand` and `rod` here, for a charged wand or rod that the user wants stored as a consumable.",
+  "smallest": "`ITEM.Name` (the name), `ITEM.Consumable Type` (`ammo`, `food`, `poison`, `potion`, `rod`, `scroll`, `trinket` or `wand`). `ammo` also needs `AMMUNITION_PROPERTIES.Ammunition Type`; `poison` also needs `POISON_PROPERTIES.Poison Type`.",
+  "notFor": [
+    "The bow, crossbow or sling that fires the ammunition: WEAPON.",
+    "A spell description that is not a scroll: SPELL.",
+    "A ring, cloak, boots or other permanent magic item: EQUIPMENT. A wand or rod fits either template; EQUIPMENT (`Equipment Type: wand` or `rod`) suits one that keeps recharging.",
+    "A quiver, bag or case that holds the consumables: CONTAINER.",
+    "A herbalism kit, poisoner's kit or other kit that gives a tool proficiency: TOOL.",
+    "A gem, an art object, or gear that is not used up: LOOT."
+  ],
+  "sourceRows": [
+    {
+      "says": "\"Potion, common\"",
+      "write": "`ITEM.Consumable Type: potion`; `ITEM.Rarities: [common]`; `PROPERTIES.Magical: true`"
+    },
+    {
+      "says": "\"when you drink this potion\" (one use, then it is gone)",
+      "write": "`USAGE.Uses Spent: 0`; `USAGE.Uses Max: 1`; `USAGE.Destroy on Empty: true`"
+    },
+    {
+      "says": "\"Arrows (20)\"",
+      "write": "`ITEM.Consumable Type: ammo`; `AMMUNITION_PROPERTIES.Ammunition Type: arrow`; `INVENTORY.Quantity: 20`"
+    },
+    {
+      "says": "\"You have a +1 bonus to attack and damage rolls made with this piece of magic ammunition\"",
+      "write": "`PROPERTIES.Magical: true`; `ATTUNEMENT.Magic Bonus: 1`"
+    },
+    {
+      "says": "\"Poison (injury)\"",
+      "write": "`ITEM.Consumable Type: poison`; `POISON_PROPERTIES.Poison Type: injury`"
+    },
+    {
+      "says": "\"Spell scroll\" of a concentration spell with V and S components",
+      "write": "`ITEM.Consumable Type: scroll`; `SCROLL_PROPERTIES.Vocal: true`; `SCROLL_PROPERTIES.Somatic: true`; `SCROLL_PROPERTIES.Concentration: true`; `SCROLL_PROPERTIES.Ritual: false`"
+    },
+    {
+      "says": "\"Rations (1 day)\"",
+      "write": "`ITEM.Consumable Type: food`; `FOOD_PROPERTIES.Nutritious: true`"
+    },
+    {
+      "says": "\"Waterskin\" or another drink",
+      "write": "`ITEM.Consumable Type: food`; `FOOD_PROPERTIES.Hydrating: true`"
+    },
+    {
+      "says": "\"This wand has 7 charges\" and \"regains 1d6 + 1 expended charges daily at dawn\"",
+      "write": "`ITEM.Consumable Type: wand`; `USAGE.Uses Spent: 0`; `USAGE.Uses Max: 7`; `USAGE.Destroy on Empty: false`; `RECOVERY: [{Period: dawn, Type: formula, Formula: \"1d6 + 1\"}]`"
+    },
+    {
+      "says": "\"Wondrous item\" that is used up, such as dust or a bead",
+      "write": "`ITEM.Consumable Type: wondrous`"
+    },
+    {
+      "says": "\"50 gp\" and \"1/2 lb.\"",
+      "write": "`COST_AND_WEIGHT.Price Value: 50`; `COST_AND_WEIGHT.Price Denomination: gp`; `COST_AND_WEIGHT.Weight Value: 0.5`; `COST_AND_WEIGHT.Weight Units: lb`"
+    },
+    {
+      "says": "\"Arrows\" or \"Rations\" in an equipment table (not magic, no rarity)",
+      "write": "`ITEM.Rarities: []`; `PROPERTIES.Magical: false`; `INVENTORY.Identified: true`"
+    }
+  ],
+  "checks": [
+    "`ITEM.Consumable Type` is one of `ammo`, `food`, `poison`, `potion`, `rod`, `scroll`, `trinket`, `wand`, `wondrous`. `ammunition` fails. Elixirs, oils and philters are `potion`. Use `wondrous` for a wondrous item that is used up, and `trinket` for a consumable that fits no other type.",
+    "`ammo` needs `AMMUNITION_PROPERTIES.Ammunition Type` and `poison` needs `POISON_PROPERTIES.Poison Type`, or the import fails. Leave `ITEM.Consumable Subtype` out: the importer fills it from those two keys. If you do write it, use the matching dnd5e id (`crossbowBolt` for `bolt`), because a value that disagrees is stored without a warning.",
+    "Ammunition type words here are `arrow`, `bolt`, `needle`, `bullet`, `slingbullet` and `energycell`. They differ from the ids in the Weapon template.",
+    "A one-use item (potion, scroll, dose of poison) is `USAGE.Uses Max: 1`, `USAGE.Uses Spent: 0`, `USAGE.Destroy on Empty: true`. Write `Destroy on Empty` with a lowercase `on`; `Destroy On Empty` is ignored with a warning.",
+    "`INVENTORY.Quantity` is how many of the item there are. Do not put the stack size in `USAGE.Uses Max`. Ammunition has no `USAGE`: twenty arrows are `Quantity: 20`.",
+    "A +1 on ammunition is `ATTUNEMENT.Magic Bonus: 1` with `PROPERTIES.Magical: true`. Do not use the old `AMMUNITION_PROPERTIES.Magic Bonus` key.",
+    "`DAMAGE` is for ammunition that deals its own damage. Do not put a potion's healing or a poison's damage there.",
+    "Scroll components are `SCROLL_PROPERTIES.Vocal` (V), `Somatic` (S), `Concentration` and `Ritual`; `Verbal` gives a warning. `FOOD_PROPERTIES` belongs only to `Consumable Type: food`; on another type it gives a warning. Always write `ITEM.Rarities` (`[]` for mundane arrows, food or poison; a missing key is stored as `common`) and `INVENTORY.Identified` (a missing key follows the user's setting)."
+  ]
+}

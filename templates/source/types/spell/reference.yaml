@@ -1,0 +1,75 @@
+SCHEMA_VERSION: 7
+SPELL:
+@@include reference/SOURCE.yaml
+
+  ITEM:
+    Icon: "[filepath|n/a]"
+    Identifier: "[text|n/a]"
+    Sort: 0 # Integer ordering value; preserve an authored zero.
+    Name: "[text]"
+    Level: "[0|1|2|3|4|5|6|7|8|9]"
+    School: "[abj|con|div|enc|evo|ill|nec|trs|n/a]" # n/a stores an empty school.
+    Ability: "[str|dex|con|int|wis|cha|n/a]"
+
+  COMPONENTS:
+    Vocal: "[true|false]"
+    Somatic: "[true|false]"
+    Material: "[true|false]"
+    Ritual: "[true|false]"
+
+  MATERIALS:
+    # Used when Material is true; retain all supplied settings when it is false.
+    Value: "[text]"
+    Cost: "[integer|decimal]"
+    Supply: "[integer|decimal]"
+    Consumed: "[true|false]"
+
+  PREPARATION:
+    Method: "[atwill|innate|ritual|pact|spell]"
+    Prepared: "[unprepared|prepared|always]"
+    Source Item: "[identifier|n/a]"
+
+  ACTIVATION:
+    Type: "[action|bonus|reaction|minute|hour|day|special]"
+    Value: "[integer]" # Nonnegative activation cost; preserve when timing hides the count.
+    Condition: "[text|n/a]"
+
+  RANGE:
+    # Value and Special remain stored for self/touch/spec/any units.
+    Special: "[text|n/a]"
+    Units: "[self|touch|spec|any|ft|mi|m|km]"
+    Value: "[formula|n/a]"
+
+  DURATION:
+    # Preserve Value and Special even when the selected unit hides those controls.
+    Expiry: null # Native expiry key (e.g. turnEnd), or null for default expiry.
+    Special: "[text|n/a]"
+    Units: "[inst|spec|turn|round|minute|hour|day|month|year|disp|dstr|perm]"
+    Value: "[formula|n/a]"
+    Concentration: "[true|false]"
+
+  TARGETS:
+    Type: "[self|ally|enemy|creature|object|space|creatureOrObject|any|willing|n/a]"
+    Count: "[formula|n/a]"
+    Choice: "[true|false]"
+    Special: "[text|n/a]"
+
+  AREA:
+    Stationary: false
+    # Used when Shape selects an area; retain dimensions and booleans with no shape.
+    Shape: "[cone|cube|cylinder|radius|ring|line|sphere|circle|square|wall|n/a]"
+    Size: "[formula|n/a]"
+    Units: "[ft|mi|m|km]"
+    Count: "[formula|n/a]"
+    Width: "[formula|n/a]"
+    Height: "[formula|n/a]"
+    Contiguous: "[true|false]" # Preserve independently of Shape and Count.
+
+@@include reference/USAGE.yaml
+
+@@include reference/RECOVERY.yaml
+
+@@include reference/DESCRIPTION.yaml
+
+@@include reference/CHAT_FLAVOR.yaml
+

@@ -1,0 +1,1 @@
+Omit optional resources the source does not give rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.

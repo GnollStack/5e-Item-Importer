@@ -1,0 +1,61 @@
+SCHEMA_VERSION: 7
+CONTAINER:
+@@include reference/SOURCE.yaml
+
+  ITEM:
+    Icon: "[filepath|n/a]"
+    Identifier: "[text|n/a]"
+    Sort: 0 # Integer ordering value; preserve an authored zero.
+    Name: "[text]"
+    Rarities: [] # Native rarity IDs: common, uncommon, rare, veryRare, legendary, artifact. [] means mundane.
+
+  INVENTORY:
+    Quantity: 1 # Compatibility input only: creation fixes quantity at 1; export omits it.
+    Identified: "[true|false]"
+    Equipped: "[true|false]"
+    Container: "[container name|uuid|n/a]" # Place inside a container: its name in this batch, an Item UUID, or drag-and-drop in the import window.
+
+  # Optional, repeatable. Items created inside this container. Each entry is one complete
+  # Item document (WEAPON, EQUIPMENT, CONSUMABLE, TOOL, LOOT or another CONTAINER) and may
+  # nest further, five containers deep at most. Contents import with the container through
+  # the batch flow (import window or parseAll); leave [] for an empty container.
+  CONTENTS: []
+
+@@include reference/COST_AND_WEIGHT.yaml
+
+  PROPERTIES:
+    NPC Equipment: false # Native gear property; shown for NPC inventory.
+    Magical: "[true|false]"
+    Weightless Contents: "[true|false]"
+    Unidentified Contents: "[true|false]" # Players cannot see the contents while the container is unidentified.
+
+  ATTUNEMENT:
+    Attuned: false # Current state, independent of Attunement requirement.
+    # Store independently of Magical; a bonus does not enable an explicit false property.
+    Attunement: "[none|required|optional]"
+    Attunement By: "[text|n/a]" # Importer metadata; ignored when Attunement is none.
+
+  CAPACITY:
+    Item Count: "[integer|null]" # Nonnegative integer or no stored count limit.
+    Weight Capacity Value: "[number|null]" # Nonnegative decimal or no stored limit.
+    Weight Capacity Units: "[lb|tn|kg|Mg|n/a]"
+    Volume Capacity Value: "[number|null]" # Nonnegative decimal or no stored limit.
+    Volume Capacity Units: "[cubicFoot|liter|n/a]"
+
+  CURRENCY_CONTENTS:
+    # Optional. Omit this entire section if the container holds no coins.
+    # If included, all fields are required; use 0 for empty denominations.
+    Platinum: "[integer]"
+    Gold: "[integer]"
+    Electrum: "[integer]"
+    Silver: "[integer]"
+    Copper: "[integer]"
+
+@@include reference/DESCRIPTION.yaml
+
+@@include reference/UNIDENTIFIED_DESCRIPTION.yaml
+
+  CHAT_FLAVOR:
+    Chat Description: |
+      [multiline text content]
+      

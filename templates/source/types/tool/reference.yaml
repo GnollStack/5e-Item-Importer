@@ -1,0 +1,44 @@
+SCHEMA_VERSION: 7
+TOOL:
+@@include reference/SOURCE.yaml
+
+  ITEM:
+    Icon: "[filepath|n/a]"
+    Identifier: "[text|n/a]"
+    Sort: 0 # Integer ordering value; preserve an authored zero.
+    Name: "[text]"
+    Rarities: [] # Native rarity IDs: common, uncommon, rare, veryRare, legendary, artifact. [] means mundane.
+    Tool Type: "[art|game|music|n/a]"
+    # Use n/a for disguise/forgery/herbalism/navigator/poisoner/thieves tools.
+    Base Tool: "[e.g. alchemist, smith, thief, lute, dice - see list below]"
+
+@@include reference/INVENTORY.yaml
+
+@@include reference/COST_AND_WEIGHT.yaml
+
+  PROPERTIES:
+    NPC Equipment: false # Native gear property; shown for NPC inventory.
+    Focus: false
+    Magical: "[true|false]"
+    Tool Bonus: "[formula|n/a]" # Finite number or formula, including dice; e.g. "1d4 + @prof".
+
+  ATTUNEMENT:
+    Attuned: false # Current state, independent of Attunement requirement.
+    # Store independently of Magical; a bonus does not enable an explicit false property.
+    Attunement: "[none|required|optional]"
+    Attunement By: "[text|n/a]" # Importer metadata; ignored when Attunement is none.
+
+  ABILITY_CHECK:
+    Proficient: "[Automatic|0|0.5|1|1.5|2]"
+    Ability: "[str|dex|con|int|wis|cha|n/a]"
+
+@@include reference/USAGE.yaml
+
+@@include reference/RECOVERY.yaml
+
+@@include reference/DESCRIPTION.yaml
+
+@@include reference/UNIDENTIFIED_DESCRIPTION.yaml
+
+@@include reference/CHAT_FLAVOR.yaml
+

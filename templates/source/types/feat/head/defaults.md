@@ -1,0 +1,1 @@
+A feature is not a physical Item: it has no quantity, price, weight, rarity, attunement or unidentified text. Omit unsupplied prerequisites, enchantment limits and optional resources rather than inventing them. Formula Uses Max must be deterministic, one line and at most 200 characters, without dice or semicolons; recovery needs a positive literal maximum or a formula maximum.

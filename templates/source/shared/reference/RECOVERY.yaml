@@ -1,0 +1,6 @@
+  # Optional, repeatable. Use [] when there is no recovery.
+  # With a positive Uses Max or a formula maximum, replace [] with entries shaped like:
+  #   - Period: "[lr|sr|day|dawn|dusk|recharge|initiative|turnStart|turnEnd|turn]"
+  #     Type: "[recoverAll|loseAll|formula]"
+  #     Formula: "[formula|n/a]" # Required for Type formula; recharge uses a 2..6 threshold.
+  RECOVERY: []

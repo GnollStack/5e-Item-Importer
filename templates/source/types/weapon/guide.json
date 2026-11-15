@@ -1,0 +1,73 @@
+{
+  "useWhen": "Use WEAPON when the source is something a creature attacks with and it has weapon damage: a mundane or magic sword, bow or other weapon, a monster's natural weapon (bite, claw), an improvised weapon or a siege weapon. A magic staff that can be swung as a quarterstaff is a weapon even when it is mainly a spellcasting focus: write `ITEM.Base Weapon: quarterstaff`, and `PROPERTIES.Focus: true` if the source says it can be a focus.",
+  "smallest": "`ITEM.Name` (the name), `ITEM.Weapon Type` (one of `simpleM`, `simpleR`, `martialM`, `martialR`, `natural`, `improv`, `siege`), `ITEM.Base Weapon` (required for the first four types; leave it out for `natural`, `improv` and `siege`), `DAMAGE.DAMAGE_DATA` (all ten keys; `Dice Count`, `Die Denomination` and `Damage Types` hold the weapon die).",
+  "notFor": [
+    "Arrows, bolts, sling bullets and other ammunition: CONSUMABLE (`Consumable Type: ammo`).",
+    "A shield: EQUIPMENT (`Equipment Type: shield`).",
+    "A wand or rod. It has no weapon damage: EQUIPMENT (`Equipment Type: wand` or `rod`).",
+    "A worn item that only improves attacks (bracers, gloves, a ring): EQUIPMENT.",
+    "A spell that makes an attack: SPELL.",
+    "A monster ability with no weapon attack (breath weapon, aura, Multiattack): FEAT.",
+    "Poison or oil that is applied to a weapon: CONSUMABLE."
+  ],
+  "sourceRows": [
+    {
+      "says": "\"Weapon (longsword)\" or \"martial melee weapon\"",
+      "write": "`ITEM.Weapon Type: martialM`; `ITEM.Base Weapon: longsword`"
+    },
+    {
+      "says": "\"1d8 slashing\"",
+      "write": "`DAMAGE.DAMAGE_DATA.Dice Count: 1`; `DAMAGE.DAMAGE_DATA.Die Denomination: 8`; `DAMAGE.DAMAGE_DATA.Damage Types: [slashing]`"
+    },
+    {
+      "says": "\"versatile (1d10)\"",
+      "write": "`PROPERTIES.Versatile: true`; `VERSATILE_DAMAGE.DAMAGE_DATA.Dice Count: 1`; `VERSATILE_DAMAGE.DAMAGE_DATA.Die Denomination: 10`; `VERSATILE_DAMAGE.DAMAGE_DATA.Damage Types: [slashing]`"
+    },
+    {
+      "says": "\"finesse, light, thrown (range 20/60)\"",
+      "write": "`PROPERTIES.Finesse: true`; `PROPERTIES.Light: true`; `PROPERTIES.Thrown: true`; `RANGE.Range Normal: 20`; `RANGE.Range Long: 60`; `RANGE.Range Units: ft`"
+    },
+    {
+      "says": "\"ammunition (range 150/600), heavy, two-handed\"",
+      "write": "`PROPERTIES.Ammunition: true`; `AMMUNITION.Ammunition Type: arrow`; `PROPERTIES.Heavy: true`; `PROPERTIES.Two-Handed: true`; `RANGE.Range Normal: 150`; `RANGE.Range Long: 600`; `RANGE.Range Units: ft`"
+    },
+    {
+      "says": "\"reach\" (10 feet instead of 5)",
+      "write": "`PROPERTIES.Reach: true`; `RANGE.Reach: 10`"
+    },
+    {
+      "says": "\"Mastery: Sap\"",
+      "write": "`MASTERY.Mastery: sap`"
+    },
+    {
+      "says": "\"You have a +1 bonus to attack and damage rolls made with this magic weapon\"",
+      "write": "`PROPERTIES.Magical: true`; `ATTUNEMENT.Magic Bonus: 1`"
+    },
+    {
+      "says": "\"rare (requires attunement by a paladin)\"",
+      "write": "`ITEM.Rarities: [rare]`; `PROPERTIES.Magical: true`; `ATTUNEMENT.Attunement: required`; `ATTUNEMENT.Attunement By: a paladin`"
+    },
+    {
+      "says": "\"15 gp\" and \"3 lb.\"",
+      "write": "`COST_AND_WEIGHT.Price Value: 15`; `COST_AND_WEIGHT.Price Denomination: gp`; `COST_AND_WEIGHT.Weight Value: 3`; `COST_AND_WEIGHT.Weight Units: lb`"
+    },
+    {
+      "says": "\"It has 7 charges\" and \"regains 1d6 + 1 expended charges daily at dawn\"",
+      "write": "`USAGE.Uses Spent: 0`; `USAGE.Uses Max: 7`; `RECOVERY: [{Period: dawn, Type: formula, Formula: \"1d6 + 1\"}]`"
+    },
+    {
+      "says": "\"Longsword\" in an equipment table (not magic, no rarity)",
+      "write": "`ITEM.Rarities: []`; `PROPERTIES.Magical: false`; `INVENTORY.Identified: true`"
+    }
+  ],
+  "checks": [
+    "Write `ITEM.Weapon Type` with exact case: `simpleM`, `simpleR`, `martialM`, `martialR`. `martialm` or `Martial Melee` fails.",
+    "Write `ITEM.Base Weapon` as the mundane weapon in one lowercase word: `longsword`, `lightcrossbow`, `handcrossbow`, `warpick`. Use it for magic weapons too. Spaces are removed (`hand crossbow` becomes `handcrossbow`), and an id dnd5e does not know gives a warning.",
+    "Write all ten `DAMAGE_DATA` keys. For a plain weapon the other seven are `Bonus: \"\"`, `Modifiers: []`, `Custom Enabled: false`, `Custom Formula: \"\"`, `Scaling Mode: none`, `Scaling Dice Count: 0`, `Scaling Formula: \"\"`.",
+    "Put only the weapon's own die in `DAMAGE.DAMAGE_DATA`. Leave `Bonus` empty: do not write the ability modifier or the magic bonus there. Extra damage that depends on a condition (for example 2d6 fire while the blade burns) does not belong in `DAMAGE_DATA`.",
+    "`PROPERTIES.Versatile: true` needs `VERSATILE_DAMAGE.DAMAGE_DATA`, and `PROPERTIES.Ammunition: true` needs `AMMUNITION.Ammunition Type`. The import fails without them. Ammunition ids are case-sensitive: `arrow`, `crossbowBolt`, `firearmBullet`, `slingBullet`, `energyCell`, `blowgunNeedle`.",
+    "`PROPERTIES.Reach` is `true` or `false`; the distance is the number in `RANGE.Reach`. `RANGE.Range Normal` and `RANGE.Range Long` are separate numbers: write `20` and `60`, never `20/60`.",
+    "Write damage types in lowercase (`slashing`, not `Slashing`) and property keys exactly as in the reference (`Two-Handed` has a hyphen). A wrong damage type fails. A wrong property key is ignored with a warning.",
+    "Set `PROPERTIES.Magical: true` on every magic weapon; `ATTUNEMENT.Attunement: required` does not set it. `ATTUNEMENT.Magic Bonus` is a number such as `1`, never dice. Always write `ITEM.Rarities` (`[]` for a mundane weapon; a missing key is stored as `common`) and `INVENTORY.Identified` (a missing key follows the user's setting)."
+  ]
+}

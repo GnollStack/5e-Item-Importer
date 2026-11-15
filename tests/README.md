@@ -101,6 +101,8 @@ Source-reviewed gameplay rules, declared mappings, named parser tests and candid
 
 Run `node --experimental-vm-modules tools/Test-TemplateAuthoring.mjs` for marked example/file parity, source parser results, prerequisites and semantic assertions. Run `node --experimental-vm-modules --test tools/template-authoring.test.mjs` for negative documentation cases. The existing explicit YAML/completeness suites additionally check the declared MIDI template mappings. Keep native completeness, MIDI tests, full read-only smoke suites and shared-helper parity passing. These checks do not execute gameplay or establish independent LLM generation reliability.
 
+The templates are generated from `templates/source/`. `tools/template-build.test.mjs` is part of the Node regression suite: it tests the generator and fails when a shipped template differs from its source, so a template edited by hand is caught. `node tools/Build-Templates.mjs --check` runs the same comparison alone. See [the source guide](../templates/source/README.md).
+
 
 ## Import window layout regression checks
 

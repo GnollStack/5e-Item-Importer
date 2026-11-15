@@ -1,0 +1,1 @@
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 and 6.1.0 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.11 and DAE 14.6.9 integrations. Package versions and YAML versions are separate.

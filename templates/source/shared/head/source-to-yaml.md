@@ -1,0 +1,1 @@
+Find the wording closest to the source and write the fields shown. A path such as `ITEM.Name` is the `Name` key inside the `ITEM` section of `{{rootKey}}`. A list such as `RECOVERY` takes one `-` entry per item. Leave out every section the source does not mention.

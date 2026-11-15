@@ -1,0 +1,109 @@
+SCHEMA_VERSION: 7
+WEAPON:
+@@include reference/SOURCE.yaml
+
+  ITEM:
+    Icon: "[filepath|n/a]"
+    Identifier: "[text|n/a]"
+    Sort: 0 # Integer ordering value; preserve an authored zero.
+    Name: "[text]"
+    Rarities: [] # Native rarity IDs: common, uncommon, rare, veryRare, legendary, artifact. [] means mundane.
+    Weapon Type: "[simpleM|simpleR|martialM|martialR|natural|improv|siege]"
+    Base Weapon: "[e.g. longsword, dagger, bow - see list below - OR n/a]"
+
+@@include reference/INVENTORY.yaml
+
+@@include reference/COST_AND_WEIGHT.yaml
+
+  PROPERTIES:
+    NPC Equipment: false # Native gear property; shown for NPC inventory.
+    Adamantine: "[true|false]"
+    Ammunition: "[true|false]"
+    Finesse: "[true|false]"
+    Firearm: "[true|false]"
+    Focus: "[true|false]"
+    Heavy: "[true|false]"
+    Light: "[true|false]"
+    Loading: "[true|false]"
+    Magical: "[true|false]"
+    Reach: "[true|false]" # Property checkbox; the distance is RANGE.Reach.
+    Reload: "[true|false]"
+    Returning: "[true|false]"
+    Silvered: "[true|false]"
+    Special: "[true|false]"
+    Thrown: "[true|false]"
+    Two-Handed: "[true|false]"
+    Versatile: "[true|false]"
+
+@@include reference/ATTUNEMENT.yaml
+
+  AMMUNITION:
+    # Select for Ammunition; preserve a supplied selection when the property is false.
+    Ammunition Type: "[arrow|crossbowBolt|firearmBullet|slingBullet|energyCell|blowgunNeedle]"
+
+  RELOAD:
+    # Compatibility metadata only; no native reload amount or automation.
+    # Optional legacy metadata, even when Reload is true.
+    Reload Amount: "[integer]"
+
+  VERSATILE_DAMAGE:
+    DAMAGE_DATA:
+      Dice Count: "[integer|null]" # Nonnegative integer; null means no dice count.
+      Die Denomination: "[integer|null]" # Sheet dice: 4, 6, 8, 10, 12, 20, 100; or null.
+      Bonus: "[formula|n/a]"
+      Damage Types: [] # Native damage type IDs; e.g. [piercing, fire].
+      Modifiers: []
+      Custom Enabled: false
+      Custom Formula: "[formula|n/a]" # Retained even when Custom Enabled is false.
+      Scaling Mode: "[none|whole|half]"
+      Scaling Dice Count: "[integer|null]" # Default 1 if omitted; retain explicit 0 or null.
+      Scaling Formula: "[formula|n/a]" # Retained even when Scaling Mode is none.
+    # Used when Versatile is true; preserve supplied damage when the property is false.
+
+  SIEGE_PROPERTIES:
+    Crew Capacity: 0
+    Speed: "[integer|null]" # Nonnegative integer; no formula.
+    Speed Units: "[ft|mi|m|km]"
+    Speed Conditions: "[text|n/a]"
+    # Shown for siege weapons; preserve supplied mountable settings on other types.
+    Siege Armor Class: "[integer|null]" # Nonnegative integer or native null.
+    Cover: "[none|half|threequarters|total|number|null]" # Numeric cover is 0..1.
+    Hit Points Current: "[integer|null]" # Nonnegative integer, or native null.
+    Hit Points Max: "[integer|null]" # Nonnegative integer, or native null.
+    Hit Points Threshold: "[integer|null]" # Nonnegative integer, or native null.
+    Health Conditions: "[text|n/a]"
+
+  RANGE:
+    Reach: "[number|null]" # Nonnegative decimal distance; no formula.
+    Range Normal: "[number|null]" # Nonnegative decimal distance; no formula.
+    Range Long: "[number|null]" # Nonnegative decimal distance; no formula.
+    Range Units: "[ft|m|sq|mi]"
+
+  DAMAGE:
+    DAMAGE_DATA:
+      Dice Count: "[integer|null]" # Nonnegative integer; null means no dice count.
+      Die Denomination: "[integer|null]" # Sheet dice: 4, 6, 8, 10, 12, 20, 100; or null.
+      Bonus: "[formula|n/a]"
+      Damage Types: [] # Native damage type IDs; e.g. [piercing, fire].
+      Modifiers: []
+      Custom Enabled: false
+      Custom Formula: "[formula|n/a]" # Retained even when Custom Enabled is false.
+      Scaling Mode: "[none|whole|half]"
+      Scaling Dice Count: "[integer|null]" # Default 1 if omitted; retain explicit 0 or null.
+      Scaling Formula: "[formula|n/a]" # Retained even when Scaling Mode is none.
+
+  MASTERY:
+    Mastery: "[cleave|graze|nick|push|sap|slow|topple|vex|n/a]"
+
+@@include reference/PROFICIENCY.yaml
+
+@@include reference/USAGE.yaml
+
+@@include reference/RECOVERY.yaml
+
+@@include reference/DESCRIPTION.yaml
+
+@@include reference/UNIDENTIFIED_DESCRIPTION.yaml
+
+@@include reference/CHAT_FLAVOR.yaml
+

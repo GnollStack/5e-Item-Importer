@@ -1,0 +1,26 @@
+{
+  "vars": {
+    "rootKey": "{{TYPE}}"
+  },
+  "sets": [
+    {
+      "name": "item",
+      "output": "templates/YAML Templates/Strict {{Type}} Template.md",
+      "layout": "layouts/item.md",
+      "lookup": [
+        "types/{{type}}",
+        "shared"
+      ],
+      "types": [
+        "weapon",
+        "equipment",
+        "consumable",
+        "tool",
+        "loot",
+        "container",
+        "spell",
+        "feat"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "useWhen": "Use FEAT when the source is something a creature has, not something it carries: a feat, a class or subclass feature, a species trait, a background feature, a monster trait or action, a boon, blessing or charm, a fighting style, an eldritch invocation, a metamagic option or a maneuver.",
+  "smallest": "`ITEM.Name` (the name). Nothing else is required, but write `ITEM.Feature Type` so the sheet shows the right kind of feature.",
+  "notFor": [
+    "A whole class, subclass, species or background. These templates do not cover them; FEAT holds one feature at a time.",
+    "A spell, even one granted by a feat or a species: SPELL.",
+    "A monster's weapon attack (Bite, Claw, Longsword): WEAPON (`Weapon Type: natural` for a bite or claw).",
+    "A magic item: EQUIPMENT, WEAPON, CONSUMABLE, TOOL or CONTAINER."
+  ],
+  "sourceRows": [
+    {
+      "says": "\"2nd-level fighter feature\"",
+      "write": "`ITEM.Feature Type: class`; `ITEM.Requirements: Fighter 2`"
+    },
+    {
+      "says": "\"General Feat (Prerequisite: Level 4+)\"",
+      "write": "`ITEM.Feature Type: feat`; `ITEM.Feature Subtype: general`; `ITEM.Requirements: Level 4+`; `PREREQUISITES.Level: 4`"
+    },
+    {
+      "says": "\"Eldritch Invocation\"",
+      "write": "`ITEM.Feature Type: class`; `ITEM.Feature Subtype: eldritchInvocation`"
+    },
+    {
+      "says": "A species or lineage trait, such as \"Darkvision\" in a species entry",
+      "write": "`ITEM.Feature Type: race`; `PROPERTIES.Passive Trait: true`"
+    },
+    {
+      "says": "A monster trait, such as \"Pack Tactics\" in a stat block",
+      "write": "`ITEM.Feature Type: monster`; `PROPERTIES.Passive Trait: true`"
+    },
+    {
+      "says": "\"Once you use this feature, you must finish a short or long rest before you can use it again\"",
+      "write": "`USAGE.Uses Spent: 0`; `USAGE.Uses Max: 1`; `RECOVERY: [{Period: sr, Type: recoverAll}]`"
+    },
+    {
+      "says": "\"a number of times equal to your Proficiency Bonus\" and \"you regain all expended uses when you finish a Long Rest\"",
+      "write": "`USAGE.Uses Spent: 0`; `USAGE.Uses Max: \"@prof\"`; `RECOVERY: [{Period: lr, Type: recoverAll}]`"
+    },
+    {
+      "says": "\"(Recharge 5-6)\"",
+      "write": "`USAGE.Uses Spent: 0`; `USAGE.Uses Max: 1`; `RECOVERY: [{Period: recharge, Type: recoverAll, Formula: \"5\"}]`"
+    },
+    {
+      "says": "\"Repeatable\" or \"You can take this feat more than once\"",
+      "write": "`PREREQUISITES.Repeatable: true`"
+    },
+    {
+      "says": "\"Increase your Constitution score by 1, to a maximum of 20\"",
+      "write": "`ADVANCEMENT: [{ABILITY_SCORE_IMPROVEMENT: {Points: 0, FIXED: [{Ability: con, Value: 1}]}}]`"
+    },
+    {
+      "says": "\"You gain proficiency in the Athletics skill\"",
+      "write": "`ADVANCEMENT: [{TRAIT: {Grants: [\"skills:ath\"]}}]`"
+    },
+    {
+      "says": "\"You always have the Thunderwave spell prepared\"",
+      "write": "`ADVANCEMENT: [{GRANT_ITEMS: {ITEMS: [{Name: Thunderwave, Type: spell}], SPELL: {Method: spell, Prepared: always}}}]`"
+    }
+  ],
+  "checks": [
+    "A feature has no rarity, price, weight, quantity, attunement or unidentified text. `ITEM.Rarities`, `INVENTORY`, `COST_AND_WEIGHT`, `UNIDENTIFIED_DESCRIPTION` and `ATTUNEMENT` are ignored with a warning.",
+    "`ITEM.Feature Type` is a dnd5e id: `background`, `class`, `monster`, `race`, `enchantment`, `feat`, `pietyTrait`, `supernaturalGift` or `vehicle`. A species or lineage trait is `race`. `species`, `racial` or `Class Feature` is stored as an unknown type with a warning.",
+    "`ITEM.Feature Subtype` takes only the listed subtype ids, such as `fightingStyle`, `eldritchInvocation`, `metamagic`, `maneuver`, `channelDivinity`, `general`, `origin` and `epicBoon`. Do not put the class name there. Class and level go in `ITEM.Requirements`, for example `Fighter 2`.",
+    "\"Level 4+\" is two fields: the text in `ITEM.Requirements` and the number in `PREREQUISITES.Level`. `PREREQUISITES.Level: 4+` fails. `PREREQUISITES.Items` takes dnd5e identifiers such as `\"feat:alert\"`, not display names.",
+    "A passive feature has no `USAGE` or `RECOVERY`. For limited uses, `USAGE.Uses Max` is a whole number or a quoted formula without dice, such as `\"@prof\"` or `\"max(1, @abilities.wis.mod)\"`, and `USAGE.Uses Spent` is `0` for a fresh feature.",
+    "\"Short or long rest\" is one `RECOVERY` entry with `Period: sr`. \"3/Day\" is `Period: day`. \"Recharge 5-6\" is `Period: recharge` with `Formula: \"5\"`; `\"5-6\"` is dropped with a warning.",
+    "`ADVANCEMENT` is one list for the whole feature. Each entry has exactly one root key: `ABILITY_SCORE_IMPROVEMENT`, `GRANT_ITEMS`, `CHOOSE_ITEMS`, `MODIFY_ITEMS`, `SCALE_VALUE` or `TRAIT`. A mapping in place of the list fails.",
+    "Trait keys use dnd5e ids: `skills:ath`, not `skills:athletics` (the importer does not catch that one); `weapon:mar`; `armor:hvy`. A granted Item is a reference to an Item that already exists in the world or a compendium: give `Name` and `Type`, and do not make up a `UUID`. The import waits until every reference is resolved."
+  ]
+}

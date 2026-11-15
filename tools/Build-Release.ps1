@@ -57,6 +57,10 @@ $requiredRuntimeFiles = @(
 $excludedRuntimeFiles = @(
     "scripts/diagnostics/stormglassFixture.js"
 )
+# The generated templates ship; the source they are built from does not.
+$excludedFolders = @(
+    "templates/source"
+)
 
 foreach ($entry in $releaseEntries + $requiredRuntimeFiles) {
     $source = Join-Path $moduleRoot $entry
@@ -73,7 +77,11 @@ if ($CheckOnly) {
         else { Get-ChildItem -LiteralPath $source -Recurse -File | ForEach-Object {
             $_.FullName.Substring($moduleRoot.Length + 1).Replace("\", "/")
         } }
-    } | Where-Object { $excludedRuntimeFiles -notcontains $_ } | Sort-Object -Unique)
+    } | Where-Object {
+        $file = $_
+        $excludedRuntimeFiles -notcontains $file -and
+            @($excludedFolders | Where-Object { $file.StartsWith($_ + "/", [System.StringComparison]::Ordinal) }).Count -eq 0
+    } | Sort-Object -Unique)
     [pscustomobject]@{ Version = $manifest.version; Valid = $true; Built = $false; Files = $files; DocumentationFiles = $documentation.Count }
     return
 }
@@ -91,6 +99,10 @@ try {
     foreach ($excluded in $excludedRuntimeFiles) {
         $stagedPath = Join-Path $stagingModule $excluded
         if (Test-Path -LiteralPath $stagedPath) { Remove-Item -LiteralPath $stagedPath -Force }
+    }
+    foreach ($excluded in $excludedFolders) {
+        $stagedPath = Join-Path $stagingModule $excluded
+        if (Test-Path -LiteralPath $stagedPath) { Remove-Item -LiteralPath $stagedPath -Recurse -Force }
     }
 
     New-Item -ItemType Directory -Path $outputPath -Force | Out-Null

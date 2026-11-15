@@ -65,8 +65,12 @@ The standalone builder writes `dist/5e-item-importer.zip` and `dist/module.json`
 
 The same assemble/render/diff commands accept MIDI pages. Select layer:midi in the catalog query; --layer midi can project a complete all-layer snapshot offline. It cannot invent missing layers. Follow every nextCursor, retaining filters and catalog metadata.
 
-The parity check now covers 22 shared files, including explicitYamlFields.js, activityEffectLinks.js, fieldCatalogMidi.js, fieldCatalogMidiRules.js, Test-MidiFieldCatalog.mjs and midiFieldCatalogTests.js. Provider-specific coverage stays independent. Run node --experimental-vm-modules tools/Test-MidiFieldCatalog.mjs alongside the native and report checks. See [the MIDI guide](../docs/midi-field-catalog.md).
+The parity check now covers 25 shared files, including explicitYamlFields.js, activityEffectLinks.js, fieldCatalogMidi.js, fieldCatalogMidiRules.js, Test-MidiFieldCatalog.mjs, midiFieldCatalogTests.js and the template build tools (template-build.mjs, its test and Build-Templates.mjs). Provider-specific coverage stays independent. Run node --experimental-vm-modules tools/Test-MidiFieldCatalog.mjs alongside the native and report checks. See [the MIDI guide](../docs/midi-field-catalog.md).
 
+
+## Template source and generated templates
+
+The Item templates are generated. Edit `templates/source/`, run `node tools/Build-Templates.mjs`, and commit the source together with the regenerated templates. `node tools/Build-Templates.mjs --check` changes nothing and fails when a template differs from its source, when a source file is read by no page, or when a template is written by no page. `tools/template-build.test.mjs` tests the generator and runs the same check in the Node regression suite. [The source guide](../templates/source/README.md) describes the folders, the `@@` lines and the guide data. The source is tracked in git and left out of the release package.
 
 ## Template authoring checks
 

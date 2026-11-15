@@ -40,6 +40,7 @@ try {
         "tools/",
         ".github/",
         ".git/",
+        "templates/source/",
         "dist/"
     )
     $forbiddenFiles = @(

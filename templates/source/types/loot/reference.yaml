@@ -1,0 +1,28 @@
+SCHEMA_VERSION: 7
+LOOT:
+@@include reference/SOURCE.yaml
+
+  ITEM:
+    Loot Subtype: "[text|n/a]"
+    Icon: "[filepath|n/a]"
+    Identifier: "[text|n/a]"
+    Sort: 0 # Integer ordering value; preserve an authored zero.
+    Name: "[text]"
+    Rarities: [] # Native rarity IDs: common, uncommon, rare, veryRare, legendary, artifact. [] means mundane.
+    Loot Type: "[art|gear|gem|junk|material|resource|trade|treasure]"
+
+  INVENTORY:
+    Quantity: "[integer]"
+    Identified: "[true|false]"
+    Container: "[container name|uuid|n/a]" # Place inside a container: its name in this batch, an Item UUID, or drag-and-drop in the import window.
+
+@@include reference/COST_AND_WEIGHT.yaml
+
+@@include reference/PROPERTIES.yaml
+
+@@include reference/DESCRIPTION.yaml
+
+@@include reference/UNIDENTIFIED_DESCRIPTION.yaml
+
+@@include reference/CHAT_FLAVOR.yaml
+

@@ -1,0 +1,5 @@
+  INVENTORY:
+    Quantity: "[integer]"
+    Identified: "[true|false]"
+    Equipped: "[true|false]"
+    Container: "[container name|uuid|n/a]" # Place inside a container: its name in this batch, an Item UUID, or drag-and-drop in the import window.

@@ -1,0 +1,57 @@
+SCHEMA_VERSION: 7
+EQUIPMENT:
+@@include reference/SOURCE.yaml
+
+  ITEM:
+    Icon: "[filepath|n/a]"
+    Identifier: "[text|n/a]"
+    Sort: 0 # Integer ordering value; preserve an authored zero.
+    Name: "[text]"
+    Rarities: [] # Native rarity IDs: common, uncommon, rare, veryRare, legendary, artifact. [] means mundane.
+    Equipment Type: "[light|medium|heavy|natural|shield|clothing|ring|rod|trinket|wand|wondrous|vehicle]"
+    Base Equipment: "[e.g. plate, leather, shield - OR n/a for wondrous items]"
+
+@@include reference/INVENTORY.yaml
+
+@@include reference/COST_AND_WEIGHT.yaml
+
+  PROPERTIES:
+    NPC Equipment: false # Native gear property; shown for NPC inventory.
+    Magical: "[true|false]"
+    Adamantine: "[true|false]"
+    Focus: "[true|false]"
+    Stealth Disadvantage: "[true|false]"
+
+@@include reference/ATTUNEMENT.yaml
+
+  ARMOR:
+    # Armor/shield controls; preserve supplied settings on non-armor types.
+    Armor Class: "[integer|null]" # Same native AC field; supplied non-null values must agree.
+    Max Dex Modifier: "[integer|null]" # Null means no stored dexterity cap.
+    Strength Requirement: "[integer|null]" # Nonnegative integer or native null.
+
+  VEHICLE_PROPERTIES:
+    Crew Capacity: 0
+    Speed Units: "[ft|mi|m|km]"
+    # Vehicle controls; preserve supplied settings on other equipment types.
+    Vehicle Armor Class: "[integer|null]" # Same native AC field; supplied non-null values must agree.
+    Cover: "[none|half|threequarters|total|number|null]" # Numeric cover is 0..1.
+    Hit Points Current: "[integer|null]" # Nonnegative integer, or native null.
+    Hit Points Max: "[integer|null]" # Nonnegative integer, or native null.
+    Hit Points Threshold: "[integer|null]" # Nonnegative integer, or native null.
+    Health Conditions: "[text|n/a]"
+    Speed: "[integer|null]" # Nonnegative integer; no formula.
+    Speed Conditions: "[text|n/a]"
+
+@@include reference/PROFICIENCY.yaml
+
+@@include reference/USAGE.yaml
+
+@@include reference/RECOVERY.yaml
+
+@@include reference/DESCRIPTION.yaml
+
+@@include reference/UNIDENTIFIED_DESCRIPTION.yaml
+
+@@include reference/CHAT_FLAVOR.yaml
+

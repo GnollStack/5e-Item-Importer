@@ -1,0 +1,79 @@
+SCHEMA_VERSION: 7
+CONSUMABLE:
+@@include reference/SOURCE.yaml
+
+  ITEM:
+    Icon: "[filepath|n/a]"
+    Identifier: "[text|n/a]"
+    Sort: 0 # Integer ordering value; preserve an authored zero.
+    Name: "[text]"
+    Rarities: [] # Native rarity IDs: common, uncommon, rare, veryRare, legendary, artifact. [] means mundane.
+    Consumable Type: "[ammo|food|poison|potion|rod|scroll|trinket|wand|wondrous]"
+    Consumable Subtype: "[text|n/a]" # Native ID; match the active ammo/poison alias below.
+
+@@include reference/INVENTORY.yaml
+
+@@include reference/COST_AND_WEIGHT.yaml
+
+@@include reference/PROPERTIES.yaml
+
+  ATTUNEMENT:
+    Attuned: false # Current state, independent of Attunement requirement.
+    # Store independently of Magical; a bonus does not enable an explicit false property.
+    Attunement: "[none|required|optional]"
+    Attunement By: "[text|n/a]" # Importer metadata; ignored when Attunement is none.
+    Magic Bonus: "[formula|n/a]" # Canonical for every subtype; deterministic, no dice.
+
+  AMMUNITION_PROPERTIES:
+    # Booleans remain stored on all subtypes; the type alias is required only for ammo.
+    Ammunition Type: "[arrow|bolt|needle|bullet|slingbullet|energycell]" # Omit this alias outside ammo.
+    Adamantine: "[true|false]"
+    Silvered: "[true|false]"
+    Returning: "[true|false]"
+
+  POISON_PROPERTIES:
+    # Required for poison; omit this alias section for other subtypes.
+    Poison Type: "[contact|ingested|inhaled|injury]"
+
+  SCROLL_PROPERTIES:
+    # Shown for scrolls; preserve supplied booleans on other subtypes.
+    Concentration: "[true|false]"
+    Somatic: "[true|false]"
+    Vocal: "[true|false]"
+    Ritual: "[true|false]"
+
+  FOOD_PROPERTIES:
+    # dnd5e 6.1 or later, Consumable Type food only (rations, water). Earlier dnd5e stores them without using them.
+    Hydrating: "[true|false]"
+    Nutritious: "[true|false]"
+
+  USAGE:
+    # Uses Spent = number of charges ALREADY CONSUMED (0 means all charges are available).
+    # Uses Max = maximum count or deterministic formula, e.g. "1 + @prof" (no dice).
+    # Example: A fresh item with 5 charges → Uses Spent: 0, Uses Max: 5
+    Uses Spent: "[integer|n/a]"
+    Uses Max: "[integer|formula|n/a]"
+    Destroy on Empty: "[true|false]"
+
+@@include reference/RECOVERY.yaml
+
+@@include reference/DESCRIPTION.yaml
+
+@@include reference/UNIDENTIFIED_DESCRIPTION.yaml
+
+@@include reference/CHAT_FLAVOR.yaml
+
+  DAMAGE:
+    Replace: false
+    DAMAGE_DATA:
+      Dice Count: "[integer|null]" # Nonnegative integer; null means no dice count.
+      Die Denomination: "[integer|null]" # Sheet dice: 4, 6, 8, 10, 12, 20, 100; or null.
+      Bonus: "[formula|n/a]"
+      Damage Types: [] # Native damage type IDs; e.g. [piercing, fire].
+      Modifiers: []
+      Custom Enabled: false
+      Custom Formula: "[formula|n/a]" # Retained even when Custom Enabled is false.
+      Scaling Mode: "[none|whole|half]"
+      Scaling Dice Count: "[integer|null]" # Default 1 if omitted; retain explicit 0 or null.
+      Scaling Formula: "[formula|n/a]" # Retained even when Scaling Mode is none.
+
