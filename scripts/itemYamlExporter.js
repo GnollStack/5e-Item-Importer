@@ -299,11 +299,15 @@ function coverLabel(value) {
 
 function buildWeapon(item) {
   const properties = propertySet(item);
+  const weaponType = read(item, "weaponType", "system.type.value") ?? "improv";
+  const baseWeapon = read(item, "baseWeapon", "system.type.baseItem");
   const itemSection = {
     Name: String(item?.name ?? "Unnamed Item"),
     Rarities: itemRarities(item),
-    "Weapon Type": read(item, "weaponType", "system.type.value") ?? "improv",
-    "Base Weapon": na(read(item, "baseWeapon", "system.type.baseItem"))
+    "Weapon Type": weaponType,
+    // A standard weapon stored without a base weapon (dnd5e's Unarmed Strike) exports an explicit
+    // blank, which the parser accepts with a warning; "n/a" would be an error for these types.
+    "Base Weapon": baseWeapon === "" && ["simpleM", "simpleR", "martialM", "martialR"].includes(weaponType) ? "" : na(baseWeapon)
   };
   const data = commonSections(item, itemSection, "weapon");
   data.PROPERTIES = Object.fromEntries(
@@ -1268,6 +1272,11 @@ export function itemToStrictYamlDocument(item, options = {}) {
   // Prepared sheet values may replace stored formulas or disabled controls.
   const data = builders[type](item._source ?? item);
   exportExplicitItemFields(data, item);
+  // A weapon with the Ammunition property but no stored ammunition type (dnd5e's Vicious Blowgun)
+  // loses the key above; an explicit blank lets the parser tell it from YAML that forgot it.
+  if (type === "weapon" && data.PROPERTIES?.Ammunition && data.AMMUNITION && !Object.hasOwn(data.AMMUNITION, "Ammunition Type")) {
+    data.AMMUNITION["Ammunition Type"] = "";
+  }
   addCustomProperties(data, item, options);
   const automation = exportAutomation(item.automationSource ?? item, "item", type);
   if (Object.keys(automation).length) data.AUTOMATION = automation;

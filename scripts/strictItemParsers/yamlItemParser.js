@@ -1138,14 +1138,26 @@ export class YamlItemParser {
         }
     }
 
+    // The preview shows these; the console keeps them for API callers.
     addError(message) {
         this.errors.push(message);
-        ItemUtils.error(`Parse Error: ${message}`);
+        ItemUtils.console("error", `Parse Error: ${message}`);
     }
 
     addWarning(message) {
         this.warnings.push(message);
-        ItemUtils.warn(`Parse Warning: ${message}`);
+        ItemUtils.console("warn", `Parse Warning: ${message}`);
+    }
+
+    /**
+     * dnd5e stores some Items with a blank type, base weapon or subtype (its own Paper,
+     * Unarmed Strike, Antitoxin), and an export writes that as an explicit empty value ('').
+     * Accept that value with a warning so the export imports again; a missing key stays an error.
+     */
+    acceptBlank(section, key, blank = '') {
+        if (!section || !Object.hasOwn(section, key) || section[key] !== blank) return false;
+        this.addWarning(`${key} is empty (${blank === null ? 'null' : "''"}), so the Item is stored without one, as dnd5e allows.`);
+        return true;
     }
 
     createResult(success, itemData) {
@@ -1565,11 +1577,11 @@ export class YamlItemParser {
 
         // Weapon Type (required)
         const weaponTypeRaw = asString(itemSection['Weapon Type'], '');
-        if (!weaponTypeRaw) {
+        if (!weaponTypeRaw && !this.acceptBlank(itemSection, 'Weapon Type')) {
             this.addError('Weapon Type is required but was not found');
             return;
         }
-        if (!VALID_WEAPON_TYPES.includes(weaponTypeRaw)) {
+        if (weaponTypeRaw && !VALID_WEAPON_TYPES.includes(weaponTypeRaw)) {
             this.addError(`Invalid Weapon Type "${weaponTypeRaw}". Must be one of: ${VALID_WEAPON_TYPES.join(', ')}`);
             return;
         }
@@ -1593,7 +1605,7 @@ export class YamlItemParser {
 
         // Validate base weapon for standard types
         const standardTypes = ['simpleM', 'simpleR', 'martialM', 'martialR'];
-        if (standardTypes.includes(item.weaponType) && !item.baseWeapon) {
+        if (standardTypes.includes(item.weaponType) && !item.baseWeapon && !this.acceptBlank(itemSection, 'Base Weapon')) {
             this.addError(`Base Weapon is required for ${item.weaponType} weapons`);
         }
 
@@ -1620,7 +1632,7 @@ export class YamlItemParser {
             const ammoSection = data?.AMMUNITION || {};
             const ammoType = asString(ammoSection['Ammunition Type'], '');
             if (!ammoType) {
-                this.addError('Ammunition Type is required when Ammunition property is true');
+                if (!this.acceptBlank(ammoSection, 'Ammunition Type')) this.addError('Ammunition Type is required when Ammunition property is true');
             } else if (!VALID_AMMO_TYPES.includes(ammoType)) {
                 this.addError(`Invalid Ammunition Type "${ammoType}"`);
             } else {
@@ -1763,11 +1775,11 @@ export class YamlItemParser {
 
         // Equipment Type (required)
         const eqTypeRaw = asString(itemSection['Equipment Type'], '').toLowerCase();
-        if (!eqTypeRaw) {
+        if (!eqTypeRaw && !this.acceptBlank(itemSection, 'Equipment Type')) {
             this.addError('Equipment Type is required but was not found');
             return;
         }
-        if (!VALID_EQUIPMENT_TYPES.includes(eqTypeRaw)) {
+        if (eqTypeRaw && !VALID_EQUIPMENT_TYPES.includes(eqTypeRaw)) {
             this.addError(`Invalid Equipment Type "${eqTypeRaw}". Must be one of: ${VALID_EQUIPMENT_TYPES.join(', ')}`);
             return;
         }
@@ -1823,7 +1835,8 @@ export class YamlItemParser {
             } else {
                 const acRaw = asNullable(armor['Armor Class']);
                 if (acRaw === null) {
-                    this.addError('Armor Class is required for armor and shield equipment');
+                    // dnd5e's Helm of Brilliance and "Shield, +1, +2, or +3" store a null Armor Class, and export it as null.
+                    if (!this.acceptBlank(armor, 'Armor Class', null)) this.addError('Armor Class is required for armor and shield equipment');
                 } else {
                     const acVal = asInt(acRaw, -1);
                     if (acVal >= 0) {
@@ -1905,11 +1918,11 @@ export class YamlItemParser {
 
         // Consumable Type (required)
         const conTypeRaw = asString(itemSection['Consumable Type'], '').toLowerCase();
-        if (!conTypeRaw) {
+        if (!conTypeRaw && !this.acceptBlank(itemSection, 'Consumable Type')) {
             this.addError('Consumable Type is required but was not found');
             return;
         }
-        if (!VALID_CONSUMABLE_TYPES.includes(conTypeRaw)) {
+        if (conTypeRaw && !VALID_CONSUMABLE_TYPES.includes(conTypeRaw)) {
             this.addError(`Invalid Consumable Type "${conTypeRaw}". Must be one of: ${VALID_CONSUMABLE_TYPES.join(', ')}`);
             return;
         }
@@ -1932,7 +1945,8 @@ export class YamlItemParser {
                 // Ammunition Type (required for ammo)
                 const ammoTypeRaw = asString(ammoProps['Ammunition Type'], '').toLowerCase();
                 if (!ammoTypeRaw) {
-                    this.addError('Ammunition Type is required for ammo consumables');
+                    if (this.acceptBlank(ammoProps, 'Ammunition Type')) item.ammunitionType = '';
+                    else this.addError('Ammunition Type is required for ammo consumables');
                 } else {
                     const systemVal = CONSUMABLE_AMMO_TYPE_MAP[ammoTypeRaw];
                     if (systemVal) {
@@ -1984,7 +1998,8 @@ export class YamlItemParser {
             } else {
                 const poisonType = asString(poisonProps['Poison Type'], '').toLowerCase();
                 if (!poisonType) {
-                    this.addError('Poison Type is required for poison consumables but was not found');
+                    if (this.acceptBlank(poisonProps, 'Poison Type')) item.poisonType = '';
+                    else this.addError('Poison Type is required for poison consumables but was not found');
                 } else if (!VALID_POISON_TYPES.includes(poisonType)) {
                     this.addError(`Invalid Poison Type "${poisonType}". Must be one of: ${VALID_POISON_TYPES.join(', ')}`);
                 } else {
@@ -2030,10 +2045,11 @@ export class YamlItemParser {
         this.extractUsageAndRecovery(item, data, { hasDestroyOnEmpty: true });
 
         // Validation
-        if (conTypeRaw === 'ammo' && !item.ammunitionType) {
+        // An accepted blank ('') is a string; only a missing subtype is an error here.
+        if (conTypeRaw === 'ammo' && typeof item.ammunitionType !== 'string') {
             this.addError('Ammunition Type is required for ammo consumables');
         }
-        if (conTypeRaw === 'poison' && !item.poisonType) {
+        if (conTypeRaw === 'poison' && typeof item.poisonType !== 'string') {
             this.addError('Poison Type is required for poison consumables');
         }
 
@@ -2051,7 +2067,7 @@ export class YamlItemParser {
         // Base Tool (required)
         const baseToolRaw = asString(itemSection['Base Tool'], '').toLowerCase();
         if (!baseToolRaw) {
-            this.addError('Base Tool field is required but was not found');
+            if (!this.acceptBlank(itemSection, 'Base Tool')) this.addError('Base Tool field is required but was not found');
         } else {
             const normalizedBaseTool = LEGACY_BASE_TOOL_ALIASES[baseToolRaw] ?? baseToolRaw;
             if (BASE_TOOL_MAPPINGS.hasOwnProperty(normalizedBaseTool)) {
@@ -2144,7 +2160,9 @@ export class YamlItemParser {
 
         // Loot Type (required)
         const lootTypeRaw = asString(itemSection['Loot Type'], '').toLowerCase();
-        if (!lootTypeRaw) {
+        if (!lootTypeRaw && this.acceptBlank(itemSection, 'Loot Type')) {
+            item.lootType = '';
+        } else if (!lootTypeRaw) {
             this.addError('Loot Type field is required but was not found. Using fallback: gear');
             item.lootType = 'gear';
         } else if (!VALID_LOOT_TYPES.includes(lootTypeRaw)) {

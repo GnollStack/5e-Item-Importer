@@ -63,6 +63,16 @@ export class ItemUtils {
     }
 
     /**
+     * Write a parse message to the console only. The import preview lists every parse error and
+     * warning, so a toast for each repeated them, once per Item in a batch.
+     * @param {"warn"|"error"} type - Console level
+     * @param {string} message - Message to log
+     */
+    static console(type, message) {
+        console[type === "error" ? "error" : "warn"](LOG_PREFIX, message);
+    }
+
+    /**
      * Log info message (only in debug mode)
      */
     static log(message, ...objects) {

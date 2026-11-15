@@ -3105,14 +3105,15 @@ buildWeaponSections(extracted, data) {
     this.featureDetection = null;
   }
 
+  // The preview shows these; the console keeps them for API callers.
   addError(message) {
     this.errors.push(message);
-    ItemUtils.error(`NaturalItemParser Error: ${message}`);
+    ItemUtils.console("error", `NaturalItemParser Error: ${message}`);
   }
 
   addWarning(message) {
     this.warnings.push(message);
-    ItemUtils.warn(`NaturalItemParser Warning: ${message}`);
+    ItemUtils.console("warn", `NaturalItemParser Warning: ${message}`);
   }
 
   createResult(success, item) {

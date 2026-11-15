@@ -258,6 +258,34 @@ export async function runExplicitItemYamlTests() {
     const scroll={name:"Old scroll",type:"consumable",system:{type:{value:"scroll",subtype:""},properties:["verbal"]}};
     requireValue(itemToStrictYamlDocument(scroll).CONSUMABLE.SCROLL_PROPERTIES.Vocal===true,"Legacy verbal was not exported as Vocal.");
   });
+  await test("Exports of Items stored with a blank type, base weapon or subtype import again with a warning",async () => {
+    // dnd5e's own compendia hold such Items (Paper, Adamantine Armor, Conjured Flame Blade, Unarmed Strike,
+    // Dust of Disappearance, Antitoxin); 127 of them failed to import their own export before 14.4.0.
+    const damage={base:{number:1,denomination:6,bonus:"",types:["fire"],custom:{enabled:false,formula:""},scaling:{mode:"",number:null,formula:""}}};
+    const cases=[
+      [{name:"Paper",type:"loot",system:{type:{value:"",subtype:""}}},"Loot Type",system=>system.type.value===""],
+      [{name:"Adamantine Armor",type:"equipment",system:{type:{value:"",baseItem:""}}},"Equipment Type",system=>system.type.value===""],
+      [{name:"Conjured Blade",type:"weapon",system:{type:{value:"",baseItem:""},damage}},"Weapon Type",system=>system.type.value===""],
+      [{name:"Unarmed Strike",type:"weapon",system:{type:{value:"simpleM",baseItem:""},damage}},"Base Weapon",system=>system.type.value==="simpleM"&&!system.type.baseItem],
+      [{name:"Dust",type:"consumable",system:{type:{value:"",subtype:""}}},"Consumable Type",system=>system.type.value===""],
+      [{name:"Antitoxin",type:"consumable",system:{type:{value:"poison",subtype:""}}},"Poison Type",system=>system.type.value==="poison"&&!system.type.subtype],
+      // Stored without an ammunition type at all: the export writes an explicit blank (Vicious Blowgun).
+      [{name:"Blowgun",type:"weapon",system:{type:{value:"martialR",baseItem:"blowgun"},properties:["amm","mgc"],ammunition:{},damage}},"Ammunition Type",system=>!system.ammunition?.type],
+      [{name:"Oathbow",type:"weapon",system:{type:{value:"martialR",baseItem:"longbow"},properties:["amm","mgc"],ammunition:{type:""},damage}},"Ammunition Type",system=>!system.ammunition?.type],
+      // A stored null Armor Class exports as null (Helm of Brilliance).
+      [{name:"Helm",type:"equipment",system:{type:{value:"light",baseItem:""},armor:{value:null,dex:null}}},"Armor Class",system=>system.type.value==="light"&&system.armor?.value==null],
+      [{name:"Three-dragon ante",type:"tool",system:{type:{value:"game",baseItem:""}}},"Base Tool",system=>system.type.value==="game"&&!system.type.baseItem]
+    ];
+    for (const [source,key,check] of cases) {
+      const parsed=await build(itemToStrictYamlDocument(source));
+      requireValue(parsed.warnings.some(warning=>warning.startsWith(key+" is empty")),`${source.name}: no warning for the empty ${key}: ${parsed.warnings}`);
+      requireValue(check(parsed.item.itemData.system),`${source.name}: the blank ${key} was not stored as blank: ${JSON.stringify(parsed.item.itemData.system)}`);
+    }
+    const missing=new YamlItemParser().parse(yaml.dump({SCHEMA_VERSION:7,LOOT:{ITEM:{Name:"No type"}}}));
+    requireValue(!missing.success&&missing.errors.some(error=>error.includes("Loot Type")),"A missing Loot Type was accepted.");
+    const missingBase=new YamlItemParser().parse(yaml.dump({SCHEMA_VERSION:7,WEAPON:{ITEM:{Name:"No base","Weapon Type":"simpleM","Base Weapon":"n/a"},DAMAGE:{DAMAGE_DATA:{"Dice Count":1,"Die Denomination":6,"Damage Types":["fire"]}}}}));
+    requireValue(!missingBase.success&&missingBase.errors.some(error=>error.includes("Base Weapon is required")),"A standard weapon with Base Weapon n/a was accepted.");
+  });
   await test("Blank stored Uses Max exports as no limited uses",async () => {
     // dnd5e stores "" on an Item without limited uses; sheet-made Items and the SRD compendia all have it.
     for(const max of [""," ",null]){

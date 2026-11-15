@@ -252,8 +252,8 @@ const ARMOR_TYPE_TO_FOLDER = {
 const CONSUMABLE_ICON_PATHS = {
   potion: ["icons/consumables/potions", "icons/consumables/drinks"],
   scroll: ["icons/sundries/scrolls", "icons/sundries/documents"],
-  wand: ["icons/weapons/wands", "icons/magic/enchantments"],
-  rod: ["icons/weapons/rods", "icons/magic/enchantments"],
+  wand: ["icons/weapons/wands", "icons/magic/symbols"],
+  rod: ["icons/weapons/wands", "icons/weapons/staves"],
   food: ["icons/consumables/food", "icons/commodities/biological"],
   poison: ["icons/consumables/potions", "icons/commodities/biological"],
   trinket: ["icons/sundries/misc", "icons/commodities/treasure"],
@@ -289,7 +289,7 @@ const POISON_TYPE_KEYWORDS = {
  */
 const TOOL_ICON_PATHS = {
   art: [
-    "icons/tools/crafting",
+    "icons/tools/hand",
     "icons/tools/smithing",
     "icons/tools/cooking",
     "icons/tools",
@@ -375,7 +375,6 @@ const CONTAINER_ICON_PATHS = [
   "icons/containers/chest",
   "icons/containers",
   "icons/sundries/survival",
-  "icons/commodities/bags",
 ];
 
 /**
@@ -418,12 +417,11 @@ const LOOT_ICON_PATHS = {
   gear: ["icons/sundries/survival", "icons/sundries/misc", "icons/tools"],
   gem: [
     "icons/commodities/gems",
-    "icons/commodities/stones",
+    "icons/commodities/stone",
     "icons/commodities/materials",
   ],
   junk: [
     "icons/sundries/misc",
-    "icons/commodities/junk",
     "icons/commodities/materials",
   ],
   material: [

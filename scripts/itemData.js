@@ -548,8 +548,8 @@ export class ItemData {
   async buildWeaponData() {
     ItemUtils.log("Building weapon data");
 
-    // Weapon type
-    if (this.weaponType) {
+    // Weapon type ('' is an accepted blank from an export and is stored as such)
+    if (typeof this.weaponType === "string") {
       this.setProperty("system.type.value", this.weaponType);
       ItemUtils.log("Weapon type set to", this.weaponType);
     }
@@ -775,8 +775,8 @@ export class ItemData {
   async buildEquipmentData() {
     ItemUtils.log("Building equipment data");
 
-    // Armor/Equipment type
-    if (this.armorType) {
+    // Armor/Equipment type ('' is an accepted blank from an export)
+    if (typeof this.armorType === "string") {
       this.setProperty("system.type.value", this.armorType);
       ItemUtils.log("Equipment type set to", this.armorType);
     }
@@ -911,8 +911,8 @@ export class ItemData {
   async buildConsumableData() {
     ItemUtils.log("Building consumable data");
 
-    // Consumable type
-    if (this.consumableType) {
+    // Consumable type ('' is an accepted blank from an export)
+    if (typeof this.consumableType === "string") {
       this.setProperty("system.type.value", this.consumableType);
       ItemUtils.log("Consumable type set to", this.consumableType);
     }
@@ -1177,8 +1177,8 @@ export class ItemData {
   async buildLootData() {
     ItemUtils.log("Building loot data");
 
-    // Set loot type
-    if (this.lootType) {
+    // Set loot type ('' is an accepted blank from an export)
+    if (typeof this.lootType === "string") {
       this.setProperty("system.type.value", this.lootType);
       ItemUtils.log("Loot type set to", this.lootType);
     } else {
