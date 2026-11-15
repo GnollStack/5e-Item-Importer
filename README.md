@@ -25,15 +25,15 @@
 
 | Feature | What it does |
 | :--- | :--- |
-| **[Natural Language Parser](#natural-language-parser)** | Paste a familiar stat block from a PDF, website, or your notes and import it. |
-| **[Strict Format Parser](#strict-format-parser)** | Use documented YAML templates for exact control over complex homebrew. |
-| **[Features & Advancement](#features-and-advancement)** | Import class features, feats, and monster traits, including the ability increases, spells, and proficiencies a feat grants. |
-| **[Batch Imports](#batch-imports)** | Import a mixed collection of Items from one block, including bags packed with their contents. |
-| **[Lightweight Drafts](#lightweight-key-value-drafts)** | Write a quick key/value list and let the importer fill in sensible defaults. |
-| **[Import Workflow](#import-workflow)** | Choose a destination, handle existing matches, and undo imports from the current session. |
-| **[Activity Importer Companion](#activity-importer-companion)** | Premium: import an Item together with its activities and Active Effects. |
+| **[Paste a Stat Block](#natural-language-parser)** | Copy an item from a book, PDF or website and import it. |
+| **[Fill In a Template](#strict-format-parser)** | Build tricky homebrew field by field. |
+| **[Let a Chatbot Fill It In](#chatbot-workflow)** | Have Claude, ChatGPT or another chatbot fill in the template from an item's rules text. |
+| **[Feats & Features](#features-and-advancement)** | Class features, feats and monster traits, with everything a feat grants. |
+| **[A Whole Shop at Once](#batch-imports)** | Import a merchant's stock or a loot pile in one paste, bags with their contents. |
+| **[Safe Imports](#import-workflow)** | Preview first, choose where it goes, and undo this session's imports. |
+| **[Activity Importer Companion](#activity-importer-companion)** | Premium: Items arrive with working attacks, saves, healing and effects. |
 
-*5e Item Importer is free and works on its own. Paste a normal stat block for a quick import, or use one of the strict YAML templates when you want exact control. The premium [5e Activity Importer companion](#activity-importer-companion) adds activities and effects to imported Items.*
+*5e Item Importer is free and works on its own. Paste a stat block or fill in a template. The premium [5e Activity Importer companion](#activity-importer-companion) makes imported Items work at the table.*
 
 </div>
 
@@ -86,79 +86,11 @@
 
 <a id="natural-language-parser"></a>
 
-### Natural Language Parser
+### Paste a Stat Block
 
-*Best for: quick imports from books, PDFs, or websites. This parser is still under active development.*
+*Best for: items from books, PDFs, websites and your notes.*
 
-Paste a familiar D&D 5e item stat block from a PDF, website, or your own notes. The importer looks for the Item type, price, weight, damage, properties, and description, then shows you the result before anything is created.
-
-1. Copy the item text from your source.
-2. Open the **Items Directory** in Foundry and click **Import Item**.
-3. Paste the text and click **Preview**.
-4. Review the result, choose a destination, and click **Import**.
-
-<details>
-<summary><strong>📄 View Natural Language Template & Examples</strong></summary>
-
-###### Best Practice Patterns
-For best results, try to match the standard D&D 5e Statblock format:
-
-```text
-[Item Name]
-[Type], [Rarity] (requires attunement [by Class/Race])
-Cost: [Value] [gp/sp/cp], Weight: [Value] [lb]
-Damage: [Formula] [Type]
-Properties: [Prop1], [Prop2], [Versatile (1d10)]
-AC: [Number] (max Dex [Number])
-
-[Description Paragraphs...]
-```
-
----
-
-###### 1. Naming & Header
-The parser uses 3 strategies. The safest is Title Case on the first line.
-*   **Good:** `Flame Tongue`
-*   **Better:** `Name: Flame Tongue` (Guarantees 100% confidence)
-
-###### 2. Type Detection
-Include specific keywords in the first 3 lines to trigger type detection:
-*   **Weapon:** "Weapon", "Melee Weapon", "Ranged Weapon", "Attack Roll"
-*   **Armor:** "Armor", "Shield", "Plate", "Leather", "AC"
-*   **Consumable:** "Potion", "Scroll", "Wand", "Rod", "Food", "Drink", "Poison", "Ammunition", "Trinket"
-*   **Tool:** "Tool", "Kit", "Instrument", "Gaming Set"
-*   **Container:** "Bag", "Backpack", "Box", "Holds", "Capacity"
-*   **Loot:** "Gem", "Art Object", "Treasure", "Material"
-*   **Feature:** a header line such as "General Feat", "3rd-level Fighter feature", "Eldritch Invocation" or "Species Trait"; a "Prerequisite:" line; or a stat-block marker on the name line such as "(3/Day)", "(Recharge 5-6)", "Multiattack" or "Legendary Resistance". Features are detected from header signals only, never from item keywords in the body text.
-
-###### 3. Weapons
-To ensure correct parsing of damage and properties:
-*   **Type:** Use full terms like "Martial Melee Weapon" or "Simple Ranged Weapon".
-*   **Damage:** Format as `1d8 slashing` or `Damage: 2d6 fire`.
-*   **Properties:** Use an explicit label, such as `Properties: Finesse, Light, Thrown`.
-*   **Versatile:** Use the specific format `Versatile (1d10)`.
-*   **Magic weapon damage:** Known base weapons retain their normal base damage unless an explicit `Damage:` field overrides it. Additional damage in description prose remains additional damage and does not replace the base roll.
-
-###### 4. Armor & Equipment
-*   **AC:** Use `AC 18` or `Armor Class: 14`.
-*   **Stealth:** Use the phrase `Disadvantage on Stealth checks`.
-*   **Strength:** Use `Requires Strength 13` or `Str 15`.
-*   **Wondrous items:** A declared `Wondrous Item` type imports as dnd5e `wondrous` equipment rather than loot.
-
-###### 5. Consumables
-*   The header/name determines potion, scroll, wand, rod, ammunition, poison, food, or trinket subtype before description keywords are considered.
-*   Phrases such as `has 7 charges` populate the maximum uses and start with zero uses spent. Prefer `Uses Spent` in strict YAML; legacy `Uses Current` means remaining uses and is converted with a warning.
-*   Quantity suffixes preserve exact non-negative integers, including zero (`Arrows (0)`). Fractional or unsafe quantities and charge counts are ignored with a warning rather than truncated.
-
-###### 6. Containers
-The parser looks for specific capacity phrases:
-*   **Weight:** "Holds 500 pounds" or "Capacity: 500 lbs".
-*   **Volume:** "64 cubic feet".
-*   **Currency:** "Contains 50 gp" or "Holds 10 platinum".
-
----
-
-##### Example: Weapon
+Copy the item as it's printed, paste it into **Import Item**, and click **Preview**. The importer picks out the name, type, rarity, price, weight, damage, properties and description, and shows you the Item before anything is created. It reads the usual stat block layout best:
 
 ```text
 Stormglass Rapier
@@ -167,59 +99,23 @@ Cost: 2500 gp, Weight: 2 lb.
 Damage: 1d8 piercing
 Properties: Finesse
 
-This slender blade is forged from blue crystal that hums before a storm. The wielder has a +1 bonus to attack and damage rolls made with this magic weapon. When the wielder hits a creature with it, the target takes an extra 1d6 lightning damage. Once per turn, the wielder can force the target to make a DC 14 Constitution saving throw or be deafened until the end of its next turn.
+This slender blade is forged from blue crystal that hums before a storm. The wielder has a +1 bonus to attack and damage rolls made with this magic weapon.
 ```
 
-##### Example: Armor
-
-```text
-Emberguard Half Plate
-Armor (half plate), rare (requires attunement)
-Cost: 3500 gp, Weight: 40 lb.
-Armor Class: 15 (max Dex 2)
-
-This blackened half plate is warm to the touch and etched with lines like cooling lava. While wearing this armor, the wearer has a +1 bonus to AC and resistance to fire damage. When a creature within 5 feet hits the wearer with a melee attack, sparks leap from the plates and scorch the attacker.
-```
-
-##### Example: Container
-
-```text
-Moonwell Bag
-Container, uncommon
-Weight: 2 lb.
-
-This silver-threaded bag feels cool even in direct sunlight. The bag can hold up to 120 pounds, not exceeding a volume of 12 cubic feet, and its contents do not add to the carrier's encumbrance. The carrier can whisper the name of a stored item to retrieve it without searching. The bag currently contains 3 moonstones, 20 gp, and 12 sp.
-```
-
-##### Example: Tool
-
-```text
-Cartographer's Quillcase
-Tool, uncommon
-Cost: 75 gp, Weight: 1 lb.
-
-This lacquered case contains enchanted inks, folding rulers, waxed vellum, and a silver nib that points toward true north. Proficiency with these tools lets the user add their proficiency bonus to ability checks they make to draw maps, mark safe routes, or decode old survey notes. Once per day, the user can mark one safe route they can see; checks to follow that route have advantage for 24 hours.
-```
-
-</details>
+Put the name alone on the first line and leave a blank line before the description. If a value comes out wrong, fix it in the preview or use a template. The [stat block guide](templates/Naturalized%20Item%20Template.md) lists the phrases the importer recognizes, with more examples.
 
 ---
 
 <a id="strict-format-parser"></a>
+<a id="template-reference"></a>
 
-### Strict Format Parser
+### Fill In a Template
 
-*Best for: complex homebrew and bulk generation.*
+*Best for: tricky homebrew, and anything pasted text gets wrong.*
 
-Strict Format uses a documented YAML shape instead of guessing from prose. Start with the template for the Item type you need, fill in the relevant fields, and parse it in the same importer window. Validation messages call out fields that need attention before import. It works well with large language models like ChatGPT, Gemini, or Claude: the [Importer LLM Pack](https://github.com/GnollStack/bakshis-bazaar-archives/tree/main/importer-llm-pack/14.4.0) holds the files to give a chatbot, with setup steps for Claude Projects, ChatGPT Projects and other chatbots.
+Pick a template in the window, fill in the fields, and click **Preview**. Every setting has its own field, so nothing is guessed, and the preview names anything to fix. There are templates for weapons, armor and other equipment, consumables, tools, loot, containers, spells and features, plus ready-made recipes such as an item with several rarities or charges that return at dawn. For a quick draft, a few lines such as `name:` and `type:` are enough.
 
-The template picker includes [editable recipes](templates/README.md#schema-4-automation-and-recipes) for multiple rarities and dawn/dusk charge recovery. With the compatible Activity Importer companion enabled, it also offers complete-Item recipes.
-
-<a id="validated-custom-yaml-examples"></a>
-
-#### Validated Custom YAML Examples
-
-These examples have been checked against the current parser and dnd5e Item schema. They use optional sections such as uses, recovery, chat flavor, unidentified descriptions, enrichers, and dynamic name lookups while remaining usable with 5e Item Importer alone.
+The [template guide](templates/README.md) has every template, ready-to-import examples, and the rules for each field. A filled-in template looks like this:
 
 <a id="validated-yaml-stormglass-rapier"></a>
 
@@ -315,757 +211,52 @@ WEAPON:
 
 </details>
 
-<a id="validated-yaml-emberguard-half-plate"></a>
-
-<details>
-<summary><strong>🛡️ Emberguard Half Plate (`EQUIPMENT`)</strong></summary>
-
-
-```yaml
-SCHEMA_VERSION: 7
-EQUIPMENT:
-  ITEM:
-    Name: "Emberguard Half Plate"
-    Rarities: [rare]
-    Equipment Type: medium
-    Base Equipment: halfplate
-
-  INVENTORY:
-    Quantity: 1
-    Identified: true
-    Equipped: false
-
-  COST_AND_WEIGHT:
-    Price Value: 3500
-    Price Denomination: gp
-    Weight Value: 40
-    Weight Units: lb
-
-  PROPERTIES:
-    Magical: true
-    Adamantine: false
-    Focus: false
-    Stealth Disadvantage: true
-
-  ATTUNEMENT:
-    Attunement: required
-    Attunement By: n/a
-    Magic Bonus: 1
-
-  ARMOR:
-    Armor Class: 15
-    Max Dex Modifier: 2
-    Strength Requirement: n/a
-
-  PROFICIENCY:
-    Proficient: Automatic
-
-  USAGE:
-    Uses Spent: 0
-    Uses Max: 2
-
-  RECOVERY:
-    - Period: dawn
-      Type: recoverAll
-      Formula: n/a
-
-  DESCRIPTION:
-    Description: |
-      <p>This blackened half plate is warm to the touch and etched with lines like cooling lava.</p>
-      <p>While [[lookup @name]]{the creature} wears this armor, they have a +1 bonus to AC and resistance to &Reference[fire] damage.</p>
-      <p><strong>Cinder Flare.</strong> When a creature within 5 feet hits [[lookup @name]]{the creature} with a melee attack, they can expend 1 charge to deal [[/damage 2d6 fire average]] to the attacker.</p>
-
-  UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "Blackened Half Plate"
-    Unidentified Description: |
-      <p>Blackened half plate with dull red seams and a faint smell of smoke.</p>
-
-  CHAT_FLAVOR:
-    Chat Description: |
-      Sparks crawl across [[lookup @name]]{the creature}'s armor.
-```
-
-</details>
-
-<a id="validated-yaml-potion-of-sunlit-breath"></a>
-
-<details>
-<summary><strong>🧪 Potion of Sunlit Breath (`CONSUMABLE`)</strong></summary>
-
-
-```yaml
-SCHEMA_VERSION: 7
-CONSUMABLE:
-  ITEM:
-    Name: "Potion of Sunlit Breath"
-    Rarities: [uncommon]
-    Consumable Type: potion
-
-  INVENTORY:
-    Quantity: 1
-    Identified: true
-    Equipped: false
-
-  COST_AND_WEIGHT:
-    Price Value: 125
-    Price Denomination: gp
-    Weight Value: 0.5
-    Weight Units: lb
-
-  PROPERTIES:
-    Magical: true
-
-  ATTUNEMENT:
-    Attunement: none
-    Attunement By: n/a
-
-  USAGE:
-    Uses Spent: 0
-    Uses Max: 1
-    Destroy on Empty: true
-
-  RECOVERY: []
-
-  DESCRIPTION:
-    Description: |
-      <p>This golden potion fizzes with tiny motes of warm light.</p>
-      <p>When [[lookup @name]]{the creature} drinks it, they regain [[/heal 2d4 + 2 average]] hit points and can breathe underwater and in smoke-filled air for 1 hour.</p>
-      <p>During that hour, [[lookup @name]]{the creature} sheds dim sunlight in a 5-foot radius.</p>
-
-  UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "Golden Fizzing Potion"
-    Unidentified Description: |
-      <p>A sealed vial of golden liquid with bubbles that rise like sparks.</p>
-
-  CHAT_FLAVOR:
-    Chat Description: |
-      [[lookup @name]]{The creature} drinks a potion bright as sunrise.
-```
-
-</details>
-
-<a id="validated-yaml-moonwell-bag"></a>
-
-<details>
-<summary><strong>🎒 Moonwell Bag (`CONTAINER`)</strong></summary>
-
-
-```yaml
-SCHEMA_VERSION: 7
-CONTAINER:
-  ITEM:
-    Name: "Moonwell Bag"
-    Rarities: [uncommon]
-
-  INVENTORY:
-    Quantity: 1
-    Identified: true
-    Equipped: false
-
-  COST_AND_WEIGHT:
-    Price Value: 300
-    Price Denomination: gp
-    Weight Value: 2
-    Weight Units: lb
-
-  PROPERTIES:
-    Magical: true
-    Weightless Contents: true
-
-  ATTUNEMENT:
-    Attunement: none
-    Attunement By: n/a
-
-  CAPACITY:
-    Item Count: 12
-    Weight Capacity Value: 120
-    Weight Capacity Units: lb
-    Volume Capacity Value: 12
-    Volume Capacity Units: cubicFoot
-
-  CURRENCY_CONTENTS:
-    Platinum: 0
-    Gold: 20
-    Electrum: 0
-    Silver: 12
-    Copper: 0
-
-  DESCRIPTION:
-    Description: |
-      <p>This silver-threaded bag feels cool even in direct sunlight.</p>
-      <p>The bag can hold up to 120 pounds, not exceeding a volume of 12 cubic feet, and its contents do not add to the carrier's encumbrance.</p>
-      <p><strong>Moonwell Pocket.</strong> As an action, [[lookup @name]]{the creature} can whisper the name of a stored item to retrieve it without searching.</p>
-      <p><strong>Overfilled.</strong> If the bag is overloaded, it ruptures and spills moonlit mist into the nearest unoccupied space.</p>
-
-  UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "Silver-Threaded Bag"
-    Unidentified Description: |
-      <p>A soft travel bag stitched with silver thread and tiny pearl toggles.</p>
-
-  CHAT_FLAVOR:
-    Chat Description: |
-      [[lookup @name]]{The creature} reaches into a cold shimmer of moonlight.
-```
-
-</details>
-
-<a id="validated-yaml-starfall-opal"></a>
-
-<details>
-<summary><strong>💎 Starfall Opal (`LOOT`)</strong></summary>
-
-
-```yaml
-SCHEMA_VERSION: 7
-LOOT:
-  ITEM:
-    Name: "Starfall Opal"
-    Rarities: [rare]
-    Loot Type: gem
-
-  INVENTORY:
-    Quantity: 1
-    Identified: true
-    Equipped: false
-
-  COST_AND_WEIGHT:
-    Price Value: 750
-    Price Denomination: gp
-    Weight Value: 0
-    Weight Units: lb
-
-  PROPERTIES:
-    Magical: true
-
-  DESCRIPTION:
-    Description: |
-      <p>This dark opal holds a silver streak like a falling star.</p>
-      <p><strong>Diviner's Lens.</strong> A spellcaster can use the opal as a focus for divination rituals. A creature examining it can identify the omen trapped inside with a [[/check arcana 15 format=long]].</p>
-      <p><strong>Celestial Residue.</strong> The gem is warm near sources of &Reference[radiant] damage and cold near sources of &Reference[necrotic] damage.</p>
-
-  UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "Dark Opal"
-    Unidentified Description: |
-      <p>A polished black opal with a pale streak deep beneath its surface.</p>
-
-  CHAT_FLAVOR:
-    Chat Description: |
-      The opal catches the light like a tiny falling star.
-```
-
-</details>
-
-<a id="validated-yaml-lantern-mote"></a>
-
-<details>
-<summary><strong>✨ Lantern Mote (`SPELL`)</strong></summary>
-
-
-```yaml
-SCHEMA_VERSION: 7
-SPELL:
-  ITEM:
-    Name: "Lantern Mote"
-    Level: 1
-    School: evo
-    Ability: n/a
-
-  COMPONENTS:
-    Vocal: true
-    Somatic: true
-    Material: true
-
-  MATERIALS:
-    Value: "a firefly wing sealed in amber"
-    Cost: 0
-    Supply: 1
-    Consumed: false
-
-  PREPARATION:
-    Method: spell
-    Prepared: true
-
-  ACTIVATION:
-    Type: action
-    Value: 1
-    Condition: n/a
-
-  RANGE:
-    Units: ft
-    Value: 60
-
-  DURATION:
-    Units: minute
-    Value: 10
-    Concentration: false
-
-  TARGETS:
-    Type: space
-    Count: 1
-    Choice: false
-    Special: n/a
-
-  AREA:
-    Shape: sphere
-    Size: 10
-    Units: ft
-    Count: n/a
-    Width: n/a
-    Height: n/a
-    Contiguous: n/a
-
-  USAGE:
-    Uses Spent: 0
-    Uses Max: n/a
-
-  RECOVERY: []
-
-  DESCRIPTION:
-    Description: |
-      <p>[[lookup @name]]{The creature} creates a tiny floating mote of warm light at a point they can see within range.</p>
-      <p>The mote sheds bright light in a 10-foot radius and dim light for an additional 10 feet. Invisible creatures in the bright light shimmer with a faint outline but are not revealed automatically.</p>
-      <p>When the spell ends, one creature of the caster's choice in the bright light gains [[/heal 1d4 temp average]] temporary hit points.</p>
-      <section class="secret" id="upcast"><p><strong>At Higher Levels.</strong> When [[lookup @name]]{the creature} casts this spell using a spell slot of 2nd level or higher, the bright-light radius increases by 5 feet for each slot level above 1st.</p></section>
-
-  CHAT_FLAVOR:
-    Chat Description: |
-      [[lookup @name]]{The creature} releases a small sun-colored mote.
-```
-
-</details>
-
-<a id="validated-yaml-second-wind"></a>
-
-<details>
-<summary><strong>⭐ Second Wind (`FEAT`)</strong></summary>
-
-
-```yaml
-SCHEMA_VERSION: 7
-FEAT:
-  ITEM:
-    Name: "Second Wind"
-    Feature Type: class
-    Feature Subtype: n/a
-    Requirements: "Fighter 1"
-
-  PREREQUISITES:
-    Level: n/a
-    Items: []
-    Repeatable: false
-
-  PROPERTIES:
-    Magical: false
-    Passive Trait: false
-
-  USAGE:
-    Uses Spent: 0
-    Uses Max: 1
-
-  RECOVERY:
-    - Period: sr
-      Type: recoverAll
-
-  DESCRIPTION:
-    Description: |
-      <p>You have a limited well of stamina that you can draw on to protect yourself from harm. On your turn, you can use a bonus action to regain hit points equal to [[/heal 1d10 + @classes.fighter.levels]].</p>
-      <p>Once you use this feature, you must finish a short or long rest before you can use it again.</p>
-
-  CHAT_FLAVOR:
-    Chat Description: |
-      n/a
-```
-
-Features have no rarity, price, weight or attunement. `Feature Type` takes a dnd5e identifier (`class`, `feat`, `monster`, `race`, `background`, `enchantment`, `pietyTrait`, `supernaturalGift`, `vehicle`); `Feature Subtype` applies to class, feat, enchantment and supernatural gift types. `PREREQUISITES.Items` lists dnd5e identifiers such as `fighter` or `"feat:alert"`. Features can also carry advancement; see [Features & Advancement](#features-and-advancement). See the [Strict Feat Template](templates/YAML%20Templates/Strict%20Feat%20Template.md) and [full-native-feat.yaml](docs/examples/full-native-feat.yaml).
-
-</details>
-
-<a id="validated-yaml-cartographers-quillcase"></a>
-
-<details>
-<summary><strong>⚒️ Cartographer's Quillcase (`TOOL`)</strong></summary>
-
-
-```yaml
-SCHEMA_VERSION: 7
-TOOL:
-  ITEM:
-    Name: "Cartographer's Quillcase"
-    Rarities: [uncommon]
-    Tool Type: art
-    Base Tool: cartographer
-
-  INVENTORY:
-    Quantity: 1
-    Identified: true
-    Equipped: false
-
-  COST_AND_WEIGHT:
-    Price Value: 75
-    Price Denomination: gp
-    Weight Value: 1
-    Weight Units: lb
-
-  PROPERTIES:
-    Magical: true
-    Tool Bonus: 1
-
-  ATTUNEMENT:
-    Attunement: none
-    Attunement By: n/a
-
-  ABILITY_CHECK:
-    Proficient: Automatic
-    Ability: wis
-
-  USAGE:
-    Uses Spent: 0
-    Uses Max: 3
-
-  RECOVERY:
-    - Period: dawn
-      Type: recoverAll
-      Formula: n/a
-
-  DESCRIPTION:
-    Description: |
-      <p>This lacquered case contains enchanted inks, folding rulers, waxed vellum, and a silver nib that points toward true north.</p>
-      <p>While using these tools, [[lookup @name]]{the creature} has a +1 bonus to ability checks made with them.</p>
-      <p><strong>True-North Mark.</strong> [[lookup @name]]{The creature} can expend 1 charge while drawing a map to mark one safe route they can see. For the next 24 hours, checks to follow that route can use [[/check survival 13 format=long]] or [[/check cartographer 13 format=long]].</p>
-
-  UNIDENTIFIED_DESCRIPTION:
-    Unidentified Name: "Lacquered Quillcase"
-    Unidentified Description: |
-      <p>A travel-worn case filled with precise mapping tools and unusually bright ink.</p>
-
-  CHAT_FLAVOR:
-    Chat Description: |
-      [[lookup @name]]{The creature} sketches a line that refuses to point anywhere but true north.
-```
-
-</details>
-
-<a id="validated-mixed-batch-example"></a>
-
-<details>
-<summary><strong>📦 Mixed-Type Batch Example</strong></summary>
-
-
-```yaml
-SCHEMA_VERSION: 7
-WEAPON:
-  ITEM:
-    Name: "Stormglass Rapier"
-    Rarities: [rare]
-    Weapon Type: martialM
-    Base Weapon: rapier
-  INVENTORY:
-    Quantity: 1
-    Identified: true
-    Equipped: false
-  COST_AND_WEIGHT:
-    Price Value: 2500
-    Price Denomination: gp
-    Weight Value: 2
-    Weight Units: lb
-  PROPERTIES:
-    Magical: true
-    Finesse: true
-  ATTUNEMENT:
-    Attunement: required
-    Magic Bonus: 1
-  RANGE:
-    Reach: 5
-  DAMAGE:
-    Damage Formula: "1d8[piercing] + 1d6[lightning]"
-    Damage Type: piercing
-  USAGE:
-    Uses Spent: 0
-    Uses Max: 3
-  RECOVERY:
-    - Period: dawn
-      Type: formula
-      Formula: "1d3"
-  DESCRIPTION:
-    Description: |
-      <p>A blue crystal dueling blade that crackles before a storm. When [[lookup @name]]{the creature} hits with it, the target takes an extra [[/damage 1d6 lightning average]].</p>
-
-CONSUMABLE:
-  ITEM:
-    Name: "Potion of Sunlit Breath"
-    Rarities: [uncommon]
-    Consumable Type: potion
-  COST_AND_WEIGHT:
-    Price Value: 125
-    Price Denomination: gp
-    Weight Value: 0.5
-    Weight Units: lb
-  PROPERTIES:
-    Magical: true
-  USAGE:
-    Uses Spent: 0
-    Uses Max: 1
-    Destroy on Empty: true
-  RECOVERY: []
-  DESCRIPTION:
-    Description: |
-      <p>For 1 hour, [[lookup @name]]{the creature} can breathe underwater and in smoke-filled air.</p>
-  CHAT_FLAVOR:
-    Chat Description: |
-      [[lookup @name]]{The creature} drinks a potion bright as sunrise.
-
-LOOT:
-  ITEM:
-    Name: "Starfall Opal"
-    Rarities: [rare]
-    Loot Type: gem
-  COST_AND_WEIGHT:
-    Price Value: 750
-    Price Denomination: gp
-    Weight Value: 0
-    Weight Units: lb
-  PROPERTIES:
-    Magical: true
-  DESCRIPTION:
-    Description: |
-      <p>This dark opal holds a silver streak like a falling star. A creature examining it can identify the omen trapped inside with a [[/check arcana 15 format=long]].</p>
-```
-
-</details>
-
-<a id="validated-same-type-batch-example"></a>
-
-<details>
-<summary><strong>🔁 Same-Type Batch Example</strong></summary>
-
-
-```yaml
-SCHEMA_VERSION: 7
-WEAPON:
-  ITEM:
-    Name: "Stormglass Rapier"
-    Rarities: [rare]
-    Weapon Type: martialM
-    Base Weapon: rapier
-  INVENTORY:
-    Quantity: 1
-    Identified: true
-    Equipped: false
-  COST_AND_WEIGHT:
-    Price Value: 2500
-    Price Denomination: gp
-    Weight Value: 2
-    Weight Units: lb
-  PROPERTIES:
-    Magical: true
-    Finesse: true
-  ATTUNEMENT:
-    Attunement: required
-    Magic Bonus: 1
-  RANGE:
-    Reach: 5
-  DAMAGE:
-    Damage Formula: "1d8[piercing] + 1d6[lightning]"
-    Damage Type: piercing
-  MASTERY:
-    Mastery: vex
-  USAGE:
-    Uses Spent: 0
-    Uses Max: 3
-  RECOVERY:
-    - Period: dawn
-      Type: formula
-      Formula: "1d3"
-  DESCRIPTION:
-    Description: |
-      <p>A blue crystal dueling blade that crackles before a storm. When [[lookup @name]]{the creature} hits with it, the target takes an extra [[/damage 1d6 lightning average]].</p>
 ---
-SCHEMA_VERSION: 7
-WEAPON:
-  ITEM:
-    Name: "Whisperpin Dagger"
-    Rarities: [uncommon]
-    Weapon Type: simpleM
-    Base Weapon: dagger
-  INVENTORY:
-    Quantity: 1
-    Identified: true
-    Equipped: false
-  COST_AND_WEIGHT:
-    Price Value: 600
-    Price Denomination: gp
-    Weight Value: 1
-    Weight Units: lb
-  PROPERTIES:
-    Magical: true
-    Finesse: true
-    Light: true
-    Thrown: true
-    Returning: true
-  ATTUNEMENT:
-    Attunement: none
-    Attunement By: n/a
-    Magic Bonus: 1
-  RANGE:
-    Reach: 5
-    Range Normal: 20
-    Range Long: 60
-    Range Units: ft
-  DAMAGE:
-    Damage Formula: "1d4"
-    Damage Type: piercing
-  MASTERY:
-    Mastery: nick
-  PROFICIENCY:
-    Proficient: Automatic
-  USAGE:
-    Uses Spent: 0
-    Uses Max: 2
-  RECOVERY:
-    - Period: dusk
-      Type: recoverAll
-      Formula: n/a
-  DESCRIPTION:
-    Description: |
-      <p>A matte-black returning dagger that drinks in nearby sound.</p>
-      <p>When [[lookup @name]]{the creature} hits with this weapon, they can expend 1 charge to force the target to make a [[/save wis 13 format=long]] or be unable to speak above a whisper until the end of its next turn.</p>
-  CHAT_FLAVOR:
-    Chat Description: |
-      [[lookup @name]]{The creature} throws a blade that returns without a sound.
-```
 
-</details>
+<a id="chatbot-workflow"></a>
 
-<details>
-<summary><strong>Advanced: dnd5e description enrichers and name lookups</strong></summary>
+### Let a Chatbot Fill It In
 
-`Description` and `Chat Description` fields preserve Foundry/dnd5e text features for Foundry to resolve when displayed. You can use dnd5e enrichers like `[[/damage 1d6 fire average]]`, roll-data formulas like `@prof`, dynamic lookups like `[[lookup @name]]{the creature}`, System HTML classes, and pass-through document links like `@UUID[...]` or `@Embed[...]`.
+*Best for: turning rules text into Items without typing the template yourself.*
 
-Use dynamic name lookups for active narration and chat flavor, such as `[[lookup @name]]{The creature} drinks the potion.` or `When [[lookup @name]]{the creature} hits with this weapon...`. Keep passive rules text natural.
+The templates are written strictly so chatbots like Claude, ChatGPT and Gemini fill them in correctly, quickly, and only in a way Foundry can understand. Give yours the free [Importer LLM Pack](https://github.com/GnollStack/bakshis-bazaar-archives/tree/main/importer-llm-pack/14.4.0) and it writes complete Items from an item's rules text, one at a time or a whole batch. For best results:
 
-Optional companion: **Token Name Lookup** can make the same stock dnd5e `[[lookup @name]]` text prefer concrete token names for aliases, disguises, and token inventory views. Items remain fully compatible without that module; dnd5e simply resolves the lookup to the actor name.
+1. Create a chat or project in your chatbot, a Claude or ChatGPT Project works well, paste the pack's project instructions, and upload the files its README lists for your modules.
+2. Paste the item's rules text and ask for the Item along with what you want said item to do.
+3. Paste the answer into **Import Item** and click **Preview**.
+4. If anything is flagged, **Copy problems** gives the chatbot exactly what to fix.
 
-</details>
-
-<a id="template-reference"></a>
-
-#### Template Downloads
-
-The full strict templates live as real module files under `templates/YAML Templates/`. Use those files as the source of truth; the README keeps only validated examples so the docs do not drift.
-
-After installing the module, the same files are available locally in your Foundry data folder:
-
-```text
-modules/5e-item-importer/templates/YAML Templates/
-```
-
-| Template | View in Repo | Raw Download |
-| --- | --- | --- |
-| Weapon | [Strict Weapon Template](templates/YAML%20Templates/Strict%20Weapon%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Weapon%20Template.md) |
-| Consumable | [Strict Consumable Template](templates/YAML%20Templates/Strict%20Consumable%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Consumable%20Template.md) |
-| Container | [Strict Container Template](templates/YAML%20Templates/Strict%20Container%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Container%20Template.md) |
-| Equipment | [Strict Equipment Template](templates/YAML%20Templates/Strict%20Equipment%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Equipment%20Template.md) |
-| Loot | [Strict Loot Template](templates/YAML%20Templates/Strict%20Loot%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Loot%20Template.md) |
-| Spell | [Strict Spell Template](templates/YAML%20Templates/Strict%20Spell%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Spell%20Template.md) |
-| Tool | [Strict Tool Template](templates/YAML%20Templates/Strict%20Tool%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Tool%20Template.md) |
-| Feature | [Strict Feat Template](templates/YAML%20Templates/Strict%20Feat%20Template.md) | [Raw](https://raw.githubusercontent.com/GnollStack/5e-Item-Importer/main/templates/YAML%20Templates/Strict%20Feat%20Template.md) |
-
-For import-ready examples, use the [validated custom YAML examples](#validated-custom-yaml-examples), the [mixed-type batch example](#validated-mixed-batch-example), and the [same-type batch example](#validated-same-type-batch-example) above.
-
-<details>
-<summary><strong>Strict YAML rules worth knowing</strong></summary>
-
-For mixed weapon damage, use a dnd5e typed custom formula such as `1d8[piercing] + 1d6[lightning]` and set `Damage Type` to the weapon's primary damage type, such as `piercing`. Do the same for `Versatile Damage Type`. The primary type gives dnd5e a default for system-added ability and magic bonuses, while bracketed formula terms keep extra damage such as lightning separate for resistance and immunity. Use `n/a` only for fully self-contained typed formulas that will not receive system-added ability, magic, or ammunition bonuses. Description enrichers provide clickable text; they do not generate activity mechanics. For functional source-defined saves, damage, healing, conditions, and passive bonuses, include the appropriate `Activities`/`effects` arrays when Activity Importer is available for the workflow or its support is requested. Use the companion strict templates and preserve the source rules. Core Item imports work independently: omit attachment sections and keep the complete rules in the description when companion support is unavailable or unspecified.
-
-Spell ritual capability is independent of preparation. Use `COMPONENTS.Ritual: true` with `PREPARATION.Method: spell` for a normal ritual-capable spell. Explicit ritual booleans take precedence; older YAML without the field retains the `Method: ritual` fallback. Material cost and supply must be nonnegative.
-
-Strict YAML reports unknown sections and field names as warnings so typos are not silently ignored. A parse with validation errors returns no importable item; correct the reported fields before importing.
-
-Strict numeric scalars are parsed exactly: quantities and uses must be integers, while price, weight, and weight/volume capacities may be finite decimals; these values cannot be negative. Values with trailing text such as `12abc` are errors rather than numeric prefixes. `Attunement By` is retained only when `Attunement` is `required` or `optional`; it is cleared with a warning for `none` or invalid attunement values.
-
-</details>
+**You use your own chatbot;** <ins>**the module never contacts one**</ins>. Preview shows exactly what will be created and flags anything the importer can't use before it reaches your world. With the [Activity Importer companion](#activity-importer-companion), the chatbot can add the Item's activities, such as attacks and saves, and its effects as well. The import window links the pack for your installed version.
 
 ---
 
 <a id="features-and-advancement"></a>
 
-### Features & Advancement
+### Feats & Features
 
-*Best for: class features, feats, monster traits, and species traits.*
+*Best for: class features, feats, species traits and monster traits.*
 
-Features import from all three formats. Paste a feature with its header line, such as "General Feat (Prerequisite: Level 4+)" or "3rd-level Fighter feature"; fill in the strict `FEAT` template; or write a lightweight `type: feat` draft. The importer keeps the feature type and subtype, requirements and prerequisites, limited uses with rest or combat recovery, and the full description.
+Paste a feature with its header line, such as "General Feat (Prerequisite: Level 4+)" or "3rd-level Fighter feature", or use the Feature template. Uses per rest or recharge, prerequisites and the full text come along.
 
-A feat can also carry its advancement, so dropping it on a character applies what it grants. Add an `ADVANCEMENT` list to the strict template:
-
-| Entry | What it gives |
-| --- | --- |
-| `ABILITY_SCORE_IMPROVEMENT` | Fixed increases, or points the player assigns among the abilities you leave unlocked |
-| `GRANT_ITEMS` | Spells, feats, or equipment, with spellcasting settings for granted spells |
-| `CHOOSE_ITEMS` | A pool of options the player picks from, optionally filtered by type, spell level, or school |
-| `MODIFY_ITEMS` | An enchantment applied to the character's Items that match the listed identifiers |
-| `SCALE_VALUE` | A value that grows with level, such as a die that becomes 2d6 |
-| `TRAIT` | Skill, save, language, armor, weapon, or tool proficiencies, expertise, or a choice among them |
-
-Granted items and pool entries can be named instead of linked. When exactly one world or compendium document matches the name or identifier, it links on its own; otherwise the preview shows a drop zone with the candidates, and you pick one or drag the right document onto it. Import waits until every reference is linked. Exporting the feature writes its advancement back with each document's UUID and name.
-
-See the [Strict Feat Template](templates/YAML%20Templates/Strict%20Feat%20Template.md) for every field and [full-native-feat.yaml](docs/examples/full-native-feat.yaml) for a feat that uses four kinds of advancement.
+A feat can also carry what it grants, such as an ability score increase, spells, proficiencies or a choice from a list, so dropping it on a character applies them. Spells and items can be named instead of linked: the preview links each one it finds and gives you a drop zone for any it can't.
 
 ---
 
 <a id="batch-imports"></a>
 
-### Batch Imports
+### A Whole Shop at Once
 
-Strict Format can import a mixed collection in one block. For several Items of the same type, separate YAML documents with `---`. Supported top-level keys are `SPELL`, `FEAT`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT`, and `CONTAINER`.
-
-A `CONTAINER` can hold its contents: list complete Item documents under `CONTENTS` (nesting up to five containers deep) and they are created inside it, in the same collection and folder. A contained Item can also name its container with `INVENTORY.Container`: the name of a container in the same batch, the UUID of an existing container, or a container dragged onto the reference in the import window. The preview marks each content **Inside** its container; contents import after their container and are never created loose if it is deselected or fails. Exporting a world or Actor container writes its contents back under `CONTENTS`. See [full-native-container.yaml](docs/examples/full-native-container.yaml).
-
----
-
-<a id="lightweight-key-value-drafts"></a>
-
-### Lightweight Key/Value Drafts
-
-<details>
-<summary><strong>View a lightweight draft example and supported fields</strong></summary>
-
-For a quick single-Item draft, the same eight Item types can also be written as a flat key/value list. At minimum, provide `name` and `type`; the router supplies conservative valid defaults and then validates the generated document through the strict parser.
-
-```yaml
-name: Quick Spark
-type: spell
-level: 2
-school: evocation
-activation: bonus action
-components: V, S
-range: 60 feet
-duration: 1 minute
-description: A brief arc of blue-white light.
-```
-
-Type-specific lightweight fields include `weaponType`/`baseWeapon`, `equipmentType`/`baseEquipment`/`armorClass`, `consumableType`/`ammunitionType`/`poisonType`, `toolType`/`baseTool`, `lootType`, container capacity fields, spell level/school/activation/component/range/duration fields, and feature `featureType`/`featureSubtype`/`requirements`/`prerequisiteLevel`/`repeatable` fields (`type: feat` with `featureType: general feat`, `invocation`, `species trait`, and similar readable values).
-
-Readable aliases such as `armor`/`armour`, `potion`, `scroll`, `martial melee`, `thieves tools`, `trade goods`, and full spell-school names are accepted. Mismatched fields, conflicting representations, malformed values, and unknown properties are reported instead of being silently replaced. Use the full strict templates when you need advanced configuration.
-
-</details>
+Paste a merchant's stock, a treasure hoard or a whole adventuring kit in one go. The preview lists every Item, and you choose which to import. A bag or chest can bring its contents, which arrive inside it. The [template guide](templates/README.md#several-items-in-one-paste) shows how to write several Items in one paste.
 
 ---
 
 <a id="import-workflow"></a>
 
-### Import Workflow
+### Safe Imports
 
-Paste text, choose a template, or drop an Item, Actor, Journal passage, or local text/YAML file into the importer. After parsing, review the preview and choose a World Items folder, an owned Actor, or a writable Item compendium as the destination.
+Choose where Items go: a world folder, a character, or a compendium you can edit. If an Item with the same name already exists, add a copy, update it, merge, or skip it; an update shows what will change first. Spells, items and containers an Item mentions are linked by name, and anything not found gets a drop zone in the preview.
 
-When a matching Item already exists, choose whether to create another copy, update it, merge conservatively, or skip it. Update and merge show the exact target and any field conflicts before writing. Ambiguous matches are stopped for review.
-
-Document references (a feature's granted items and choice pools, or an Item's container) are listed under **References** in the preview. A unique name or identifier match resolves on its own; anything missing or ambiguous gets a drop zone with candidates, and **Import** waits until every reference is resolved. A container with nested contents previews as a batch and places its children inside it.
-
-Templates and presets share one picker; **Manage** opens preset controls. Full mechanical previews are the default. **View options** offers Compact previews and shows the optional generated YAML editor and Import History. The editor lets you inspect and edit parsed values and defaults from natural-language input.
-
-**Import options** starts collapsed. **Import options > Restore defaults** resets window preferences while preserving your work; **View options > Reset layout** changes display preferences only. See the [import-window guide](docs/import-window.md) for these controls.
-
-Batch imports can be filtered, cancelled before the next write, and retried without recreating successful entries. History offers report download and Undo for eligible imports in the current session.
+**Copy problems** copies whatever the preview flags together with your YAML. **View options > Show Import History** keeps this session's imports with **Undo**. The [import-window guide](docs/import-window.md) covers every control.
 
 ---
 
@@ -1073,19 +264,15 @@ Batch imports can be filtered, cancelled before the next write, and retried with
 
 ### Activity Importer Companion
 
-5e Item Importer creates Items on its own. Add the premium **5e Activity Importer** and the same import can include the Item's attacks, saves, damage, healing, and Active Effects, so it arrives ready to use at the table.
+5e Item Importer creates Items on its own. Add the premium **5e Activity Importer** and the same import brings the Item's attacks, saves, damage, healing and effects, so it works at the table right away.
 
-With both modules enabled:
+- **One menu:** **Import Item** joins Activity Importer's **Add Activity / Effect** menu in the Items Directory. Turn off **Merge with Activity Importer Dropdown** to keep a separate button.
+- **Mechanics included:** templates can carry activities and effects; [full-native-weapon.yaml](docs/examples/full-native-weapon.yaml) is a complete example.
+- **Checked first:** activities, effects and the spells or creatures they link are checked before anything is written.
+- **With or without MIDI-QOL:** MIDI-QOL settings are kept where it runs, and left out with a note where it doesn't.
+- **Share it:** right-click an Item and choose **Copy Full Item YAML** or **Download Full Item YAML** to export it with its mechanics.
 
-- **One menu:** **Import Item** joins Activity Importer's **Add Activity / Effect** dropdown in the Items Directory. Turn off **Merge with Activity Importer Dropdown** in the settings to keep a separate button.
-- **Mechanics in strict YAML:** add `Activities` and `effects` arrays to a strict template. Each template has an optional activities and effects section showing the format, [`docs/examples/full-native-weapon.yaml`](docs/examples/full-native-weapon.yaml) is a complete native example, and [`docs/examples/full-midi-weapon.yaml`](docs/examples/full-midi-weapon.yaml) and [`docs/examples/full-midi-feat.yaml`](docs/examples/full-midi-feat.yaml) are complete MIDI-QOL examples for a weapon and a feature.
-- **Build them in the window:** **Add activities or effects** opens Activity Importer's builder for the parsed Item. **Resolve document references** links the spells and Actors that Cast, Summon, and Transform need; the Item's own references (granted items, choice pools, containers) resolve without the companion.
-- **Checked first:** Activity Importer checks activities, effects, and their references before import. Previews do not run commands or evaluate conditions.
-- **Full Item YAML:** right-click an Item and choose **Copy Full Item YAML** or **Download Full Item YAML** to export it with its activities and effects, ready to re-import or share.
-
-When asking an LLM for YAML, ask for a premium/full Item and give it both modules' templates. See [Automation storage in schema 4](docs/automation-schema-4.md) for the automation settings preserved during import and export.
-
-Without the companion, the Item itself still imports: the preview warns that any `Activities` or `effects` will be skipped, and export uses **Copy Core Item YAML**.
+Without the companion, the Item itself still imports, and the preview says the mechanics will be skipped.
 
 <div align="center">
 
@@ -1102,30 +289,38 @@ Activity Importer is available to [Bazaar Patrons](https://www.patreon.com/cw/Gn
 <details>
 <summary><strong>Settings</strong></summary>
 
-Relevant registered settings:
+Open **Configure Settings → 5e Item Importer**. Each setting applies to your browser only, except Enable MCP Diagnostics, which applies to the world.
 
-| Setting key | Scope | Purpose |
+| Setting | Default | What it does |
 | --- | --- | --- |
-| `savedPresets` | client | Bounded reusable input presets |
-| `lastDestination` | client | Last permission-validated destination |
-| `compendiumImageMode` | client | Deterministic or random top image selection |
+| Auto-Parse on Input | On | Previews while you type |
+| Auto-Parse Delay (ms) | 1000 | How long to wait after typing stops |
+| Default Item Type | Adventuring Gear | Used when the text doesn't name a type |
+| Create Items as Identified | On | Imported Items start identified |
+| Match Icons from Compendiums | On | Takes the icon of a matching compendium Item |
+| Compendium Image Selection | Best deterministic match | Or a random pick among the top matches |
+| Use Semantic Random Icons | On | A random fitting dnd5e icon, such as a sword for a longsword; wins over compendium icons |
+| Merge with Activity Importer Dropdown | On | Puts **Import Item** in Activity Importer's menu |
+| Replace Generated Default Activities | On | Stops dnd5e adding its default attack or check when your YAML has its own |
+| Show Parse Results, Show YAML Normalization Warnings, Debug Logging | Off | Extra troubleshooting messages |
+| Enable MCP Diagnostics | Off | Advanced diagnostics; leave off during play |
 
-Enable **Match Icons from Compendiums** in Module Settings to pick Item icons from your compendiums, and use **Compendium image choice** to select the best deterministic match or a random top match.
+Presets and your last destination are saved in your browser.
 
 </details>
 
 <details>
 <summary><strong>Troubleshooting</strong></summary>
 
-**The natural parser missed or misread a field.**
-> Check the preview before importing. Clear labels such as `Damage:`, `Properties:`, and `Weight:` help. For complicated Items, use the strict template for that Item type.
+**A pasted stat block came out wrong.**
+> Check the preview before importing. Clear labels such as `Damage:`, `Properties:` and `Weight:` help. For complicated Items, use a template.
 
 **Icons aren't matching automatically.**
-> Go to Module Settings and enable **"Match Icons from Compendiums"**. This works best when the item name includes a recognizable D&D 5e base item or item type (for example, "Stormglass Rapier", "Emberguard Half Plate", or "Potion of Sunlit Breath"). Use **Compendium image choice** to select the best deterministic match or a random top match. Random selection can still be made reproducible with a seed when using the core service programmatically.
+> Turn on **Match Icons from Compendiums** in the module settings. It works best when the name includes a known base item or type, such as "Stormglass Rapier" or "Potion of Sunlit Breath". **Use Semantic Random Icons** wins over it, so turn that off to prefer compendium icons, and use **Compendium Image Selection** to choose between the best match and a random top match.
 
 **Description is empty.**
-> If using Natural Language: Ensure there is a blank line between the stat block and the description.
-> If using Strict Format: Use the YAML block form `Description: |` and indent the HTML description beneath it, as shown in the validated examples and template files.
+> For pasted text, leave a blank line between the stats and the description.
+> In a template, write `Description: |` and indent the text beneath it, as the templates show.
 
 </details>
 
@@ -1164,7 +359,7 @@ https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.j
 
 </div>
 
-**Foundry VTT:** v14 only, build 14.367 or later; verified on **14.370**. If your world is staying on Foundry v13, use the last stable v13-compatible release instead.
+**Foundry VTT:** v14 only, build 14.367 or later; verified on **14.370**. For a world that stays on Foundry v13, use 5e Item Importer 13.9.1.
 
 **Game system:** **dnd5e** 6.0.6 minimum; verified on **6.0.6** and **6.1.0**.
 
@@ -1179,6 +374,11 @@ https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.j
 ## Developer API
 
 </div>
+
+Macros and other modules can import, export and undo Items through `game.modules.get("5e-item-importer").api`.
+
+<details>
+<summary><strong>API reference</strong></summary>
 
 ```js
 const api = game.modules.get("5e-item-importer").api;
@@ -1201,27 +401,11 @@ API undo is intentionally explicit: `api.history.undo(sessionId, { confirmed: tr
 
 `api.import()` creates one Item. A `CONTAINER` with nested `CONTENTS` returns an error that points to the import window's batch flow, and an Item with an unresolved reference (a granted item, choice pool entry, or container) returns the missing references as issues without creating anything.
 
-<details>
-<summary><strong>Advanced: Schema versions, exports, and integration contracts</strong></summary>
+New strict YAML starts with `SCHEMA_VERSION: 7`. Older versions (0 to 6) still import, and YAML that declares a newer version than the installed importer knows is refused instead of half-imported. Schema 7 added food properties and Unidentified Contents; 6 added feature advancement, container contents and document references; 5 added the `FEAT` root and combat recovery periods; 4 added typed automation storage.
 
-Schema 7 adds the food properties of consumables (`FOOD_PROPERTIES.Hydrating` and `Nutritious`, used by dnd5e 6.1) and `PROPERTIES.Unidentified Contents` for containers. Schema 6 added feature advancement (`FEAT.ADVANCEMENT`), container contents (`CONTAINER.CONTENTS` and `INVENTORY.Container`) and document references that resolve by UUID, name or identifier, or by dragging a document onto the reference in the import window. Schema 5 added the `FEAT` root for Features and the combat recovery periods `initiative`, `turnStart`, `turnEnd` and `turn`. Schema 4 added reviewed typed automation storage (a separate contract that stays at 4) and retains `ITEM.Rarities` as a list, `DAMAGE_DATA.Modifiers` as dice modifier strings, and spell `DURATION.Expiry`. Legacy `ITEM.Rarity` and supported YAML versions 0, 1, 2, 3, 4, 5 and 6 remain accepted; an explicit empty Rarities list means mundane.
+**Core export** (`api.export()`, the default, and **Copy Core Item YAML**) writes the Item without activities or effects. **Full export** (`api.exportFull()`, `{ mode: "full" }` and the Full Item YAML menu entries) adds them through Activity Importer; when something can't be written out exactly, it stops with an error instead of dropping it. Batch exports separate Items with `---`.
 
-New strict YAML documents begin with visible schema metadata:
-
-```yaml
-SCHEMA_VERSION: 7
-WEAPON:
-  ITEM:
-    Name: "Example Weapon"
-```
-
-The parser reports migration provenance and carries it through mixed and multi-document batches. Documents declaring a schema version newer than the installed importer supports are rejected instead of being partially imported. `Uses Max`, magic bonuses, tool bonuses, and recharge thresholds preserve compatible dnd5e formula strings; legacy `Uses Current` cannot be converted against a formula maximum and fails with an instruction to provide `Uses Spent`.
-
-The strict exporter supports Weapon, Equipment, Consumable, Tool, Loot, Container, Spell, and Feature Items. **Core Item export** is always available, excludes Activities and Active Effects, and is the default for `api.export()`, `api.exportBatch()`, copy, download, and Item drops when the companion serializers are unavailable. **Full Item export** is an explicit companion workflow exposed by `api.exportFull()`, `api.exportFullBatch()`, `{ mode: "full" }`, and the Full Item YAML context actions shown when Activity Importer exposes both synchronous serializers. Batch export uses `---` document separators so repeated Item types remain lossless.
-
-For full export, every live dnd5e Activity and Active Effect is serialized from its current document state through Activity Importer's `api.serializeActivity()` and `api.serializeEffect()` services, so later edits supersede stored provenance. If the companion is unavailable, the current state cannot be represented, an unreviewed third-party field is present, or the serializer cannot prove a lossless mapping, full export stops with an explicit error. Activity-specific effect application metadata is matched separately from the effect body. With the paired schema 6 serializers, multiple Activities can reference one local Active Effect: export writes one Item-level effect definition and keeps each Activity's `Effect ID` reference and application settings. Standalone `Effect UUID` references remain external links. Older or custom serializers that inline the same shared effect without reference support fail clearly; duplicate authored effect definitions are rejected during import. A linked effect is omitted from the standalone `effects` section only when its exact serialized body is embedded in its owning Activity. Low-level export options continue to accept `includeActivities` and `includeEffects`; each alias takes precedence over the older aggregate attachment options when both are supplied.
-
-Custom properties use this strict shape:
+Item properties without a field of their own use this shape:
 
 ```yaml
 CUSTOM_PROPERTIES:
@@ -1231,33 +415,9 @@ CUSTOM_PROPERTIES:
     my-module.note: "Namespaced metadata only"
 ```
 
-`Registered` accepts only property IDs registered for that Item type by dnd5e. `Metadata` requires namespaced keys and is stored under the Item Importer's flags. Metadata keys are never treated as `system.*` update paths. The core adapter returns registered property IDs separately from the nested flag object so callers cannot accidentally flatten metadata into Item system data.
+`Registered` takes only property ids that dnd5e registers for that Item type. `Metadata` needs namespaced keys and is stored in the importer's flags, never in `system` data.
 
-Parser confidence, provenance, and review suggestions are produced locally. Natural-text suggestions can recognize explicit extra damage, healing, saving throws, conditions, and recharge wording. They remain previews unless automation synthesis is explicitly requested. If Activity Importer is available, attachment payloads can also be checked through its public parser API.
-
-Compendium image candidates are collected locally and can be selected randomly, with a seed for reproducible random choice, or deterministically. Cache enablement, lifetime, size, statistics, and clearing are explicit controls. AutoAnimations candidates now cover weapons, spells, consumables, tools, and equipment, can use inline activity hints, and are persisted only when a sufficiently confident candidate is available; installed animation database availability is checked at runtime.
-
-The supported module API remains feature-detected:
-
-```js
-const importer = game.modules.get("5e-item-importer")?.api;
-const result = importer?.parse(text, {
-  trace: true,
-  synthesizeAutomation: false
-});
-```
-
-Internal UI integrations load `scripts/itemCoreFeatures.js` defensively and verify each capability before use. That facade exposes the strict exporters, schema migration helpers, parse insights, safe custom-property adapters, compendium image candidate/cache services, natural automation synthesis/validation, and AutoAnimations preview/flag builders. Callers should likewise feature-detect functions and must not interpret returned metadata keys as Foundry property paths.
-
-</details>
-
-<details>
-<summary><strong>How the natural-language parser works</strong></summary>
-
-1. **Extraction:** The parser scans the text using Regex to find Stats (Name, Type, Cost, Weight, Damage, Properties, AC, etc.). Feature header signals (a feat/feature/trait header line, a `Prerequisite:` line, or stat-block markers such as `(3/Day)` and `Recharge 5-6`) are checked first and route the text to a `FEAT` document with its requirements, uses and recovery.
-2. **Stripping:** It removes lines that look like Stats to isolate the **Description**.
-3. **Conversion:** It builds a YAML document matching the strict template format.
-4. **Final Pass:** It runs the generated YAML through the `YamlItemParser` for validation and item creation.
+`api.parse(text, { trace: true })` returns the parsed Item together with where each value came from. Check that a function exists before calling it, since the API grows between versions.
 
 </details>
 

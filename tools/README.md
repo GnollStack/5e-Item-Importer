@@ -33,7 +33,7 @@ The command builds local artifacts. Publishing and premium access remain separat
 3. Update each version-pinned GitHub `download` tag to `V<version>`. Keep current manifest URLs and distribution settings.
 4. Update release notes and run the Foundry verification matrix below, then build the pair from the source intended for release.
 
-The tools read versions from the manifests; there are no current-release version constants to edit in the build scripts or companion diagnostics. Package versions are coordinated, while YAML/API schema versions change only when their contracts change. Runtime capability checks continue to tolerate compatible installations updated one module at a time. Foundry/dnd5e support versions are distinct from package versions, but both importers must advertise the same support targets. Change both manifests, the matching runtime advisory/diagnostic constants, and documentation together. A declared minimum is not evidence that the exact minimum was tested; current-candidate checks use Foundry 14.369 / dnd5e 6.0.6; retain dated older captures as historical evidence.
+The tools read versions from the manifests; there are no current-release version constants to edit in the build scripts or companion diagnostics. Package versions are coordinated, while YAML/API schema versions change only when their contracts change. Runtime capability checks continue to tolerate compatible installations updated one module at a time. Foundry/dnd5e support versions are distinct from package versions, but both importers must advertise the same support targets. Change both manifests, the matching runtime advisory/diagnostic constants, and documentation together. A declared minimum is not evidence that the exact minimum was tested; current-candidate checks use Foundry 14.370 with dnd5e 6.1.0, and with dnd5e 6.0.6 plus MIDI-QOL and DAE in a separate data folder; retain dated older captures as historical evidence.
 
 ## Foundry verification before publishing
 
@@ -65,7 +65,7 @@ The standalone builder writes `dist/5e-item-importer.zip` and `dist/module.json`
 
 The same assemble/render/diff commands accept MIDI pages. Select layer:midi in the catalog query; --layer midi can project a complete all-layer snapshot offline. It cannot invent missing layers. Follow every nextCursor, retaining filters and catalog metadata.
 
-The parity check now covers 25 shared files, including explicitYamlFields.js, activityEffectLinks.js, fieldCatalogMidi.js, fieldCatalogMidiRules.js, Test-MidiFieldCatalog.mjs, midiFieldCatalogTests.js and the template build tools (template-build.mjs, its test and Build-Templates.mjs). Provider-specific coverage stays independent. Run node --experimental-vm-modules tools/Test-MidiFieldCatalog.mjs alongside the native and report checks. See [the MIDI guide](../docs/midi-field-catalog.md).
+The parity check now covers 27 shared files, including explicitYamlFields.js, activityEffectLinks.js, fieldCatalogMidi.js, fieldCatalogMidiRules.js, Test-MidiFieldCatalog.mjs, midiFieldCatalogTests.js, the template build tools (template-build.mjs, its test and Build-Templates.mjs) and the import window's chatbot helper (scripts/ui/chatbotSupport.js and chatbot-support.test.mjs). Provider-specific coverage stays independent. Run node --experimental-vm-modules tools/Test-MidiFieldCatalog.mjs alongside the native and report checks. See [the MIDI guide](../docs/midi-field-catalog.md).
 
 
 ## Template source and generated templates

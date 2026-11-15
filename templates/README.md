@@ -9,20 +9,20 @@ Start with [explicit authoring rules](../docs/template-authoring.md), then suppl
 The first YAML block in each explicit template remains the native field reference; reviewed canonical automation fields are in the [schema 4 automation reference](../docs/automation-schema-4.md). The later marked example is concrete input with stated prerequisites. Select fields from the source intent for new content; preserve all supported supplied fields when reproducing data.
 
 
-5e Item Importer is free and works standalone. The forthcoming optional premium 5e Activity Importer adds authored activity/effect import and full Item YAML export when installed. It is not included in this free release. Premium examples below apply only when companion availability is explicitly confirmed or premium output is requested. The same strict Item format supports both workflows.
+5e Item Importer is free and works standalone. The optional premium 5e Activity Importer, available to Bazaar Patrons, adds authored activity/effect import and full Item YAML export when installed; it is a separate module. Premium examples below apply only when companion availability is explicitly confirmed or premium output is requested. The same strict Item format supports both workflows.
 
 ## Pick the template
 
 | The source is | Root key | Template |
 | --- | --- | --- |
-| Something a creature attacks with: a sword, a bow, a natural weapon, a siege weapon | `WEAPON` | Strict Weapon |
-| Armor, a shield, clothing, or a worn or held magic item that is not used up | `EQUIPMENT` | Strict Equipment |
-| Something used up or carried as a stack: a potion, scroll, ammunition, poison, food | `CONSUMABLE` | Strict Consumable |
-| Artisan's tools, a gaming set, a musical instrument or another tool | `TOOL` | Strict Tool |
-| Treasure, gems, art objects, trade goods, or plain gear with nothing to activate | `LOOT` | Strict Loot |
-| A bag, chest, quiver or other holder of items | `CONTAINER` | Strict Container |
-| A spell | `SPELL` | Strict Spell |
-| A class feature, species trait, monster ability or feat | `FEAT` | Strict Feat |
+| Something a creature attacks with: a sword, a bow, a natural weapon, a siege weapon | `WEAPON` | [Strict Weapon](YAML%20Templates/Strict%20Weapon%20Template.md) |
+| Armor, a shield, clothing, or a worn or held magic item that is not used up | `EQUIPMENT` | [Strict Equipment](YAML%20Templates/Strict%20Equipment%20Template.md) |
+| Something used up or carried as a stack: a potion, scroll, ammunition, poison, food | `CONSUMABLE` | [Strict Consumable](YAML%20Templates/Strict%20Consumable%20Template.md) |
+| Artisan's tools, a gaming set, a musical instrument or another tool | `TOOL` | [Strict Tool](YAML%20Templates/Strict%20Tool%20Template.md) |
+| Treasure, gems, art objects, trade goods, or plain gear with nothing to activate | `LOOT` | [Strict Loot](YAML%20Templates/Strict%20Loot%20Template.md) |
+| A bag, chest, quiver or other holder of items | `CONTAINER` | [Strict Container](YAML%20Templates/Strict%20Container%20Template.md) |
+| A spell | `SPELL` | [Strict Spell](YAML%20Templates/Strict%20Spell%20Template.md) |
+| A class feature, species trait, monster ability or feat | `FEAT` | [Strict Feat](YAML%20Templates/Strict%20Feat%20Template.md) |
 
 Every template opens with **At a glance** (when to use it, when to use another template, and the smallest document that works). **From source text to YAML** maps rules wording to the fields to write. The complete field reference and one concrete example follow, and **Check before you answer** lists the mistakes to look for before returning YAML.
 
@@ -61,6 +61,49 @@ Activity Importer must be active when attachments are imported. If it is absent,
 
 Free imports retain normal dnd5e Item fields and system behavior. Description enrichers provide clickable text but do not generate source-specific activities. Loot and Container support passive `effects` only and must never include `Activities`. MIDI-QOL and DAE are separate optional integrations; select their fields only when that automation is intended and available.
 
+
+## Several Items in one paste
+
+Different Item types can share one paste; separate Items of the same type with a line holding `---`. The top-level keys are `SPELL`, `FEAT`, `WEAPON`, `EQUIPMENT`, `CONSUMABLE`, `TOOL`, `LOOT` and `CONTAINER`.
+
+A `CONTAINER` can list complete Items under `CONTENTS`, up to five containers deep, and they are created inside it. An Item can also name its container with `INVENTORY.Container`: a container in the same paste, an existing one by UUID, or one dragged onto the reference in the window. Contents are never created loose if their container fails, and exporting a container includes its contents. See [full-native-container.yaml](../docs/examples/full-native-container.yaml).
+
+## Quick drafts
+
+For a quick single-Item draft, the eight Item types can also be written as a flat key/value list. At minimum give `name` and `type`; the importer fills in sensible defaults and checks the result the same way as strict YAML.
+
+```yaml
+name: Quick Spark
+type: spell
+level: 2
+school: evocation
+activation: bonus action
+components: V, S
+range: 60 feet
+duration: 1 minute
+description: A brief arc of blue-white light.
+```
+
+Type-specific lightweight fields include `weaponType`/`baseWeapon`, `equipmentType`/`baseEquipment`/`armorClass`, `consumableType`/`ammunitionType`/`poisonType`, `toolType`/`baseTool`, `lootType`, container capacity fields, spell level/school/activation/component/range/duration fields, and feature `featureType`/`featureSubtype`/`requirements`/`prerequisiteLevel`/`repeatable` fields (`type: feat` with `featureType: general feat`, `invocation`, `species trait`, and similar readable values).
+
+Readable aliases such as `armor`/`armour`, `potion`, `scroll`, `martial melee`, `thieves tools`, `trade goods`, and full spell-school names are accepted. Values it can't use are reported, never silently replaced. Use the strict templates for anything more detailed.
+
+## Rules worth knowing
+
+- **Mixed damage:** write a typed formula such as `1d8[piercing] + 1d6[lightning]` and set `Damage Type` to the main type (`piercing`), so ability and magic bonuses land on the right type. Do the same for `Versatile Damage Type`.
+- **Mechanics:** enrichers such as `[[/damage 1d6 fire]]` make clickable text, not mechanics. Saves, damage and effects that should work at the table go in `Activities` and `effects`, which need Activity Importer; without it, keep the rules in the description.
+- **Rituals:** `COMPONENTS.Ritual: true` marks a ritual spell; how it is prepared is set separately.
+- **Numbers:** quantities and uses are whole numbers; price, weight and capacity may have decimals; none can be negative, and `12abc` is an error.
+- **Attunement:** `Attunement By` is kept only when `Attunement` is `required` or `optional`.
+- **Warnings and errors:** an unknown section or field name is a warning; anything invalid is an error, and nothing imports until it is fixed.
+
+## Descriptions: enrichers and name lookups
+
+`Description` and `Chat Description` fields preserve Foundry/dnd5e text features for Foundry to resolve when displayed. You can use dnd5e enrichers like `[[/damage 1d6 fire average]]`, roll-data formulas like `@prof`, dynamic lookups like `[[lookup @name]]{the creature}`, System HTML classes, and pass-through document links like `@UUID[...]` or `@Embed[...]`.
+
+Use dynamic name lookups for active narration and chat flavor, such as `[[lookup @name]]{The creature} drinks the potion.` or `When [[lookup @name]]{the creature} hits with this weapon...`. Keep passive rules text natural.
+
+Optional companion: **Token Name Lookup** can make the same stock dnd5e `[[lookup @name]]` text prefer concrete token names for aliases, disguises, and token inventory views. Items remain fully compatible without that module; dnd5e simply resolves the lookup to the actor name.
 
 ## Explicit YAML schema 7 reference
 

@@ -1,6 +1,6 @@
 # Using the Item Importer window
 
-This guide covers the unreleased window improvements. Older screenshots may show **Parse** instead of **Preview**, or an always-visible normalized YAML panel. Item Importer remains free and standalone with its eight supported Item types, including Features.
+This guide covers the import window. Older screenshots may show **Parse** instead of **Preview**, or an always-visible normalized YAML panel. Item Importer remains free and standalone with its eight supported Item types, including Features.
 
 ## Prepare, preview and import
 

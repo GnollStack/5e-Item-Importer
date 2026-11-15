@@ -41,17 +41,24 @@ To ensure correct parsing of damage and properties:
 *   **Damage:** Format as `1d8 slashing` or `Damage: 2d6 fire`.
 *   **Properties:** List them clearly: `Finesse, Light, Thrown`.
 *   **Versatile:** Use the specific format `Versatile (1d10)`.
+*   **Magic weapon damage:** A known base weapon keeps its normal damage unless you add a `Damage:` line. Extra damage in the description stays extra.
 
 ### **4. Armor & Equipment**
 *   **AC:** Use `AC 18` or `Armor Class: 14`.
 *   **Stealth:** Use the phrase `Disadvantage on Stealth checks`.
 *   **Strength:** Use `Requires Strength 13` or `Str 15`.
+*   **Wondrous items:** `Wondrous Item` imports as wondrous equipment.
 
 ### **5. Containers**
 The parser looks for specific capacity phrases:
 *   **Weight:** "Holds 500 pounds" or "Capacity: 500 lbs".
 *   **Volume:** "64 cubic feet".
 *   **Currency:** "Contains 50 gp" or "Holds 10 platinum".
+
+### **6. Consumables**
+*   The name and type line decide the kind: potion, scroll, wand, rod, ammunition, poison, food or trinket.
+*   `has 7 charges` gives the Item 7 uses.
+*   A count in brackets, such as `Arrows (20)`, sets the quantity.
 
 ---
 
