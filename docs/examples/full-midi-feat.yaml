@@ -134,7 +134,7 @@ FEAT:
               Units: rounds
               Effect Expiry: turnEnd
             APPLICATION:
-              Save On Save: false
+              On Save: false
             CHANGES: []
         MIDI CONDITIONS:
           Identifier: thunder-breath

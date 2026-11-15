@@ -292,7 +292,7 @@ WEAPON:
               Value: null
               Units: seconds
             APPLICATION:
-              Save On Save: false
+              On Save: false
             CHANGES: []
         MIDI CONDITIONS:
           Identifier: storm-impact

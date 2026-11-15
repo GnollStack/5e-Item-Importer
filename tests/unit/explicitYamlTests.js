@@ -562,5 +562,19 @@ export async function runExplicitItemYamlTests() {
     requireValue(result.issues.length===0&&result.addedActivities===2&&result.addedEffects===1&&effects.size===1,"Shared effect creation failed or duplicated definitions.");
     for(const planned of results.slice(0,2))requireValue(same(activities.get(planned.activityData._id).effects,planned.activityData.effects),"Planned shared reference metadata changed during creation.");
   });
+  await test("The paste repair leaves list values alone and still repairs list keys",async()=>{
+    // `- class:wizard` is a value (js-yaml writes it without quotes); `- Period:lr` is a key that lost its space.
+    const text=["SCHEMA_VERSION: 7","FEAT:","  ITEM:","    Name:\"Shifting Form\"","  USAGE:","    Uses Spent: 0","    Uses Max:2","  RECOVERY:","    - Period:lr","      Type:recoverAll",
+      "  Activities:","    - ACTIVITY_TRANSFORM:","        ACTIVITY:","          Name: Shift","        TRANSFORMATION_PROFILES:","          Mode: cr","        TRANSFORMATION_DETAILS:","          Customize: true",
+      "          CUSTOM_OPTIONS:","            OTHER_OPTIONS:","              Retained Spell Lists:","                - class:wizard","                - https://example.com/list"].join("\n");
+    const parsed=new YamlItemParser().parse(text);
+    requireValue(parsed.success,parsed.errors.join("; "));
+    await parsed.item.buildFoundryData({deterministicIcons:true});
+    const lists=parsed.item.pendingActivities[0].rawData.ACTIVITY_TRANSFORM.TRANSFORMATION_DETAILS.CUSTOM_OPTIONS.OTHER_OPTIONS["Retained Spell Lists"];
+    requireValue(same(lists,["class:wizard","https://example.com/list"]),"A block-list value with a colon was rewritten: "+JSON.stringify(lists));
+    const uses=parsed.item.itemData.system.uses;
+    requireValue(parsed.item.itemData.name==="Shifting Form"&&String(uses.max)==="2"&&uses.recovery?.[0]?.period==="lr"&&uses.recovery?.[0]?.type==="recoverAll",
+      "A key without a space after its colon is no longer repaired: "+JSON.stringify({name:parsed.item.itemData.name,uses}));
+  });
   return {passed:results.filter(r=>r.passed).length,failed:results.filter(r=>!r.passed).length,total:results.length,results};
 }

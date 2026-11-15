@@ -121,6 +121,15 @@ function asString(val, fallback = '') {
 // `!` tag, `%` directive, `@` and backtick reserved): `skills:*` is a plain-scalar
 // trait key, and `skills: *` would be an empty alias.
 const KEY_NO_SPACE_RE = /^(\s*-?\s*)([A-Za-z_](?:[A-Za-z0-9_\- ]*[A-Za-z0-9_\-])?):([^\s*&!%@`])/;
+
+/**
+ * A list entry such as `- skills:ath`, `- class:wizard` or `- https://example.com/a.png` is a
+ * value, not a key that lost its space, and js-yaml writes such values without quotes. A list
+ * entry that is a mapping starts with a template key, and every template key starts with a capital.
+ */
+function isListValue(colonMatch) {
+    return colonMatch[1].includes('-') && !/^[A-Z]/.test(colonMatch[2]);
+}
 const BLOCK_SCALAR_OPENER_RE = /:\s*[|>][\d+\-]*\s*(?:#.*)?$/;
 const SMART_QUOTE_RE = /[‘’“”]/;
 const LEADING_TABS_RE = /^\t+/;
@@ -164,7 +173,7 @@ function normalizeYamlForLlm(text) {
         }
 
         const colonMatch = line.match(KEY_NO_SPACE_RE);
-        if (colonMatch) {
+        if (colonMatch && !isListValue(colonMatch)) {
             line = line.replace(KEY_NO_SPACE_RE, '$1$2: $3');
             fixes.push({ kind: 'keyColonSpace', lineNo, snippet: original.trim() });
         }
