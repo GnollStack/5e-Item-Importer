@@ -12,6 +12,14 @@ This guide covers the unreleased window improvements. Older screenshots may show
 
 Natural-text parsing detects supported fields; it does not reconstruct every rule as automation. Keep the source description and review the generated values. The [natural-language template](../templates/Naturalized%20Item%20Template.md) gives useful input patterns, and the [generation guide](../templates/README.md) covers strict YAML.
 
+## Writing YAML with a chatbot
+
+The **Importer LLM Pack** link under **Item source** opens the files that teach Claude, ChatGPT or another chatbot to write this YAML, in the pack version made for your installed version.
+
+When the preview reports an error or a warning, **Copy problems** appears under it. It copies the messages, one setup line (which importers, dnd5e version and MIDI-QOL state you have) and your YAML, ready to paste back into the chat that wrote it. A chatbot set up with the pack then fixes what the messages name and answers with the whole corrected YAML.
+
+With Activity Importer, YAML written for MIDI-QOL also imports where MIDI-QOL is not active: the activities are created without their MIDI-QOL settings, and one notice in **Activities & Effects** (at the top of a batch) lists what is left out. To add those settings, import the YAML again in a world where MIDI-QOL is active.
+
 ## Inspect or edit generated YAML
 
 The optional second editor is useful when starting with prose: it lets you inspect the strict YAML produced from the preview while retaining the original description above.

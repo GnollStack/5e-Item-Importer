@@ -120,6 +120,8 @@
         <div class="ii-input-footer" data-input-help>
             <p id="ii-input-help" class="ii-drop-hint">
                 <i class="fas fa-file-import" aria-hidden="true"></i> {{localize "II.Input.DropHint"}}
+                <a class="ii-pack-link" href="{{packUrl}}" target="_blank" rel="noopener noreferrer"
+                    title="{{localize 'II.Pack.LinkHint'}}"><i class="fas fa-robot" aria-hidden="true"></i> Importer LLM Pack {{packVersion}}</a>
             </p>
 
             <div id="ii-shortcuts" class="ii-shortcuts-hint">
@@ -136,6 +138,10 @@
         </label>
         <div id="ii-parse-output" class="ii-parse-output" role="region" aria-live="polite" aria-busy="false">
             <p><em>{{localize "II.Results.Empty"}}</em></p>
+        </div>
+        <div class="ii-inline-actions ii-problem-tools" data-problem-tools hidden>
+            <button type="button" data-action="copyProblems" title="{{localize 'II.Problems.CopyHint'}}"><i class="fas fa-comment-dots" aria-hidden="true"></i> {{localize "II.Problems.Copy"}}</button>
+            <span class="ii-problem-note">{{localize "II.Problems.Note"}}</span>
         </div>
     </div>
 

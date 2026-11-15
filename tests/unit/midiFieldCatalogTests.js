@@ -290,11 +290,15 @@ export function runMidiYamlCoverageTests({ parser, serializer, decorate }) {
         const invalid = parser.parseAllBlocksYaml(yaml("attack", "  MIDI ATTACK:\n    Fumble Threshold: 1.5"))[0];
         assert(invalid.success && invalid.activityData.fumbleThreshold === 1.5);
     });
-    check("MIDI parser unavailable warns while preserving supported data", () => {
+    check("MIDI parser unavailable leaves the MIDI-QOL fields out and lists them", () => {
         globalThis.game.modules.get("midi-qol").active = false;
-        const result = parse(yaml("attack", "  MIDI CONDITIONS:\n    AoE Target Type: enemy"));
-        assert(result.activityData.midiProperties.autoTargetType === "enemy" && result.warnings.some(text => text.includes("not active")));
-        globalThis.game.modules.get("midi-qol").active = true;
+        try {
+            const result = parse(yaml("attack", "  MIDI CONDITIONS:\n    AoE Target Type: enemy"));
+            assert(result.success && result.activityData.midiProperties === undefined
+                && result.skippedMidiFields?.includes("midiProperties.autoTargetType"));
+        } finally {
+            globalThis.game.modules.get("midi-qol").active = true;
+        }
     });
     return { tests };
 }

@@ -28,6 +28,7 @@ import { ITEM_TEMPLATES } from "./itemTemplates.js";
 import { getItemRecipes } from "./itemRecipes.js";
 import { prepareRecipeText } from "./recipeEditor.js";
 import * as Renderer from "./itemWindowRenderer.js";
+import { hasProblems, midiSkippedNotice, parseResultProblems, problemsForChat, skippedMidiSettings, uniqueProblems } from "./chatbotSupport.js";
 import { extractExpectedItemProps, extractActualItemProps } from "./itemComparisonExtractor.js";
 import { compareProperties } from "./itemComparisonEngine.js";
 import { runItemImportWorkflow, confirmDialog } from "./itemImportWorkflow.js";
@@ -118,6 +119,7 @@ function beginParse(window, importBtn) {
     window.parseStateTimeout = null;
     window.parseGeneration = (window.parseGeneration ?? 0) + 1;
     window.currentParseResult = null;
+    window.lastParseFailure = null;
     window.normalizedText = "";
     window.normalizedError = "";
     const editor = window.element.querySelector("#ii-normalized-input");
@@ -549,6 +551,7 @@ export async function parse() {
         <ul>${allErrors.map((i) => `<li>${esc(i)}</li>`).join("")}</ul>
       </div>`;
             importBtn.disabled = true;
+            this.lastParseFailure = { errors: result?.errors || [], warnings: result?.warnings || [] };
             this._updateParseState("error");
             return;
         }
@@ -594,6 +597,7 @@ export async function parse() {
     </div>`;
         importBtn.disabled = true;
         this.currentParseResult = null;
+        this.lastParseFailure = { errors: [error.message], warnings: [] };
         this._updateParseState("error");
     }
 }
@@ -1243,6 +1247,57 @@ export async function copyNormalized() {
         if (!this.normalizedText?.trim()) throw new Error(this.normalizedError || "Preview an Item before copying generated YAML.");
         await copyText(this.normalizedText);
         ui.notifications.info(localize("II.Notifications.Copied", "Copied normalized YAML."));
+    } catch (error) {
+        ui.notifications.error(error?.message || String(error));
+    }
+}
+
+/**
+ * The current preview's errors and warnings as `{ level, text }`: the Item's own, its inline
+ * activities' and effects', batch failures, and the MIDI-QOL notice as a note. A batch names
+ * each Item.
+ */
+export function collectPreviewProblems(window) {
+    const problems = [];
+    const textOf = entry => String(entry?.message ?? entry ?? "").trim();
+    const failure = window?.lastParseFailure;
+    for (const message of failure?.errors ?? []) problems.push({ level: "error", text: textOf(message) });
+    for (const message of failure?.warnings ?? []) problems.push({ level: "warning", text: textOf(message) });
+    const parsed = window?.currentParseResult;
+    const batch = Array.isArray(parsed?.successes);
+    const entries = batch ? parsed.successes : (parsed?.item ? [parsed] : []);
+    for (const result of entries) {
+        const prefix = batch && result.item?.name ? result.item.name + ": " : "";
+        for (const message of result.errors ?? []) problems.push({ level: "error", text: prefix + textOf(message) });
+        for (const message of result.warnings ?? []) problems.push({ level: "warning", text: prefix + textOf(message) });
+        problems.push(...parseResultProblems(result.item?._parsedActivityResults, prefix));
+    }
+    for (const failed of batch ? parsed.failures ?? [] : []) {
+        const firstLine = String(failed.text ?? "").split("\n")[0].trim().slice(0, 60);
+        for (const message of failed.errors ?? []) problems.push({ level: "error", text: (firstLine ? firstLine + ": " : "") + textOf(message) });
+    }
+    const notice = midiSkippedNotice(entries.flatMap(result => skippedMidiSettings(result.item?._parsedActivityResults)));
+    if (notice) problems.push({ level: "note", text: notice.summary });
+    return uniqueProblems(problems.filter(problem => problem.text));
+}
+
+/** True while the preview has an error or a warning to copy. */
+export function previewHasProblems(window) {
+    return hasProblems(collectPreviewProblems(window));
+}
+
+/** Copy the preview's problems, the setup and the YAML for the chatbot that wrote it. */
+export async function copyProblems() {
+    const yaml = this.element.querySelector("#ii-input")?.value ?? "";
+    const problems = collectPreviewProblems(this);
+    if (!hasProblems(problems)) {
+        this._refreshContextTools?.();
+        return ui.notifications.info(localize("II.Notifications.NoProblems", "The preview has no errors or warnings to copy."));
+    }
+    const text = problemsForChat({ windowTitle: "5e Item Importer", problems, yaml });
+    try {
+        await copyText(text);
+        ui.notifications.info(localize("II.Notifications.ProblemsCopied", "Copied the problems and the YAML. Paste them into the chat that wrote the YAML."));
     } catch (error) {
         ui.notifications.error(error?.message || String(error));
     }

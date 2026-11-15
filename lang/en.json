@@ -54,6 +54,14 @@
       "Label": "Import preview",
       "Empty": "Add an item source to preview it."
     },
+    "Problems": {
+      "Copy": "Copy problems",
+      "CopyHint": "Copy the errors, warnings and YAML to paste back into the chat that wrote it",
+      "Note": "For the chatbot that wrote this YAML."
+    },
+    "Pack": {
+      "LinkHint": "Files that teach Claude, ChatGPT or another chatbot to write this YAML"
+    },
     "Normalized": {
       "Title": "Generated YAML editor",
       "Label": "Normalized strict YAML",
@@ -137,6 +145,8 @@
       "PresetSaved": "Saved preset: {name}",
       "PresetDeleted": "Deleted preset.",
       "Copied": "Copied normalized YAML.",
+      "ProblemsCopied": "Copied the problems and the YAML. Paste them into the chat that wrote the YAML.",
+      "NoProblems": "The preview has no errors or warnings to copy.",
       "CancelRequested": "Import will stop after the current Item.",
       "NoHistory": "There is no import session to report.",
       "NoUndo": "There is no undoable import session.",

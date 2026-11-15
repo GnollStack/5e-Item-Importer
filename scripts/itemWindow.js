@@ -20,6 +20,7 @@ import {
 import { getActivityCapabilities } from "./ui/itemFeatureAdapters.js";
 
 import { ImportViewLayout } from "./ui/importViewLayout.js";
+import { LLM_PACK_URL, LLM_PACK_VERSION } from "./ui/chatbotSupport.js";
 import { bindImportWindowDefaults } from "./ui/importWindowDefaults.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -97,6 +98,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       savePreset: Actions.saveCurrentPreset,
       deletePreset: Actions.deleteCurrentPreset,
       copyNormalized: Actions.copyNormalized,
+      copyProblems: Actions.copyProblems,
       downloadNormalized: Actions.downloadNormalized,
       reparseNormalized: Actions.reparseNormalized,
       cancelImport: Actions.cancelImport,
@@ -203,7 +205,9 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
       destinationCompendium: destination.kind === "compendium",
       canCreateWorld,
       activityCapabilities: getActivityCapabilities(),
-      isAutoAnimationsActive: game.modules.get("autoanimations")?.active
+      isAutoAnimationsActive: game.modules.get("autoanimations")?.active,
+      packUrl: LLM_PACK_URL,
+      packVersion: LLM_PACK_VERSION
     };
   }
 
@@ -879,6 +883,8 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     if (builder) builder.hidden = !(parsed?.success && parsed.item && !parsed.successes);
     const exports = root.querySelector("[data-generated-tools]");
     if (exports) exports.hidden = !this.normalizedText;
+    const problems = root.querySelector("[data-problem-tools]");
+    if (problems) problems.hidden = !Actions.previewHasProblems(this);
     const error = root.querySelector("[data-yaml-error]");
     if (error) { error.textContent = this.normalizedError || ""; error.hidden = !this.normalizedError; }
     const apply = root.querySelector('[data-action="reparseNormalized"]');
@@ -928,6 +934,7 @@ export class ItemWindow extends HandlebarsApplicationMixin(ApplicationV2) {
     this.parseStateTimeout = null;
 
     this.currentParseResult = null;
+    this.lastParseFailure = null;
     this.selectedBatchItems = new Set();
     this.normalizedText = "";
     this.normalizedError = "";

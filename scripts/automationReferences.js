@@ -16,6 +16,28 @@ export function automationDependencyIssues(source, type) {
     } catch (error) { return [error.message]; }
 }
 
+/**
+ * Remove the MIDI-QOL activity fields the native Activity model would discard without MIDI-QOL
+ * (`AUTOMATION.midi-qol.fields` and the older MIDI sections). Flags are kept: they survive without
+ * their provider. Returns the removed paths, for example `midiProperties.triggeredActivityId`.
+ */
+export function removeMidiActivityFields(activityData, type) {
+    const fields = exportAutomation(activityData, "activity", type)["midi-qol"]?.fields ?? {};
+    const removed = [];
+    for (const [key, value] of Object.entries(fields)) {
+        if (type === "save" && key === "damage") {
+            delete activityData.damage.critical;
+            const names = Object.keys(value.critical ?? {});
+            removed.push(...(names.length ? names.map(name => "damage.critical." + name) : ["damage.critical"]));
+            continue;
+        }
+        delete activityData[key];
+        const nested = value && typeof value === "object" && !Array.isArray(value) ? Object.keys(value) : [];
+        removed.push(...(nested.length ? nested.map(name => key + "." + name) : [key]));
+    }
+    return removed;
+}
+
 /** Resolve documented MIDI links, never references inside arbitrary command/expression text. No writes. */
 export async function validateAutomationReferences(results, item, { advisoryOnly = false, resolveUuid = globalThis.fromUuid } = {}) {
     const findings = [];

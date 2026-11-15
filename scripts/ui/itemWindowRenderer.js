@@ -9,6 +9,21 @@ import { ItemUtils } from "../itemUtils.js";
 import { isPhysicalItemType } from "../itemConfig.js";
 import { describeAdvancement } from "../itemAdvancement.js";
 import { localize } from "./itemWorkflowServices.js";
+import { midiSkippedNotice, skippedMidiSettings } from "./chatbotSupport.js";
+
+/**
+ * The one notice for MIDI-QOL settings left out of inline activities because MIDI-QOL is not
+ * active here, with the short MIDI-QOL hint. Empty when nothing was left out.
+ * @param {Array<Object>} items - Parsed Items with `_parsedActivityResults`
+ */
+export function renderMidiSkippedNotice(items) {
+    const notice = midiSkippedNotice((items ?? []).flatMap(item => skippedMidiSettings(item?._parsedActivityResults)));
+    if (!notice) return "";
+    return `<div class="ii-midi-notice" role="note">
+        <p><i class="fas fa-info-circle" aria-hidden="true"></i> ${esc(notice.summary)}</p>
+        <p class="ii-midi-hint">${esc(notice.hint)}</p>
+    </div>`;
+}
 
 /** Shorthand for HTML escaping */
 const esc = (str) => ItemUtils.escapeHtml(str);
@@ -616,6 +631,7 @@ export function renderItemCard(item, result) {
         if (!activityImporterActive) {
             html += `<div class="ii-parse-warning" style="margin-bottom: 0.5em;"><i class="fas fa-exclamation-triangle"></i> 5e-activity-importer module is not active. These will be skipped on import.</div>`;
         }
+        html += renderMidiSkippedNotice([item]);
 
         // If we have pre-parsed activity results (with UUID drop zones), render rich cards
         if (item._parsedActivityResults && item._parsedActivityResults.length > 0) {
@@ -697,6 +713,7 @@ export function renderBatchSummary(results, selectedItems) {
     // Selection controls and grid of parsed items
     if (results.successes.length > 0) {
         html += `<div class="ii-card-body">
+      ${renderMidiSkippedNotice(results.successes.map(result => result.item))}
       <div class="ii-section">
         <div class="ii-section-header">
           <i class="fas fa-check-circle ii-section-icon" style="color: var(--ii-success);"></i>
