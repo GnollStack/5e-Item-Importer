@@ -155,17 +155,19 @@ WEAPON:
                 Scaling Mode: none
                 Scaling Dice Count: 0
                 Scaling Formula: ""
-        MIDI CONDITIONS:
-          Identifier: stormsteel-strike
-          Display Activity Name: true
-          Magic Damage: true
-          Target Confirmation: always
-          Use Other Activity: none
-          Trigger Activity: none
-          Apply Convenient Effects: none
-        MIDI ATTACK:
-          Attack Roll Per Target: default
-          Fumble Threshold: 1
+        AUTOMATION:
+          midi-qol:
+            fields:
+              otherActivityId: none
+              attackRollPerTarget: default
+              fumbleThreshold: 1
+              midiProperties:
+                identifier: stormsteel-strike
+                displayActivityName: true
+                magicDamage: true
+                confirmTargets: always
+                triggeredActivityId: none
+                autoCEEffects: none
     - ACTIVITY_ATTACK:
         ACTIVITY:
           Name: Thunderous Strike
@@ -228,20 +230,23 @@ WEAPON:
                 Scaling Mode: none
                 Scaling Dice Count: 0
                 Scaling Formula: ""
-        MIDI CONDITIONS:
-          Identifier: thunderous-strike
-          Display Activity Name: true
-          Magic Damage: true
-          Auto Consume: false
-          Force Consume Dialog: always
-          Target Confirmation: always
-          Use Other Activity: none
-          Trigger Activity: storm-impact
-          Trigger Targets: hitTargets
-          Roll As: self
-          Trigger Consume Resources: false
-          Trigger Configure Dialog: false
-          Apply Convenient Effects: none
+        AUTOMATION:
+          midi-qol:
+            fields:
+              otherActivityId: none
+              midiProperties:
+                identifier: thunderous-strike
+                displayActivityName: true
+                magicDamage: true
+                autoConsume: false
+                forceConsumeDialog: always
+                confirmTargets: always
+                triggeredActivityId: storm-impact
+                triggeredActivityTargets: hitTargets
+                triggeredActivityRollAs: self
+                triggeredActivityConsume: false
+                triggeredActivityConfigure: false
+                autoCEEffects: none
     - ACTIVITY_SAVE:
         ACTIVITY:
           Name: Storm Impact
@@ -273,9 +278,22 @@ WEAPON:
         SAVE_DAMAGE:
           Damage on Save: none
           DAMAGE_PARTS: []
-        MIDI SAVE FIELDS:
-          Friendly Save: default
-          Magic Effect: true
+        AUTOMATION:
+          midi-qol:
+            fields:
+              friendlySave: default
+              otherActivityId: none
+              midiProperties:
+                magicEffect: true
+                identifier: storm-impact
+                automationOnly: true
+                otherActivityCompatible: false
+                displayActivityName: true
+                confirmTargets: never
+                chooseEffects: false
+                toggleEffect: false
+                triggeredActivityId: none
+                autoCEEffects: none
         APPLIED_EFFECTS:
           - DETAILS:
               Name: Storm Impact - Prone
@@ -294,17 +312,6 @@ WEAPON:
             APPLICATION:
               On Save: false
             CHANGES: []
-        MIDI CONDITIONS:
-          Identifier: storm-impact
-          Automation Only: true
-          Other Activity Compatible: false
-          Display Activity Name: true
-          Target Confirmation: never
-          Choose Effects: false
-          Toggle Effect: false
-          Use Other Activity: none
-          Trigger Activity: none
-          Apply Convenient Effects: none
     - ACTIVITY_SAVE:
         ACTIVITY:
           Name: Call the Storm
@@ -359,21 +366,23 @@ WEAPON:
                 Scaling Mode: none
                 Scaling Dice Count: 0
                 Scaling Formula: ""
-        MIDI SAVE FIELDS:
-          Friendly Save: default
-          Magic Effect: true
-        MIDI CONDITIONS:
-          Identifier: call-the-storm
-          Display Activity Name: true
-          Magic Damage: true
-          Auto Consume: false
-          Force Consume Dialog: always
-          Target Confirmation: always
-          AoE Target Type: enemy
-          Target on Template Draw: alwaysIgnoreDefeated
-          Use Other Activity: none
-          Trigger Activity: none
-          Apply Convenient Effects: none
+        AUTOMATION:
+          midi-qol:
+            fields:
+              friendlySave: default
+              otherActivityId: none
+              midiProperties:
+                magicEffect: true
+                identifier: call-the-storm
+                displayActivityName: true
+                magicDamage: true
+                autoConsume: false
+                forceConsumeDialog: always
+                confirmTargets: always
+                autoTargetType: enemy
+                autoTargetAction: alwaysIgnoreDefeated
+                triggeredActivityId: none
+                autoCEEffects: none
     - ACTIVITY_HEAL:
         ACTIVITY:
           Name: Stormguard
@@ -417,11 +426,14 @@ WEAPON:
             Scaling Mode: none
             Scaling Dice Count: 0
             Scaling Formula: ""
-        MIDI CONDITIONS:
-          Identifier: stormguard
-          Display Activity Name: true
-          Auto Consume: false
-          Force Consume Dialog: always
-          Target Confirmation: never
-          Trigger Activity: none
-          Apply Convenient Effects: none
+        AUTOMATION:
+          midi-qol:
+            fields:
+              midiProperties:
+                identifier: stormguard
+                displayActivityName: true
+                autoConsume: false
+                forceConsumeDialog: always
+                confirmTargets: never
+                triggeredActivityId: none
+                autoCEEffects: none

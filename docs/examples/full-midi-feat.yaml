@@ -115,9 +115,23 @@ FEAT:
                 Scaling Mode: none
                 Scaling Dice Count: 0
                 Scaling Formula: ""
-        MIDI SAVE FIELDS:
-          Friendly Save: default
-          Magic Effect: false
+        AUTOMATION:
+          midi-qol:
+            fields:
+              friendlySave: default
+              otherActivityId: none
+              midiProperties:
+                magicEffect: false
+                identifier: thunder-breath
+                displayActivityName: true
+                magicDamage: false
+                autoConsume: false
+                forceConsumeDialog: always
+                confirmTargets: always
+                autoTargetType: any
+                autoTargetAction: alwaysIgnoreDefeated
+                triggeredActivityId: none
+                autoCEEffects: none
         APPLIED_EFFECTS:
           - DETAILS:
               Name: Thunder Breath - Deafened
@@ -136,18 +150,6 @@ FEAT:
             APPLICATION:
               On Save: false
             CHANGES: []
-        MIDI CONDITIONS:
-          Identifier: thunder-breath
-          Display Activity Name: true
-          Magic Damage: false
-          Auto Consume: false
-          Force Consume Dialog: always
-          Target Confirmation: always
-          AoE Target Type: any
-          Target on Template Draw: alwaysIgnoreDefeated
-          Use Other Activity: none
-          Trigger Activity: none
-          Apply Convenient Effects: none
     - ACTIVITY_HEAL:
         ACTIVITY:
           Name: Stormheart Vigor
@@ -187,11 +189,14 @@ FEAT:
             Scaling Mode: none
             Scaling Dice Count: 0
             Scaling Formula: ""
-        MIDI CONDITIONS:
-          Identifier: stormheart-vigor
-          Display Activity Name: true
-          Auto Consume: false
-          Force Consume Dialog: always
-          Target Confirmation: never
-          Trigger Activity: none
-          Apply Convenient Effects: none
+        AUTOMATION:
+          midi-qol:
+            fields:
+              midiProperties:
+                identifier: stormheart-vigor
+                displayActivityName: true
+                autoConsume: false
+                forceConsumeDialog: always
+                confirmTargets: never
+                triggeredActivityId: none
+                autoCEEffects: none
