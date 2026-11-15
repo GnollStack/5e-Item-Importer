@@ -2,6 +2,8 @@
 
 ## LLM authoring entry point
 
+For a chatbot project, use the [Importer LLM Pack](https://github.com/GnollStack/bakshis-bazaar-archives/tree/main/importer-llm-pack/14.4.0) of this version. It assembles the field references, source-to-YAML rows and checks of these templates into a few files a chatbot can read, with worked examples and setup steps for Claude Projects, ChatGPT Projects and other chatbots. The files below are the same content for agents that read the module's own files.
+
 Start with [explicit authoring rules](../docs/template-authoring.md), then supply the matching full reference and [concrete example](../docs/examples/README.md). State whether you are creating from a description or preserving stored data. Missing material mechanics and required references need clarification before final YAML. A linked file must actually be supplied/read; links alone do not make a template bundle self-contained.
 
 The first YAML block in each explicit template remains the native field reference; reviewed canonical automation fields are in the [schema 4 automation reference](../docs/automation-schema-4.md). The later marked example is concrete input with stated prerequisites. Select fields from the source intent for new content; preserve all supported supplied fields when reproducing data.

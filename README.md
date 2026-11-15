@@ -211,7 +211,7 @@ This lacquered case contains enchanted inks, folding rulers, waxed vellum, and a
 
 *Best for: complex homebrew and bulk generation.*
 
-Strict Format uses a documented YAML shape instead of guessing from prose. Start with the template for the Item type you need, fill in the relevant fields, and parse it in the same importer window. Validation messages call out fields that need attention before import. It works well with large language models like ChatGPT, Gemini, or Claude.
+Strict Format uses a documented YAML shape instead of guessing from prose. Start with the template for the Item type you need, fill in the relevant fields, and parse it in the same importer window. Validation messages call out fields that need attention before import. It works well with large language models like ChatGPT, Gemini, or Claude: the [Importer LLM Pack](https://github.com/GnollStack/bakshis-bazaar-archives/tree/main/importer-llm-pack/14.4.0) holds the files to give a chatbot, with setup steps for Claude Projects, ChatGPT Projects and other chatbots.
 
 The template picker includes [editable recipes](templates/README.md#schema-4-automation-and-recipes) for multiple rarities and dawn/dusk charge recovery. With the compatible Activity Importer companion enabled, it also offers complete-Item recipes.
 
