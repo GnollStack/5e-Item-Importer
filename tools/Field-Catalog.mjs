@@ -37,7 +37,9 @@ async function main(argv) {
       "tools/template-completeness.mjs", "tools/template-completeness.test.mjs", "tools/Test-TemplateCompleteness.mjs",
       "tools/template-authoring.mjs", "tools/template-authoring.test.mjs", "tools/Test-TemplateAuthoring.mjs",
       "tools/template-build.mjs", "tools/template-build.test.mjs", "tools/Build-Templates.mjs",
-      "scripts/ui/chatbotSupport.js", "tools/chatbot-support.test.mjs"];
+      "scripts/ui/chatbotSupport.js", "tools/chatbot-support.test.mjs",
+      "scripts/referenceLinking.js", "scripts/ui/referencePicker.js", "tools/reference-linking.test.mjs",
+      "scripts/ui/referenceCompendiums.js"];
     for (const name of names) {
       const [local, sibling] = await Promise.all([fs.readFile(path.join(localRoot, name)), fs.readFile(path.join(argv[1], name))]);
       if (!local.equals(sibling)) throw new Error("Catalog shared helper parity failed: " + name);

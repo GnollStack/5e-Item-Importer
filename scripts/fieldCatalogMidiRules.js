@@ -1,7 +1,25 @@
 import { automationFieldEntries } from "./automationFields.js";
 /** Reviewed source annotations, not validators or a generated snapshot. Keep importer copies identical. */
-// MIDI-QOL 14.6.11 declares dnd5e maximum 6.0.999; it cannot be reviewed on dnd5e 6.1.
-export const MIDI_REVIEW = Object.freeze({ midi: "14.6.11", system: "6.0.6", foundry: "14.370" });
+// Reviewed MIDI-QOL runtimes. MIDI-QOL 14.6.x runs on dnd5e 6.0 only and 14.7.0 on dnd5e 6.1 only.
+// 14.6.14 and 14.7.0 declare the same activity fields, sheet templates and sheet choices as 14.6.11
+// (compared 2026-11-19); dnd5e 6.1.1 is a bug-fix release of 6.1.0. All stay reviewed.
+export const MIDI_REVIEWED_RUNTIMES = Object.freeze([
+    Object.freeze({ midi: "14.6.11", system: "6.0.6", foundry: "14.370" }),
+    Object.freeze({ midi: "14.6.14", system: "6.0.6", foundry: "14.370" }),
+    Object.freeze({ midi: "14.7.0", system: "6.1.0", foundry: "14.370" }),
+    Object.freeze({ midi: "14.7.0", system: "6.1.1", foundry: "14.370" })
+]);
+/** The review the templates and labels name. */
+export const MIDI_REVIEW = MIDI_REVIEWED_RUNTIMES.find(runtime => runtime.midi === "14.7.0" && runtime.system === "6.1.0");
+
+/** True when this MIDI-QOL version (and, when given, dnd5e and Foundry versions) is a reviewed runtime. */
+export function isReviewedMidiRuntime(midiVersion, systemVersion, foundryVersion) {
+    return MIDI_REVIEWED_RUNTIMES.some(runtime => runtime.midi === midiVersion
+        && (systemVersion === undefined || runtime.system === systemVersion)
+        && (foundryVersion === undefined || runtime.foundry === foundryVersion));
+}
+
+const reviewedLabel = () => MIDI_REVIEWED_RUNTIMES.map(runtime => `MIDI ${runtime.midi} / dnd5e ${runtime.system}`).join(" and ");
 const SOURCE = "modules/midi-qol/midi-qol.js";
 const TAB = "modules/midi-qol/templates/activity/parts/midi-activity-tab.hbs";
 export const MIDI_SHEET_OPTIONS = Object.freeze({
@@ -43,7 +61,7 @@ const contextual = (source, reason, ids = []) => ({ source, ids, kind: "context-
 export function midiRulesFor(field, midi) {
     const path = field.path.replace(/\[\*\]$/, "");
     const leaf = path.split(".").at(-1);
-    const current = midi.version === MIDI_REVIEW.midi && midi.reviewCurrent !== false;
+    const current = isReviewedMidiRuntime(midi.version) && midi.reviewCurrent !== false;
     const sheet = { status: "needs-review", verifiedVersion: MIDI_REVIEW.midi, verifiedSystemVersion: MIDI_REVIEW.system,
         verifiedFoundryVersion: MIDI_REVIEW.foundry, options: [], conditions: [], visibleWhen: [], disabledWhen: [],
         inactiveBehavior: "Unknown; storage acceptance does not establish whether the sheet retains or gameplay uses a value.",
@@ -60,7 +78,7 @@ export function midiRulesFor(field, midi) {
         sheet.references.push(reference);
         behavior.status = current ? "source-reviewed" : "needs-review";
         behavior.references.push(reference, SOURCE);
-        if (!current) behavior.unresolved.push(`Source review targets MIDI ${MIDI_REVIEW.midi} / dnd5e ${MIDI_REVIEW.system} / Foundry ${MIDI_REVIEW.foundry}; re-review this runtime.`);
+        if (!current) behavior.unresolved.push(`Source review targets ${reviewedLabel()} / Foundry ${MIDI_REVIEW.foundry}; re-review this runtime.`);
     };
     const condition = text => { sheet.conditions.push(text); behavior.conditions.push(text); };
     const dep = (module, requiredFor) => behavior.dependencies.push({ module, requiredFor, active: globalThis.game?.modules?.get?.(module)?.active === true });
@@ -80,7 +98,7 @@ export function midiRulesFor(field, midi) {
                     "MidiQOL.midiPropertiesOptions." + registryKey, { kind: "running-midi-registry", note: "Current registry may include further extensions." })
                     : contextual("MidiQOL.midiPropertiesOptions", "Runtime registry unavailable."));
             }
-            if (leaf === "triggeredActivityRollAs") condition("The sheet restricts Roll As to self when the resolved target reports isSelfTriggerableOnly. In reviewed 14.6.11, Cast returns false; Forward is not triggerable. Historical comments are not authoritative.");
+            if (leaf === "triggeredActivityRollAs") condition("The sheet restricts Roll As to self when the resolved target reports isSelfTriggerableOnly. In reviewed 14.6.11 and 14.7.0, Cast returns false; Forward is not triggerable. Historical comments are not authoritative.");
             if (leaf === "triggeredActivityConsume") condition("Controls consumption on the triggered workflow, separately from this activity's consumption.");
             if (leaf === "triggeredActivityConfigure") condition("Controls the triggered workflow configuration dialog, separately from its resource consumption.");
         }
@@ -105,7 +123,7 @@ export function midiRulesFor(field, midi) {
                 dep("dae", "special durations that also end an applied status");
             }
         }
-        if (leaf === "rollMode") condition("MIDI 14.6.11 offers Foundry V14 message modes. Stored legacy values publicroll, gmroll, blindroll and selfroll remain valid; MIDI converts them when the sheet is shown or the roll is made.");
+        if (leaf === "rollMode") condition("MIDI 14.6.11 and 14.7.0 offer Foundry V14 message modes. Stored legacy values publicroll, gmroll, blindroll and selfroll remain valid; MIDI converts them when the sheet is shown or the roll is made.");
         if (/^otherActivity(Id|AsParentType|Uuid)$/.test(path)) {
             condition("otherActivityId is stored by the common mixin. The top-level otherActivityAsParentType control is specific to attack, save, check and utility.");
             condition("Targets must be another compatible activity: save, check, damage, heal or utility with otherActivityCompatible enabled; actor/item context and link resolution are required.");
@@ -136,7 +154,7 @@ export function midiRulesFor(field, midi) {
             behavior.dependencies.push({ setting: "midi-qol.ConfigSettings.autoFastForward / gmAutoFastForward", requiredFor: "default roll policy" });
         }
         if (leaf === "confirmTargets") {
-            condition("forcedTargetConfirmation takes precedence over the stored confirmTargets value. Cast and Forward force never in 14.6.11.");
+            condition("forcedTargetConfirmation takes precedence over the stored confirmTargets value. Cast and Forward force never in 14.6.11 and 14.7.0.");
             if (["cast", "forward"].includes(field.type)) sheet.options = [options(["never"], SOURCE + ":forcedTargetConfirmation")];
             behavior.dependencies.push({ setting: "midi-qol.TargetConfirmation", requiredFor: "default confirmation policy" });
         }

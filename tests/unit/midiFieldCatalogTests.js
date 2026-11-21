@@ -1,7 +1,7 @@
 import { createCatalogAccumulator, addCatalogModel, finishCatalog } from "../../scripts/fieldCatalogCore.js";
 import { createFieldCatalogService } from "../../scripts/fieldCatalogService.js";
 import { extendMidiCatalog } from "../../scripts/fieldCatalogMidi.js";
-import { midiRulesFor, MIDI_REVIEW } from "../../scripts/fieldCatalogMidiRules.js";
+import { midiRulesFor, MIDI_REVIEW, isReviewedMidiRuntime } from "../../scripts/fieldCatalogMidiRules.js";
 import { assembleSnapshot, compareSnapshots } from "../../tools/field-catalog-reports.mjs";
 
 const assert = (condition, message = "Assertion failed") => { if (!condition) throw new Error(message); };
@@ -192,6 +192,12 @@ export function runMidiFieldCatalogTests({ provider, decorate }) {
             assert(teleport.sheet.status === "reviewed" && teleport.sheet.options[0].ids.includes("swap"), "midiTeleport.movers not reviewed.");
             const older = midiRulesFor({ kind: "activity", type: "attack", path: "midiProperties.followUp" }, { version: "14.6.0", active: true });
             assert(older.sheet.status === "needs-review" && older.behavior.unresolved.some(text => text.includes(MIDI_REVIEW.midi)));
+            // MIDI-QOL 14.6.11 (dnd5e 6.0) and 14.7.0 (dnd5e 6.1 only) store the same fields: both stay reviewed.
+            assert(isReviewedMidiRuntime("14.6.11", "6.0.6", "14.370") && isReviewedMidiRuntime("14.7.0", "6.1.0", "14.370"), "A reviewed MIDI runtime is missing.");
+            assert(isReviewedMidiRuntime("14.6.14", "6.0.6", "14.370") && isReviewedMidiRuntime("14.7.0", "6.1.1", "14.370"), "MIDI-QOL 14.6.14 or dnd5e 6.1.1 is missing.");
+            assert(MIDI_REVIEW.midi === "14.7.0" && MIDI_REVIEW.system === "6.1.0", "The named review moved.");
+            assert(!isReviewedMidiRuntime("14.7.0", "6.0.6") && !isReviewedMidiRuntime("14.6.11", "6.1.0"), "A MIDI version is reviewed on a dnd5e it cannot run on.");
+            assert(midiRulesFor({ kind: "activity", type: "attack", path: "midiProperties.followUp" }, { version: "14.6.11", active: true }).sheet.status === "reviewed");
         });
         check("MIDI unavailable retains explicit references and independent provider operation", () => {
             globalThis.game.modules.get("midi-qol").active = false;

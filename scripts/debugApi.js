@@ -49,7 +49,7 @@ const MUTATING_ACTIONS = ["runAutomation", "cleanupFixtures"];
 const ACTION_NAMES = [...READ_ONLY_ACTIONS, ...MUTATING_ACTIONS];
 const COMPATIBILITY_TARGETS = Object.freeze({
     foundry: Object.freeze({ minimum: "14.367", verified: "14.370" }),
-    dnd5e: Object.freeze({ minimum: "6.0.6", verified: "6.1.0" })
+    dnd5e: Object.freeze({ minimum: "6.0.6", verified: "6.1.1" })
 });
 const SETTINGS_SCHEMA = Object.freeze({
     debug: { type: "boolean" },

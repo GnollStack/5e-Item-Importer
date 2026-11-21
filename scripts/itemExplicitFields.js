@@ -204,7 +204,8 @@ export function itemExplicitRows(item) {
   return [...Object.entries(data).flatMap(([section,value]) => explicitRows(value, section)),
     ...automationRows(item.automationSource ?? item, "item", item.type)];
 }
-export function exportExplicitItemFields(data,item) {
+/** `strict` (the YAML export, not the preview rows) refuses stored values the parser would reject. */
+export function exportExplicitItemFields(data,item,{strict = false} = {}) {
   const source = explicitItemSource(item);
   const type = item.type ?? source.type;
   const exportingStoredSystem = Boolean(item?._source?.system || item?.system);
@@ -235,7 +236,7 @@ export function exportExplicitItemFields(data,item) {
     for (const [section,key] of [["DAMAGE","base"],...(type === "weapon" ? [["VERSATILE_DAMAGE","versatile"]] : [])]) {
       const damage = source.system?.damage?.[key];
       if (!damage) continue;
-      data[section] = {DAMAGE_DATA:damageDataToYaml(damage)};
+      data[section] = {DAMAGE_DATA:damageDataToYaml(damage, {strict, path: "system.damage." + key})};
       if (type === "consumable") data[section].Replace = source.system.damage.replace ?? false;
     }
     if (type === "consumable" && data.DAMAGE?.DAMAGE_DATA && data.AMMUNITION_PROPERTIES) {

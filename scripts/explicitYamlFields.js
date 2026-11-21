@@ -114,8 +114,22 @@ export function parseDamageData(value, path = "DAMAGE_DATA") {
     }
   };
 }
-export function damageDataToYaml(value = {}) {
+// dnd5e's damage scaling modes (CONFIG.DND5E.damageScalingModes: whole, half; empty is none). The parser
+// accepts these and nothing else, so an export of any other stored value would not import again.
+const DAMAGE_SCALING_MODES = Object.freeze(["", "none", "whole", "half"]);
+const DAMAGE_SCALING_LABELS = "none, every level (whole) or every other level (half)";
+
+/**
+ * A damage part as DAMAGE_DATA. `strict` (exports) refuses a stored scaling mode the parser rejects,
+ * such as the consumption mode "amount" on MIDI-QOL's sample Wand of Fireballs; previews keep showing it.
+ */
+export function damageDataToYaml(value = {}, { strict = false, path = "DAMAGE_DATA" } = {}) {
   const source = value?._source ?? value;
+  const mode = source.scaling?.mode;
+  if (strict && mode !== undefined && mode !== null && !DAMAGE_SCALING_MODES.includes(mode)) {
+    throw new Error(`${path}.scaling.mode is "${mode}", which is not a dnd5e damage scaling mode, so the exported YAML could not be imported again. `
+      + `dnd5e ignores it; set the damage scaling to ${DAMAGE_SCALING_LABELS} and export again.`);
+  }
   return {
     "Dice Count": source.number ?? null, "Die Denomination": source.denomination ?? null,
     ...(source.bonus !== undefined ? {Bonus:source.bonus} : {}), "Damage Types": stringList(source.types ?? [], "Damage Types"),

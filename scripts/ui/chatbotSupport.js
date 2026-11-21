@@ -9,7 +9,7 @@
  */
 
 /** The pack this release teaches. tools/Test-LlmPack.mjs checks it against llm-pack/pack.json. */
-export const LLM_PACK_VERSION = "14.4.0";
+export const LLM_PACK_VERSION = "14.5.0";
 export const LLM_PACK_URL = "https://github.com/GnollStack/bakshis-bazaar-archives/tree/main/importer-llm-pack/" + LLM_PACK_VERSION;
 
 const MODULES = [["5e-item-importer", "5e Item Importer"], ["5e-activity-importer", "5e Activity Importer"]];
@@ -28,7 +28,7 @@ export function compareVersions(left, right) {
 /**
  * MIDI-QOL in this world: `active`, `missing` (not installed), `inactive` (installed and able to
  * run here, but not enabled) or `unsupported` (installed, but its manifest excludes this system
- * version, as MIDI-QOL 14.6.11 does for dnd5e 6.1). Foundry itself does not flag the last case.
+ * version, as MIDI-QOL 14.6.x does for dnd5e 6.1 and 14.7.0 for dnd5e 6.0). Foundry itself does not flag the last case.
  */
 export function midiQolState(game = globalThis.game) {
     const module = game?.modules?.get?.("midi-qol");

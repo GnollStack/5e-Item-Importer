@@ -8,6 +8,10 @@
  * reference resolves. Nothing here depends on the Activity Importer.
  */
 
+import { collectCandidates, matchScore, normalizeName, packSourceLabel, pickReference, readReferenceOptions, searchReferences } from "./referenceLinking.js";
+
+const MODULE_ID = "5e-item-importer";
+
 export const REFERENCE_STATUS = Object.freeze({
   PENDING: "pending",
   RESOLVED: "resolved",
@@ -100,14 +104,19 @@ export async function resolveReference(reference, destination = null) {
     return reference;
   }
   const candidates = await findCandidates(reference, destination);
-  reference.candidates = candidates;
+  // The shared linking order: one world copy, the compendium list, one match, or the dnd5e copy of the preferred rules.
+  const pick = pickReference(candidates, readReferenceOptions(MODULE_ID));
+  reference.candidates = pick.candidates.length ? pick.candidates : candidates;
   reference.source = "resolved";
-  if (candidates.length === 1) {
-    Object.assign(reference, { status: REFERENCE_STATUS.RESOLVED, uuid: candidates[0].uuid, resolvedName: candidates[0].name, reason: "" });
-  } else if (candidates.length > 1) {
+  if (pick.status === "resolved") {
+    Object.assign(reference, {
+      status: REFERENCE_STATUS.RESOLVED, uuid: pick.match.uuid, resolvedName: pick.match.name,
+      resolvedLocation: pick.match.location ?? "", resolvedImg: pick.match.img ?? null, linkReason: pick.reason, reason: ""
+    });
+  } else if (pick.status === "ambiguous") {
     Object.assign(reference, {
       status: REFERENCE_STATUS.AMBIGUOUS, uuid: null, resolvedName: null,
-      reason: `${candidates.length} documents match; choose one or drop the intended document.`
+      reason: `${candidates.length} documents match; choose one, search, or drop the intended document.`
     });
   } else {
     const wanted = describeQuery(reference);
@@ -134,15 +143,43 @@ export async function applyDroppedReference(reference, uuid, destination = null)
 export function chooseReferenceCandidate(reference, uuid) {
   const candidate = (reference.candidates ?? []).find(entry => entry.uuid === uuid);
   if (!candidate) return false;
-  Object.assign(reference, { status: REFERENCE_STATUS.RESOLVED, uuid: candidate.uuid, resolvedName: candidate.name, reason: "", source: "chosen" });
+  Object.assign(reference, {
+    status: REFERENCE_STATUS.RESOLVED, uuid: candidate.uuid, resolvedName: candidate.name,
+    resolvedLocation: candidate.location ?? "", resolvedImg: candidate.img ?? null, linkReason: "", reason: "", source: "chosen"
+  });
   return true;
+}
+
+/**
+ * Live search for one reference field: containers where the import lands, otherwise world and
+ * compendium documents of the reference's type and Item types.
+ */
+export async function searchReferenceCandidates(reference, query, destination = null) {
+  if (reference?.kind === "container") {
+    const needle = normalizeName(query);
+    if (needle.length < 2) return [];
+    return (await destinationContainers(destination))
+      .filter(entry => matchScore(entry.name, needle) >= 0)
+      .sort((left, right) => matchScore(left.name, needle) - matchScore(right.name, needle) || String(left.name).localeCompare(String(right.name)))
+      .slice(0, 20);
+  }
+  const documentName = reference?.query?.documentName ?? "Item";
+  if (documentName !== "Item" && documentName !== "Actor") return [];
+  return searchReferences({ query, documentName, itemTypes: reference?.query?.itemTypes ?? [], ...readReferenceOptions(MODULE_ID) });
+}
+
+/** A pasted UUID as a search result when it fits the reference, otherwise null. */
+export async function describeReferenceUuid(reference, uuid, destination = null) {
+  const outcome = await inspectUuid(uuid, reference, destination);
+  if (outcome.status !== REFERENCE_STATUS.RESOLVED) return null;
+  return { uuid: outcome.uuid, name: outcome.resolvedName ?? uuid, img: outcome.resolvedImg ?? null, location: outcome.resolvedLocation ?? "" };
 }
 
 /** Forget the current document; automatic resolution may run again afterwards. */
 export function clearReference(reference) {
   Object.assign(reference, {
     status: REFERENCE_STATUS.UNRESOLVED, uuid: null, resolvedName: null, source: "cleared",
-    reason: "Cleared. Drop a document here or run Resolve references."
+    reason: "Cleared. Search, paste a UUID, or drop a document here."
   });
 }
 
@@ -217,7 +254,20 @@ async function inspectUuid(uuid, reference, destination) {
     const issue = containerCollectionIssue(document, destination);
     if (issue) return invalid(issue);
   }
-  return { status: REFERENCE_STATUS.RESOLVED, uuid: document.uuid ?? uuid.trim(), resolvedName: document.name ?? null, reason: "" };
+  return {
+    status: REFERENCE_STATUS.RESOLVED, uuid: document.uuid ?? uuid.trim(), resolvedName: document.name ?? null,
+    resolvedLocation: documentLocation(document), resolvedImg: document.img ?? null, linkReason: "", reason: ""
+  };
+}
+
+/** "World", a compendium label, or the Actor that holds the document. */
+function documentLocation(document) {
+  if (document?.pack) {
+    const pack = globalThis.game?.packs?.get?.(document.pack);
+    return pack ? packSourceLabel(pack) : document.pack;
+  }
+  if (document?.parent?.name) return `On ${document.parent.name}`;
+  return "World";
 }
 
 /** dnd5e resolves container contents within one collection, so the parent must live where the import lands. */
@@ -252,7 +302,6 @@ async function findCandidates(reference, destination) {
   const matches = (candidateName, candidateIdentifier) =>
     (name && normalizeText(candidateName) === name)
     || (identifier && (normalizeText(candidateIdentifier) === identifier || slugify(candidateName) === identifier));
-  const typeOk = type => !query.itemTypes?.length || query.itemTypes.includes(type);
   const found = [];
 
   if (reference.kind === "container") {
@@ -262,22 +311,12 @@ async function findCandidates(reference, destination) {
     return dedupe(found);
   }
 
-  const documentName = query.documentName;
-  if (documentName === "Item") {
-    for (const document of iterate(globalThis.game?.items)) {
-      if (!typeOk(document.type) || !matches(document.name, document.system?.identifier)) continue;
-      found.push(candidate(document.uuid, document.name, document.type, null, "World", document.system?.identifier));
-    }
-  }
-  for (const pack of iterate(globalThis.game?.packs)) {
-    if (pack?.documentName !== documentName) continue;
-    for (const entry of iterate(pack.index)) {
-      if (documentName === "Item" && !typeOk(entry.type)) continue;
-      if (!matches(entry.name, entry.system?.identifier)) continue;
-      found.push(candidate(entry.uuid ?? `Compendium.${pack.collection}.${documentName}.${entry._id}`, entry.name, entry.type ?? null,
-        pack.collection, pack.metadata?.label ?? pack.collection, entry.system?.identifier));
-    }
-  }
+  // World documents the user can see and visible compendiums, with source and rules for the linking order.
+  found.push(...await collectCandidates({
+    documentName: query.documentName,
+    itemTypes: query.itemTypes ?? [],
+    test: entry => matches(entry.name, entry.identifier)
+  }));
   return dedupe(found);
 }
 

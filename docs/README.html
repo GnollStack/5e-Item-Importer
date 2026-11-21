@@ -191,7 +191,7 @@ WEAPON:
 
 <h3 id="chatbot-workflow">Let a Chatbot Fill It In</h3>
 <p><em>Best for: turning rules text into Items without typing the template yourself.</em></p>
-<p>The templates are written strictly so chatbots like Claude, ChatGPT and Gemini fill them in correctly, quickly, and only in a way Foundry can understand. Give yours the free <a href="https://github.com/GnollStack/bakshis-bazaar-archives/tree/main/importer-llm-pack/14.4.0">Importer LLM Pack</a> and it writes complete Items from an item's rules text, one at a time or a whole batch. For best results:</p>
+<p>The templates are written strictly so chatbots like Claude, ChatGPT and Gemini fill them in correctly, quickly, and only in a way Foundry can understand. Give yours the free <a href="https://github.com/GnollStack/bakshis-bazaar-archives/tree/main/importer-llm-pack/14.5.0">Importer LLM Pack</a> and it writes complete Items from an item's rules text, one at a time or a whole batch. For best results:</p>
 <ol>
 <li>Create a chat or project in your chatbot, a Claude or ChatGPT Project works well, paste the pack's project instructions, and upload the files its README lists for your modules.</li>
 <li>Paste the item's rules text and ask for the Item along with what you want said item to do.</li>
@@ -204,7 +204,7 @@ WEAPON:
 <h3 id="features-and-advancement">Feats &amp; Features</h3>
 <p><em>Best for: class features, feats, species traits and monster traits.</em></p>
 <p>Paste a feature with its header line, such as &quot;General Feat (Prerequisite: Level 4+)&quot; or &quot;3rd-level Fighter feature&quot;, or use the Feature template. Uses per rest or recharge, prerequisites and the full text come along.</p>
-<p>A feat can also carry what it grants, such as an ability score increase, spells, proficiencies or a choice from a list, so dropping it on a character applies them. Spells and items can be named instead of linked: the preview links each one it finds and gives you a drop zone for any it can't.</p>
+<p>A feat can also carry what it grants, such as an ability score increase, spells, proficiencies or a choice from a list, so dropping it on a character applies them. Spells and items can be named instead of linked: the preview links each one it finds and lets you search for any it can't.</p>
 <hr />
 
 <h3 id="batch-imports">A Whole Shop at Once</h3>
@@ -212,7 +212,7 @@ WEAPON:
 <hr />
 
 <h3 id="import-workflow">Safe Imports</h3>
-<p>Choose where Items go: a world folder, a character, or a compendium you can edit. If an Item with the same name already exists, add a copy, update it, merge, or skip it; an update shows what will change first. Spells, items and containers an Item mentions are linked by name, and anything not found gets a drop zone in the preview.</p>
+<p>Choose where Items go: a world folder, a character, or a compendium you can edit. If an Item with the same name already exists, add a copy, update it, merge, or skip it; an update shows what will change first. Spells, items and containers an Item mentions are linked by name, from your world or the dnd5e compendium for your rules, and anything else gets a Search button in the preview.</p>
 <p><strong>Copy problems</strong> copies whatever the preview flags together with your YAML. <strong>View options &gt; Show Import History</strong> keeps this session's imports with <strong>Undo</strong>. The <a href="https://github.com/GnollStack/5e-Item-Importer/blob/main/docs/import-window.md">import-window guide</a> covers every control.</p>
 <hr />
 
@@ -235,7 +235,7 @@ WEAPON:
 <h3 id="more-details">More Details</h3>
 <details>
 <summary><strong>Settings</strong></summary>
-<p>Open <strong>Configure Settings → 5e Item Importer</strong>. Each setting applies to your browser only, except Enable MCP Diagnostics, which applies to the world.</p>
+<p>Open <strong>Configure Settings → 5e Item Importer</strong>. Each setting applies to your browser only, except Default compendium for linked spells and creatures, Compendiums to link first and Enable MCP Diagnostics, which apply to the world.</p>
 <table>
 <thead>
 <tr>
@@ -289,6 +289,16 @@ WEAPON:
 <td>Replace Generated Default Activities</td>
 <td>On</td>
 <td>Stops dnd5e adding its default attack or check when your YAML has its own</td>
+</tr>
+<tr>
+<td>Default compendium for linked spells and creatures</td>
+<td>Match the world's Rules Version</td>
+<td>Which dnd5e copy a named spell links to when it is in both the 2014 and 2024 compendiums; or 2024, 2014, or always ask. Shared with 5e Activity Importer</td>
+</tr>
+<tr>
+<td>Compendiums to link first</td>
+<td>None</td>
+<td><strong>Choose compendiums</strong> lists compendiums whose spells and creatures link first, in order, such as a module of pre-automated spells. Shared with 5e Activity Importer</td>
 </tr>
 <tr>
 <td>Show Parse Results, Show YAML Normalization Warnings, Debug Logging</td>
@@ -347,7 +357,7 @@ In a template, write <code>Description: |</code> and indent the text beneath it,
 </tr>
 <tr>
 <td>dnd5e</td>
-<td>6.0.6 minimum; verified on 6.0.6 and 6.1.0</td>
+<td>6.0.6 minimum; verified on 6.0.6, 6.1.0 and 6.1.1</td>
 </tr>
 <tr>
 <td><a href="https://foundryvtt.com/packages/5e-activity-importer">5e Activity Importer</a></td>
@@ -360,7 +370,7 @@ In a template, write <code>Description: |</code> and indent the text beneath it,
 <h2 id="compatibility">Compatibility</h2>
 </div>
 <p><strong>Foundry VTT:</strong> v14 only, build 14.367 or later; verified on <strong>14.370</strong>. For a world that stays on Foundry v13, use 5e Item Importer 13.9.1.</p>
-<p><strong>Game system:</strong> <strong>dnd5e</strong> 6.0.6 minimum; verified on <strong>6.0.6</strong> and <strong>6.1.0</strong>.</p>
+<p><strong>Game system:</strong> <strong>dnd5e</strong> 6.0.6 minimum; verified on <strong>6.0.6</strong>, <strong>6.1.0</strong> and <strong>6.1.1</strong>.</p>
 <p><strong>Optional modules:</strong> <strong>5e Activity Importer</strong> 14.4.0 or later adds activities and effects to imported Items; Item Importer works fully without it, and an older companion shows an update message for attachments while Items still import. <strong>Token Name Lookup</strong> can make <code>[[lookup @name]]</code> text prefer token names.</p>
 <hr />
 <div style="text-align: center;">

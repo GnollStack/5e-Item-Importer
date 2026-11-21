@@ -37,6 +37,15 @@ test("midiQolState tells missing, active, inactive and unsupported apart", () =>
     const unsupported = midiQolState(fakeGame({ midi: midiModule(false), system: "6.1.0" }));
     assert.equal(unsupported.state, "unsupported");
     assert.equal(unsupported.maximum, "6.0.999");
+    // MIDI-QOL 14.7.0 requires dnd5e 6.1: its minimum excludes 6.0 worlds.
+    const midi1470 = { active: false, version: "14.7.0",
+        relationships: { systems: new Set([{ id: "dnd5e", type: "system", compatibility: { minimum: "6.1.0", verified: "6.1.0", maximum: "6.1.999" } }]) } };
+    const tooOld = midiQolState(fakeGame({ midi: midi1470, system: "6.0.6" }));
+    assert.equal(tooOld.state, "unsupported");
+    assert.equal(tooOld.minimum, "6.1.0");
+    assert.equal(midiQolState(fakeGame({ midi: midi1470, system: "6.1.0" })).state, "inactive");
+    assert.match(midiSkippedNotice([{ name: "Strike", fields: ["otherActivityId"] }], { state: "unsupported", version: "14.7.0", systemVersion: "6.0.6" }).summary,
+        /^MIDI-QOL 14\.7\.0 does not run on dnd5e 6\.0\.6/);
     assert.equal(midiQolState(fakeGame({ midi: { active: false, version: "1.0.0" } })).state, "inactive", "no system requirement: it can run");
     assert.equal(midiQolState(undefined).state, "missing");
 });

@@ -10,6 +10,7 @@ import { isPhysicalItemType } from "../itemConfig.js";
 import { describeAdvancement } from "../itemAdvancement.js";
 import { localize } from "./itemWorkflowServices.js";
 import { midiSkippedNotice, skippedMidiSettings } from "./chatbotSupport.js";
+import { renderReferencePicker } from "./referencePicker.js";
 
 /**
  * The one notice for MIDI-QOL settings left out of inline activities because MIDI-QOL is not
@@ -765,7 +766,7 @@ export function renderBatchSummary(results, selectedItems) {
           <div class="ii-batch-item-name">${esc(res.item.name)}</div>
           <div class="ii-batch-item-type">${esc(formatType(res.item.type))}${isPhysicalItemType(res.item.type) ? ` &bull; ${esc(formatItemRarities(res.item))}` : ""}</div>
           ${res.item.containerRef ? `<div class="ii-batch-item-container"><i class="fas fa-box-open"></i> ${esc(describeContainerPlacement(res.item.containerRef))}</div>` : ""}
-          ${hasUnresolvedUuids ? '<div class="ii-parse-warning">Resolve inline activity UUIDs and document references to select this item.</div>' : ""}
+          ${hasUnresolvedUuids ? '<div class="ii-parse-warning">Pick the spells, creatures and documents marked in this Item to select it.</div>' : ""}
           <label class="ii-entry-mode-label">
             ${esc(localize("II.Batch.DuplicatePolicy", "Duplicate policy"))}
             <select class="ii-entry-mode" data-index="${index}" aria-label="${esc(localize("II.Batch.DuplicatePolicyFor", "Duplicate policy for {name}", { name: res.item.name }))}">
@@ -902,16 +903,26 @@ function getItemsNeedingUuidResolution(successes) {
 // ==========================================
 
 const REFERENCE_STATUS_LABELS = {
-    pending: "Not resolved yet",
+    pending: "Not linked yet",
     unresolved: "No match",
     ambiguous: "Several matches",
     invalid: "Invalid",
-    resolved: "Resolved"
+    resolved: "Linked"
 };
 
+/** What a reference field asks for: "spell", "container", "effect" or "item". */
+export function referenceNoun(reference) {
+    if (reference?.kind === "container") return "container";
+    if (reference?.query?.documentName === "ActiveEffect") return "effect";
+    if (reference?.query?.documentName === "Actor") return "creature";
+    const types = reference?.query?.itemTypes ?? [];
+    return types.length === 1 && types[0] === "spell" ? "spell" : "item";
+}
+
 /**
- * Render the Item Importer's own reference drop zones. Every reference is a zone so a
- * drop can override an automatic match; pending ones carry `ii-ref-pending`.
+ * Render the Item Importer's own reference fields (shared `referencePicker.js`): the linked
+ * document with Change and Clear, or a search box with the matches. Pending ones carry
+ * `ii-ref-pending`, which the window uses to point at what still needs a choice.
  * @param {Object} item - Parsed item with `references`
  * @param {number|null} [itemIndex=null] - Batch index, or null for the single-item card
  * @returns {string} HTML string
@@ -925,26 +936,29 @@ export function renderReferenceZones(item, itemIndex = null) {
         const status = REFERENCE_STATUS_LABELS[reference.status] ? reference.status : "pending";
         const pending = status !== "resolved";
         const accept = reference.query?.documentName || "Item";
-        const types = reference.query?.itemTypes?.length ? ` (${reference.query.itemTypes.join(", ")})` : "";
-        const article = /^[aeiou]/i.test(accept) ? "an" : "a";
-        let state;
-        if (status === "resolved") {
-            state = `<span class="ii-ref-resolved-name"><i class="fas fa-check"></i>${esc(reference.resolvedName || reference.uuid || "")}</span>
-            <code class="ii-ref-uuid">${esc(reference.uuid || "")}</code>`;
-        } else if (status === "ambiguous") {
-            const candidates = reference.candidates ?? [];
-            state = `<select class="ii-ref-candidates" aria-label="${esc(`Choose the document for ${reference.label}`)}">
-              <option value="">${esc(`${candidates.length} matches: choose one or drop a document`)}</option>
-              ${candidates.map(candidate => `<option value="${esc(candidate.uuid)}">${esc(candidate.name)}${candidate.type ? ` (${esc(candidate.type)})` : ""} — ${esc(candidate.location || candidate.pack || "World")}</option>`).join("")}
-            </select>`;
-        } else {
-            state = `<span class="ii-ref-hint"><i class="fas fa-hand-point-down"></i>Drop ${article} ${esc(accept)}${esc(types)} here${reference.reason ? ` — ${esc(reference.reason)}` : ""}</span>`;
-        }
+        const noun = referenceNoun(reference);
+        const label = reference.label || noun;
+        const picker = status === "resolved" && reference.uuid
+            ? renderReferencePicker({
+                prefix: "ii", mode: "linked", noun, label,
+                linked: {
+                    uuid: reference.uuid, name: reference.resolvedName || reference.uuid,
+                    location: reference.resolvedLocation || "", img: reference.resolvedImg || null,
+                    auto: reference.source === "resolved" && !!reference.linkReason
+                }
+            })
+            : renderReferencePicker({
+                prefix: "ii", mode: "searching", noun, label,
+                query: reference.query?.name || reference.query?.identifier || "",
+                candidates: status === "ambiguous" ? (reference.candidates ?? []) : [],
+                message: status === "ambiguous"
+                    ? `${(reference.candidates ?? []).length} matches: choose one, search, or drop ${/^[aeiou]/.test(noun) ? "an" : "a"} ${noun} here.`
+                    : reference.reason || ""
+            });
         html += `<div class="ii-ref-dropzone ii-ref-${esc(status)}${pending ? " ii-ref-pending" : ""}" data-reference-id="${esc(reference.id)}"${scope}
-          data-accept-type="${esc(accept)}" data-status="${esc(status)}" title="${esc(`${REFERENCE_STATUS_LABELS[status]}. Drop ${article} ${accept}${types} to set this reference.`)}">
+          data-accept-type="${esc(accept)}" data-status="${esc(status)}" title="${esc(REFERENCE_STATUS_LABELS[status])}">
           <span class="ii-ref-label">${esc(reference.label)}</span>
-          ${state}
-          ${reference.uuid ? `<button type="button" class="ii-ref-clear" title="Clear this reference" aria-label="${esc(`Clear ${reference.label}`)}">&times;</button>` : ""}
+          ${picker}
         </div>`;
     }
     return html + `</div>`;
@@ -977,7 +991,7 @@ function renderReferencesSection(item) {
       </div>
       <div class="ii-section-content"${pending ? ' style="display: block;"' : ""}>
         ${placement ? `<p class="ii-ref-help"><i class="fas fa-box-open"></i> ${esc(placement)}</p>` : ""}
-        ${references.length ? `<p class="ii-ref-help">Linked documents are matched by UUID, name, or identifier in the world and compendia. Drag a document onto a reference to choose or override it; import waits until every reference resolves.</p>` : ""}
+        ${references.length ? `<p class="ii-ref-help">Linked documents are matched by UUID, name, or identifier in the world and compendia. Use Change to search for another one, paste a UUID, or drag a document onto a reference; import waits until every reference resolves.</p>` : ""}
         ${renderReferenceZones(item)}
       </div>
     </div>`;

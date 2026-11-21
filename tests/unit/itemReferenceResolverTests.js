@@ -25,6 +25,11 @@ function stubWorld() {
   const worldShield = add(spell("Item.worldShield0001", "Shield", null, "shield"));
   const packShield = add(spell("Compendium.dnd5e.spells24.Item.phbsplShield0000", "Shield", "dnd5e.spells24"));
   const alarm = add(spell("Compendium.dnd5e.spells24.Item.phbsplAlarm00000", "Alarm", "dnd5e.spells24"));
+  // Mage Armor: a dnd5e copy and a homebrew copy, no world copy (asks). Fire Bolt: 2014 and 2024 dnd5e copies (links by rules).
+  const packMageArmor = add(spell("Compendium.dnd5e.spells24.Item.phbsplMageArmor0", "Mage Armor", "dnd5e.spells24"));
+  const homebrewMageArmor = add(spell("Compendium.homebrew.spells.Item.hbMageArmor00000", "Mage Armor", "homebrew.spells"));
+  const fireBolt2024 = add(spell("Compendium.dnd5e.spells24.Item.phbsplFireBolt00", "Fire Bolt", "dnd5e.spells24"));
+  const fireBolt2014 = add(spell("Compendium.dnd5e.spells.Item.srdFireBolt00000", "Fire Bolt", "dnd5e.spells"));
   const alertFeat = add({ uuid: "Compendium.dnd5e.feats24.Item.phbfeaAlert00000", name: "Alert", type: "feat", documentName: "Item", parent: null, pack: "dnd5e.feats24", system: { identifier: "alert" } });
   const bag = add({ uuid: "Item.worldBag00000001", name: "Adventurer's Pack", type: "container", documentName: "Item", parent: null, pack: null, system: { identifier: "" } });
   const actor = { uuid: "Actor.hero000000000001", name: "Hero", documentName: "Actor", items: [] };
@@ -34,13 +39,16 @@ function stubWorld() {
   add(actor);
   const effect = add({ uuid: "Compendium.world.effects.ActiveEffect.effect0000000001", name: "Keen Edge", type: "enchantment", documentName: "ActiveEffect", parent: null, pack: "world.effects" });
   const indexOf = document => ({ _id: document.uuid.split(".").at(-1), uuid: document.uuid, name: document.name, type: document.type, system: document.system });
+  const dnd5e = (label, rulesVersion) => ({ label, packageType: "system", packageName: "dnd5e", flags: { dnd5e: { rulesVersion } } });
   const packs = [
-    { documentName: "Item", collection: "dnd5e.spells24", metadata: { label: "Spells (SRD 2024)" }, index: [packShield, alarm].map(indexOf) },
-    { documentName: "Item", collection: "dnd5e.feats24", metadata: { label: "Feats (SRD 2024)" }, index: [alertFeat].map(indexOf) },
+    { documentName: "Item", collection: "dnd5e.spells24", metadata: dnd5e("Spells", "modern"), index: [packShield, alarm, packMageArmor, fireBolt2024].map(indexOf) },
+    { documentName: "Item", collection: "dnd5e.spells", metadata: dnd5e("Spells (SRD)", "legacy"), index: [fireBolt2014].map(indexOf) },
+    { documentName: "Item", collection: "homebrew.spells", metadata: { label: "Homebrew Spells", packageType: "module", packageName: "homebrew" }, index: [homebrewMageArmor].map(indexOf) },
+    { documentName: "Item", collection: "dnd5e.feats24", metadata: dnd5e("Feats", "modern"), index: [alertFeat].map(indexOf) },
     { documentName: "ActiveEffect", collection: "world.effects", metadata: { label: "Effects" }, index: [{ _id: "effect0000000001", uuid: effect.uuid, name: effect.name, type: effect.type }] }
   ];
   packs.get = collection => packs.find(pack => pack.collection === collection) ?? null;
-  return { documents, items: [worldShield, bag], packs, actor, worldShield, packShield, alarm, alertFeat, bag, actorBag, embeddedAlarm, effect };
+  return { documents, items: [worldShield, bag], packs, actor, worldShield, packShield, alarm, alertFeat, bag, actorBag, embeddedAlarm, effect, packMageArmor, homebrewMageArmor, fireBolt2024, fireBolt2014 };
 }
 
 async function withStubWorld(world, run) {
@@ -96,18 +104,33 @@ export async function runItemReferenceResolverTests() {
     assert(slug.uuid === world.bag.uuid, "Slugified name match failed.");
   }));
 
+  await test("a world copy wins over compendium copies", () => withStubWorld(world, async () => {
+    const reference = createReference({ kind: "item", path: "x", label: "Shield", query: { name: "Shield", itemTypes: ["spell"] } });
+    await resolveReference(reference);
+    assert(reference.status === REFERENCE_STATUS.RESOLVED && reference.uuid === world.worldShield.uuid && reference.linkReason === "world", "The world Shield did not win: " + JSON.stringify({ status: reference.status, uuid: reference.uuid }));
+    assert(reference.resolvedLocation === "World", "The linked field lost its location.");
+  }));
+
+  await test("2014 and 2024 dnd5e copies link to the copy of the world's rules", () => withStubWorld(world, async () => {
+    const reference = createReference({ kind: "item", path: "x", label: "Fire Bolt", query: { name: "Fire Bolt", itemTypes: ["spell"] } });
+    await resolveReference(reference);
+    assert(reference.status === REFERENCE_STATUS.RESOLVED && reference.uuid === world.fireBolt2024.uuid && reference.linkReason === "rules", "Fire Bolt did not link to the 2024 copy.");
+    assert(reference.resolvedLocation === "Spells · dnd5e 2024", "Source label: " + reference.resolvedLocation);
+  }));
+
   await test("several matches are ambiguous until a candidate is chosen, and the choice survives re-resolution", () => withStubWorld(world, async () => {
-    const reference = createReference({ kind: "item", path: "advancement[0].configuration.items[1].uuid", label: "Shield", query: { name: "Shield", itemTypes: ["spell"] } });
+    const reference = createReference({ kind: "item", path: "advancement[0].configuration.items[1].uuid", label: "Mage Armor", query: { name: "Mage Armor", itemTypes: ["spell"] } });
     const item = itemWith(reference);
     await resolveItemReferences(item);
     assert(reference.status === REFERENCE_STATUS.AMBIGUOUS && reference.candidates.length === 2 && reference.uuid === null, "Two matches were not reported as ambiguous.");
-    assert(reference.candidates.some(candidate => candidate.location === "World") && reference.candidates.some(candidate => candidate.pack === "dnd5e.spells24"), "Candidates lost their locations.");
+    assert(reference.candidates.some(candidate => candidate.pack === "homebrew.spells") && reference.candidates.some(candidate => candidate.pack === "dnd5e.spells24"), "Candidates lost their locations.");
+    assert(reference.candidates[0].pack === "dnd5e.spells24", "The dnd5e copy of the preferred rules is not listed first.");
     assert(hasUnresolvedReferences(item), "Ambiguous reference did not block the item.");
-    assert(chooseReferenceCandidate(reference, world.packShield.uuid), "Candidate choice was rejected.");
+    assert(chooseReferenceCandidate(reference, world.packMageArmor.uuid), "Candidate choice was rejected.");
     assert(reference.status === REFERENCE_STATUS.RESOLVED && reference.source === "chosen", "Choice did not resolve the reference.");
     await resolveItemReferences(item);
-    assert(reference.uuid === world.packShield.uuid && reference.source === "chosen", "Re-resolution overrode the user's choice.");
-    assert(item.advancement[0].configuration.items[1].uuid === world.packShield.uuid, "Chosen UUID was not applied.");
+    assert(reference.uuid === world.packMageArmor.uuid && reference.source === "chosen", "Re-resolution overrode the user's choice.");
+    assert(item.advancement[0].configuration.items[1].uuid === world.packMageArmor.uuid, "Chosen UUID was not applied.");
     assert(!chooseReferenceCandidate(reference, "Item.notACandidate0"), "Unknown candidate was accepted.");
   }));
 
@@ -142,7 +165,7 @@ export async function runItemReferenceResolverTests() {
   }));
 
   await test("a drop overrides automatic resolution, invalid drops leave the reference unchanged, and clearing re-opens it", () => withStubWorld(world, async () => {
-    const reference = createReference({ kind: "item", path: "advancement[0].configuration.items[0].uuid", label: "Shield", query: { name: "Shield", itemTypes: ["spell"] } });
+    const reference = createReference({ kind: "item", path: "advancement[0].configuration.items[0].uuid", label: "Mage Armor", query: { name: "Mage Armor", itemTypes: ["spell"] } });
     const item = itemWith(reference);
     await resolveItemReferences(item);
     assert(reference.status === REFERENCE_STATUS.AMBIGUOUS, "Precondition: ambiguous.");
@@ -188,26 +211,26 @@ export async function runItemReferenceResolverTests() {
 
   await test("import preflight resolves pending references, blocks unresolved ones and re-checks live documents", () => withStubWorld(world, async () => {
     const resolved = createReference({ kind: "item", path: "advancement[0].configuration.items[0].uuid", label: "Grant 1", query: { name: "Alarm", itemTypes: ["spell"] } });
-    const ambiguous = createReference({ kind: "item", path: "advancement[0].configuration.items[1].uuid", label: "Grant 2", query: { name: "Shield", itemTypes: ["spell"] } });
+    const ambiguous = createReference({ kind: "item", path: "advancement[0].configuration.items[1].uuid", label: "Grant 2", query: { name: "Mage Armor", itemTypes: ["spell"] } });
     const item = itemWith(resolved, ambiguous);
     const issues = await validateItemReferences(item);
     assert(issues.length === 1 && issues[0].startsWith("Grant 2:") && /2 documents match/.test(issues[0]), "Ambiguous reference did not produce exactly one issue: " + JSON.stringify(issues));
     assert(item.advancement[0].configuration.items[0].uuid === world.alarm.uuid, "Resolved reference was not applied during preflight.");
-    chooseReferenceCandidate(ambiguous, world.packShield.uuid);
+    chooseReferenceCandidate(ambiguous, world.packMageArmor.uuid);
     assert((await validateItemReferences(item)).length === 0, "Fully resolved item still reports issues.");
-    world.documents.delete(world.packShield.uuid);
+    world.documents.delete(world.packMageArmor.uuid);
     try {
       const stale = await validateItemReferences(item);
       assert(stale.length === 1 && ambiguous.status === REFERENCE_STATUS.INVALID, "Deleted document was not caught at preflight.");
     } finally {
-      world.documents.set(world.packShield.uuid, world.packShield);
+      world.documents.set(world.packMageArmor.uuid, world.packMageArmor);
     }
     assert((await validateItemReferences({ name: "No references" })).length === 0, "Items without references were blocked.");
   }));
 
   await test("summaries count statuses across items", () => withStubWorld(world, async () => {
     const a = itemWith(createReference({ kind: "item", path: "x", query: { name: "Alarm", itemTypes: ["spell"] } }));
-    const b = itemWith(createReference({ kind: "item", path: "x", query: { name: "Shield" } }), createReference({ kind: "item", path: "y", query: { uuid: "Item.missing000000001" } }), createReference({ kind: "item", path: "z", query: { name: "Nothing" } }));
+    const b = itemWith(createReference({ kind: "item", path: "x", query: { name: "Mage Armor" } }), createReference({ kind: "item", path: "y", query: { uuid: "Item.missing000000001" } }), createReference({ kind: "item", path: "z", query: { name: "Nothing" } }));
     await resolveItemReferences(a); await resolveItemReferences(b);
     const summary = summarizeReferences([a, b]);
     assert(summary.total === 4 && summary.resolved === 1 && summary.ambiguous === 1 && summary.invalid === 1 && summary.unresolved === 1, "Summary counts wrong: " + JSON.stringify(summary));

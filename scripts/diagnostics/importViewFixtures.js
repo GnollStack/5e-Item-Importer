@@ -208,19 +208,39 @@ export async function runImportViewFixtures({ Window, Actions, moduleId, prefix,
             const referenceText = "ACTIVITY_SUMMON:\n  ACTIVITY:\n    Name: Reference Search Fixture\n  SUMMONS_PROFILES:\n    Mode: By Direct Link\n    PROFILES:\n      - Display Name: Fixture Actor\n        Count: '1'";
             app.element.querySelector("#ai-input").value = referenceText;
             await Actions.parse.call(app);
-            const search = app.element.querySelector(".ai-uuid-search");
-            check("Missing reference has an inline Search action", !!search);
+            // The field looks the name up first ("Finding…"), then offers a Search button.
+            let searchButton = null;
+            for (let attempt = 0; attempt < 500 && !searchButton; attempt++) {
+                searchButton = app.element.querySelector(".ai-refpick.is-searching [data-refpick-action='search']");
+                if (!searchButton) await tick();
+            }
+            check("Missing reference has an inline Search action", !!searchButton);
             check("Resolve All appears beside missing-reference count", !app.element.querySelector("[data-reference-summary]").hidden);
-            if (actor && search) {
-                const prompt = Dialog.prompt;
-                let prompts = 0;
-                try {
-                    Dialog.prompt = async options => { prompts++; return prompts === 1 ? actor.name : options.content.includes(actor.uuid) ? actor.uuid : null; };
-                    search.click();
-                    for (let attempt = 0; attempt < 500 && search.disabled; attempt++) await tick();
-                    check("Inline search applies the chosen Actor only to its reference field", prompts === 2 && app.currentParseResults[0].activityData.profiles[0].uuid === actor.uuid);
-                    check("Resolving a field clears the contextual unresolved count", app.element.querySelector("[data-reference-summary]").hidden);
-                } finally { Dialog.prompt = prompt; }
+            if (actor && searchButton) {
+                // Search opens a small window of its own; a pasted UUID is offered there.
+                searchButton.click();
+                let searchWindow = null;
+                for (let attempt = 0; attempt < 500 && !searchWindow; attempt++) {
+                    searchWindow = document.querySelector(".ai-refpick-window");
+                    if (!searchWindow) await tick();
+                }
+                const field = searchWindow?.querySelector(".ai-refpick-input");
+                let option = null;
+                if (field) {
+                    field.value = actor.uuid;
+                    field.dispatchEvent(new Event("input", { bubbles: true }));
+                    for (let attempt = 0; attempt < 500 && !option; attempt++) {
+                        option = searchWindow.querySelector(`.ai-refpick-option[data-refpick-uuid="${actor.uuid}"]`);
+                        if (!option) await tick();
+                    }
+                    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+                }
+                const summary = () => app.element.querySelector("[data-reference-summary]");
+                for (let attempt = 0; attempt < 500 && !(app.currentParseResults[0].activityData.profiles[0].uuid && summary().hidden && !document.querySelector(".ai-refpick-window")); attempt++) await tick();
+                check("Search opens its own window, and a pasted UUID there links the Actor to its reference field only",
+                    !!option && app.currentParseResults[0].activityData.profiles[0].uuid === actor.uuid);
+                check("The search window closes after the pick", !document.querySelector(".ai-refpick-window"));
+                check("Resolving a field clears the contextual unresolved count", summary().hidden);
             }
         }
         const defaultsRoot = app.element;

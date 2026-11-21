@@ -16,7 +16,7 @@ The companion defaults to its sibling directory. For a different checkout layout
 Before writing artifacts, the command checks:
 
 - Both package versions match and use `major.minor.patch`.
-- Both manifests declare matching Foundry and dnd5e minimum/verified versions and matching optional maximums. The current Foundry minimum is 14.367, verified is 14.370, and maximum is 14; dnd5e minimum is 6.0.6 and verified is 6.1.0.
+- Both manifests declare matching Foundry and dnd5e minimum/verified versions and matching optional maximums. The current Foundry minimum is 14.367, verified is 14.370, and maximum is 14; dnd5e minimum is 6.0.6 and verified is 6.1.1.
 - Activity Importer recommends the available free Item Importer. Item Importer may omit its premium recommendation while that companion is unreleased. Every recommendation that is present must verify the shared version, have a compatible minimum, and point to the other manifest's actual URL.
 - Neither module makes the companion a hard requirement or pins a maximum version.
 - The shared release contract, paired entry point, and contract tests match across repositories.
@@ -65,7 +65,7 @@ The standalone builder writes `dist/5e-item-importer.zip` and `dist/module.json`
 
 The same assemble/render/diff commands accept MIDI pages. Select layer:midi in the catalog query; --layer midi can project a complete all-layer snapshot offline. It cannot invent missing layers. Follow every nextCursor, retaining filters and catalog metadata.
 
-The parity check now covers 27 shared files, including explicitYamlFields.js, activityEffectLinks.js, fieldCatalogMidi.js, fieldCatalogMidiRules.js, Test-MidiFieldCatalog.mjs, midiFieldCatalogTests.js, the template build tools (template-build.mjs, its test and Build-Templates.mjs) and the import window's chatbot helper (scripts/ui/chatbotSupport.js and chatbot-support.test.mjs). Provider-specific coverage stays independent. Run node --experimental-vm-modules tools/Test-MidiFieldCatalog.mjs alongside the native and report checks. See [the MIDI guide](../docs/midi-field-catalog.md).
+The parity check now covers 31 shared files, including explicitYamlFields.js, activityEffectLinks.js, fieldCatalogMidi.js, fieldCatalogMidiRules.js, Test-MidiFieldCatalog.mjs, midiFieldCatalogTests.js, the template build tools (template-build.mjs, its test and Build-Templates.mjs) the import window's chatbot helper (scripts/ui/chatbotSupport.js and chatbot-support.test.mjs) and the reference fields (scripts/referenceLinking.js, scripts/ui/referencePicker.js, scripts/ui/referenceCompendiums.js and reference-linking.test.mjs). Provider-specific coverage stays independent. Run node --experimental-vm-modules tools/Test-MidiFieldCatalog.mjs alongside the native and report checks. See [the MIDI guide](../docs/midi-field-catalog.md).
 
 
 ## Template source and generated templates
@@ -78,4 +78,4 @@ Run `node --experimental-vm-modules tools/Test-TemplateAuthoring.mjs` for marked
 
 ## Current optional integration checks
 
-D&D5e 6 uses the MIDI-QOL/DAE 14.6 release lines. Active integration checks for 14.3.0 used MIDI-QOL 14.6.8 and DAE 14.6.6; 14.4.0 uses MIDI-QOL 14.6.11 and DAE 14.6.9 on dnd5e 6.0.6, because MIDI-QOL 14.6.11 does not load on dnd5e 6.1. Keep native checks and inactive-module behavior separate from active automation; do not update or activate integrations as an incidental packaging step. See the official [MIDI-QOL](https://foundryvtt.com/packages/midi-qol) and [DAE](https://foundryvtt.com/packages/dae) compatibility notices.
+D&D5e 6 uses the MIDI-QOL/DAE 14.6 release lines. Active integration checks for 14.3.0 used MIDI-QOL 14.6.8 and DAE 14.6.6; 14.4.0 used MIDI-QOL 14.6.11 and DAE 14.6.9 on dnd5e 6.0.6, because MIDI-QOL 14.6.11 does not load on dnd5e 6.1. From 14.5.0 the active checks use MIDI-QOL 14.7.0 and DAE 14.6.10 on dnd5e 6.1.0 in the shared test world (MIDI-QOL 14.7.0 requires dnd5e 6.1), and the dnd5e 6.0.6 data folder keeps the 14.6 line. Keep native checks and inactive-module behavior separate from active automation; do not update or activate integrations as an incidental packaging step. See the official [MIDI-QOL](https://foundryvtt.com/packages/midi-qol) and [DAE](https://foundryvtt.com/packages/dae) compatibility notices.

@@ -1,10 +1,10 @@
 # Automation storage in schema 4
 
-Reviewed against Foundry 14.370, dnd5e 6.0.6, MIDI-QOL 14.6.11 and DAE 14.6.9.
+Reviewed against Foundry 14.370, dnd5e 6.1.0, MIDI-QOL 14.7.0 and DAE 14.6.10.
 
 Use `AUTOMATION` inside an existing Item, Activity or Effect block. This is a typed, reviewed mapping, not a raw-data escape hatch. Unknown keys fail with their exact path. Native fields keep their existing YAML sections. Do not combine canonical automation with legacy MIDI/DAE sections in the same Activity or Effect.
 
-Exports preserve stored source values, including inactive settings, false, zero, null and empty strings, lists and mappings. Omitted fields remain omitted. Updating an Item with an explicitly empty automation flag mapping clears its old keys; merge mode retains existing values. No macro, condition or formula is executed during parsing, exporting, preview or comparison. UUID references remain synchronous stored references; import preflight resolves supported links and rejects missing, ambiguous or recursive links.
+Exports preserve stored source values, including inactive settings, false, zero, null and empty strings, lists and mappings. Omitted fields remain omitted. DAE's deprecated `flags.dae.transfer` is left out: the native transfer field (`DETAILS.Apply Effect to Actor`) carries the same value. Updating an Item with an explicitly empty automation flag mapping clears its old keys; merge mode retains existing values. No macro, condition or formula is executed during parsing, exporting, preview or comparison. UUID references remain synchronous stored references; import preflight resolves supported links and rejects missing, ambiguous or recursive links.
 
 MIDI Activity fields require compatible MIDI-QOL to be active at import, because a native-only Activity model would discard them. Authored Item and Effect flags can be stored while their provider is inactive; they have no integration behavior until the provider is available. Native recipes require no automation modules. Item Importer remains standalone; Activity and Effect attachments and their recipes require the compatible premium Activity Importer.
 

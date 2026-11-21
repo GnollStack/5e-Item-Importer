@@ -1,6 +1,6 @@
 /** MIDI discovery, shared byte-for-byte by the independent importers. No document access. */
 import { createCatalogAccumulator, addCatalogModel, fieldCatalogId } from "./fieldCatalogCore.js";
-import { midiRulesFor, midiDeclarations, MIDI_REVIEW } from "./fieldCatalogMidiRules.js";
+import { midiRulesFor, midiDeclarations, MIDI_REVIEW, isReviewedMidiRuntime } from "./fieldCatalogMidiRules.js";
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const stable = value => JSON.stringify(value, function (key, entry) {
@@ -159,8 +159,7 @@ export function extendMidiCatalog(native, provider) {
         boundaries: [], complete: false, settings: module?.active ? readMidiSettings() : { status: "unavailable" },
         limitations: ["No exhaustive claim for open flags, contextual choices, callbacks or gameplay.",
             "Native constructors can themselves read modified CONFIG registries; registry additions are not automatically native or MIDI-owned."] };
-    const reviewed = midi.version === MIDI_REVIEW.midi && native.environment.systemVersion === MIDI_REVIEW.system
-        && native.environment.foundryVersion === MIDI_REVIEW.foundry;
+    const reviewed = isReviewedMidiRuntime(midi.version, native.environment.systemVersion, native.environment.foundryVersion);
     midi.reviewCurrent = reviewed;
     if (!midi.active) result.diagnostics.push({ code: "midi-unavailable", severity: "info", layer: "midi",
         message: "MIDI is inactive or absent. Reviewed declarations are reference-only; active MIDI schemas cannot be probed." });

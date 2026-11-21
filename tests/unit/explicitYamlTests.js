@@ -7,6 +7,7 @@ import { itemToStrictYamlDocument, exportStrictItemYamlBatch } from "../../scrip
 import { cloneExplicit, readPath, parseDamageData, damageDataToYaml } from "../../scripts/explicitYamlFields.js";
 import { extractExpectedItemProps, extractActualItemProps } from "../../scripts/ui/itemComparisonExtractor.js";
 import { compareProperties } from "../../scripts/ui/itemComparisonEngine.js";
+import { itemExplicitRows } from "../../scripts/itemExplicitFields.js";
 
 function stable(value) {
   value = cloneExplicit(value);
@@ -143,6 +144,17 @@ export async function runExplicitItemYamlTests() {
       requireValue(same(readPath(second.item.itemData.system,path),readPath(spell.system,path)),"Round trip loss at " + path);
     }
     requireValue(!new Set(second.item.itemData.system.properties).has("material"),"Inactive materials enabled their component.");
+  });
+  await test("A weapon damage scaling mode dnd5e does not know is refused on export, shown in previews",async () => {
+    const weapon = {name:"Scaling weapon",type:"weapon",img:"icons/svg/sword.svg",system:{properties:[],quantity:1,type:{value:"simpleM",baseItem:""},
+      damage:{base:{...cloneExplicit(DAMAGE),scaling:{mode:"amount",number:1,formula:""}}}}};
+    let message = "";
+    try { itemToStrictYamlDocument(weapon); } catch (error) { message = error.message; }
+    requireValue(/system\.damage\.base\.scaling\.mode is "amount", which is not a dnd5e damage scaling mode/.test(message),"Export did not refuse the unknown mode: " + message);
+    const rows = itemExplicitRows(weapon);
+    requireValue(rows.some(row => String(row.value).includes("amount")),"The preview no longer shows the stored mode.");
+    weapon.system.damage.base.scaling.mode = "half";
+    requireValue(itemToStrictYamlDocument(weapon).WEAPON.DAMAGE.DAMAGE_DATA["Scaling Mode"] === "half","A valid mode was refused.");
   });
   for (const type of ["weapon","equipment","consumable","tool","loot","container","spell","feat"]) {
     await test(type + " identity, source, state and native controls",async () => {

@@ -1,6 +1,6 @@
 ## Explicit fields in Item YAML schema 7
 
-Verification target: D&D5e 6.0.6 and 6.1.0 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6, 6.1.0 and 6.1.1 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|

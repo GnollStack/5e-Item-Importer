@@ -219,7 +219,7 @@ WEAPON:
 
 *Best for: turning rules text into Items without typing the template yourself.*
 
-The templates are written strictly so chatbots like Claude, ChatGPT and Gemini fill them in correctly, quickly, and only in a way Foundry can understand. Give yours the free [Importer LLM Pack](https://github.com/GnollStack/bakshis-bazaar-archives/tree/main/importer-llm-pack/14.4.0) and it writes complete Items from an item's rules text, one at a time or a whole batch. For best results:
+The templates are written strictly so chatbots like Claude, ChatGPT and Gemini fill them in correctly, quickly, and only in a way Foundry can understand. Give yours the free [Importer LLM Pack](https://github.com/GnollStack/bakshis-bazaar-archives/tree/main/importer-llm-pack/14.5.0) and it writes complete Items from an item's rules text, one at a time or a whole batch. For best results:
 
 1. Create a chat or project in your chatbot, a Claude or ChatGPT Project works well, paste the pack's project instructions, and upload the files its README lists for your modules.
 2. Paste the item's rules text and ask for the Item along with what you want said item to do.
@@ -238,7 +238,7 @@ The templates are written strictly so chatbots like Claude, ChatGPT and Gemini f
 
 Paste a feature with its header line, such as "General Feat (Prerequisite: Level 4+)" or "3rd-level Fighter feature", or use the Feature template. Uses per rest or recharge, prerequisites and the full text come along.
 
-A feat can also carry what it grants, such as an ability score increase, spells, proficiencies or a choice from a list, so dropping it on a character applies them. Spells and items can be named instead of linked: the preview links each one it finds and gives you a drop zone for any it can't.
+A feat can also carry what it grants, such as an ability score increase, spells, proficiencies or a choice from a list, so dropping it on a character applies them. Spells and items can be named instead of linked: the preview links each one it finds and lets you search for any it can't.
 
 ---
 
@@ -254,7 +254,7 @@ Paste a merchant's stock, a treasure hoard or a whole adventuring kit in one go.
 
 ### Safe Imports
 
-Choose where Items go: a world folder, a character, or a compendium you can edit. If an Item with the same name already exists, add a copy, update it, merge, or skip it; an update shows what will change first. Spells, items and containers an Item mentions are linked by name, and anything not found gets a drop zone in the preview.
+Choose where Items go: a world folder, a character, or a compendium you can edit. If an Item with the same name already exists, add a copy, update it, merge, or skip it; an update shows what will change first. Spells, items and containers an Item mentions are linked by name, from your world or the dnd5e compendium for your rules, and anything else gets a Search button in the preview.
 
 **Copy problems** copies whatever the preview flags together with your YAML. **View options > Show Import History** keeps this session's imports with **Undo**. The [import-window guide](docs/import-window.md) covers every control.
 
@@ -289,7 +289,7 @@ Activity Importer is available to [Bazaar Patrons](https://www.patreon.com/cw/Gn
 <details>
 <summary><strong>Settings</strong></summary>
 
-Open **Configure Settings → 5e Item Importer**. Each setting applies to your browser only, except Enable MCP Diagnostics, which applies to the world.
+Open **Configure Settings → 5e Item Importer**. Each setting applies to your browser only, except Default compendium for linked spells and creatures, Compendiums to link first and Enable MCP Diagnostics, which apply to the world.
 
 | Setting | Default | What it does |
 | --- | --- | --- |
@@ -302,6 +302,8 @@ Open **Configure Settings → 5e Item Importer**. Each setting applies to your b
 | Use Semantic Random Icons | On | A random fitting dnd5e icon, such as a sword for a longsword; wins over compendium icons |
 | Merge with Activity Importer Dropdown | On | Puts **Import Item** in Activity Importer's menu |
 | Replace Generated Default Activities | On | Stops dnd5e adding its default attack or check when your YAML has its own |
+| Default compendium for linked spells and creatures | Match the world's Rules Version | Which dnd5e copy a named spell links to when it is in both the 2014 and 2024 compendiums; or 2024, 2014, or always ask. Shared with 5e Activity Importer |
+| Compendiums to link first | None | **Choose compendiums** lists compendiums whose spells and creatures link first, in order, such as a module of pre-automated spells. Shared with 5e Activity Importer |
 | Show Parse Results, Show YAML Normalization Warnings, Debug Logging | Off | Extra troubleshooting messages |
 | Enable MCP Diagnostics | Off | Advanced diagnostics; leave off during play |
 
@@ -346,7 +348,7 @@ https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.j
 | Requirement | Version |
 | --- | --- |
 | Foundry VTT | v14 only, build 14.367 or later; verified on 14.370 |
-| dnd5e | 6.0.6 minimum; verified on 6.0.6 and 6.1.0 |
+| dnd5e | 6.0.6 minimum; verified on 6.0.6, 6.1.0 and 6.1.1 |
 | [5e Activity Importer](https://foundryvtt.com/packages/5e-activity-importer) | Optional premium companion; see [Activity Importer Companion](#activity-importer-companion) |
 
 ---
@@ -361,7 +363,7 @@ https://github.com/GnollStack/5e-Item-Importer/releases/latest/download/module.j
 
 **Foundry VTT:** v14 only, build 14.367 or later; verified on **14.370**. For a world that stays on Foundry v13, use 5e Item Importer 13.9.1.
 
-**Game system:** **dnd5e** 6.0.6 minimum; verified on **6.0.6** and **6.1.0**.
+**Game system:** **dnd5e** 6.0.6 minimum; verified on **6.0.6**, **6.1.0** and **6.1.1**.
 
 **Optional modules:** **5e Activity Importer** 14.4.0 or later adds activities and effects to imported Items; Item Importer works fully without it, and an older companion shows an update message for attachments while Items still import. **Token Name Lookup** can make `[[lookup @name]]` text prefer token names.
 

@@ -2325,6 +2325,17 @@ export class ItemData {
       }
     }
 
+    // Spells and creatures named without a UUID: link the clear choices (Activity Importer 14.5.0+),
+    // as the import window does, so API and macro imports behave like the window.
+    const autoLink = activityImporter.api?.lookup?.autoLink;
+    if (typeof autoLink === "function") {
+      try {
+        await autoLink(allResults);
+      } catch (err) {
+        ItemUtils.warn(`Could not link named spells or creatures automatically: ${err?.message || err}`);
+      }
+    }
+
     issues.push(...ItemData.collectInlineResultWarnings(allResults));
     return {
       results: allResults,
@@ -2565,7 +2576,7 @@ export class ItemData {
       if (activityType === "cast") {
         const uuid = typeof activityData.spell?.uuid === "string" ? activityData.spell.uuid.trim() : "";
         if (!uuid) {
-          issues.push(`${label} requires a spell Item UUID.`);
+          issues.push(`${label} has no linked spell. Pick it in the import window, or write the spell's UUID in CASTING_DETAILS.Item UUID.`);
         } else if (uuidResolver) {
           const spell = await resolveDocument(uuid);
           if (!spell || spell.documentName !== "Item" || spell.type !== "spell") {

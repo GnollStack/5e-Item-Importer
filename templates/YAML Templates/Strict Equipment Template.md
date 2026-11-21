@@ -23,7 +23,7 @@ Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 7` a
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Loot/Container accept passive effects only.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 and 6.1.0 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.11 and DAE 14.6.9 integrations. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6, 6.1.0 and 6.1.1 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.7.0 and DAE 14.6.10 on D&D5e 6.1.0 (and MIDI-QOL 14.6.11 and DAE 14.6.9 on D&D5e 6.0.6). Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -467,7 +467,7 @@ The completed examples below demonstrate array nesting for a passive +1 AC ward 
 
 ## Explicit fields in Item YAML schema 7
 
-Verification target: D&D5e 6.0.6 and 6.1.0 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6, 6.1.0 and 6.1.1 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|

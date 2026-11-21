@@ -1192,6 +1192,55 @@ body.theme-dark .ii-shortcuts-hint kbd {
 body.theme-dark .ii-window .ii-ref-dropzone { border-color: rgba(255, 255, 255, .3); }
 body.theme-dark .ii-window .ii-ref-dropzone.ii-ref-resolved { border-color: var(--ii-success, #2d8f51); }
 
+/* Reference field: linked document or live search (shared scripts/ui/referencePicker.js,
+   the same markup as Activity Importer's ai-refpick-*) */
+.ii-window .ii-ref-dropzone > .ii-refpick { flex: 1 1 260px; min-width: 0; }
+.ii-window .ii-refpick { display: flex; flex-direction: column; align-items: stretch; gap: 3px; min-width: 0; font-size: 12px; }
+.ii-window .ii-refpick.is-linked { flex-direction: row; align-items: center; justify-content: space-between; gap: 6px; }
+.ii-window .ii-refpick-linked { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+.ii-window .ii-refpick-icon { width: 20px; height: 20px; flex: 0 0 20px; border: none; border-radius: 3px; object-fit: cover; text-align: center; line-height: 20px; }
+.ii-window .ii-refpick-name { font-weight: 600; }
+.ii-window .ii-refpick-source, .ii-window .ii-refpick-message { font-size: 11px; opacity: .75; }
+.ii-window .ii-refpick-auto {
+    font-size: 9px; text-transform: uppercase; letter-spacing: .04em; padding: 0 4px; border-radius: 3px;
+    background: rgba(45, 143, 81, .15); color: var(--ii-success, #2d8f51);
+}
+.ii-window .ii-refpick-actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+.ii-window .ii-refpick-change, .ii-window .ii-refpick-cancel { width: auto; height: auto; line-height: 1.4; padding: 1px 8px; font-size: 11px; border-radius: 3px; flex: 0 0 auto; }
+.ii-window .ii-refpick-clear { width: auto; height: auto; background: none; border: none; color: #888; padding: 2px 6px; font-size: 12px; line-height: 1; }
+.ii-window .ii-refpick-clear:hover { color: var(--ii-error, #e63946); }
+.ii-window .ii-refpick-finding { opacity: .7; font-style: italic; }
+.ii-window .ii-refpick-bar { display: flex; align-items: center; gap: 6px; }
+.ii-window .ii-refpick-bar > i { font-size: 11px; opacity: .6; }
+.ii-window .ii-refpick-input { flex: 1 1 auto; min-width: 0; height: 26px; }
+.ii-window .ii-refpick-results {
+    list-style: none; margin: 0; padding: 2px; max-height: 220px; overflow-y: auto;
+    border: 1px solid rgba(0, 0, 0, .15); border-radius: 4px; background: rgba(255, 255, 255, .6);
+}
+.ii-window .ii-refpick-option { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 3px; cursor: pointer; }
+.ii-window .ii-refpick-option:hover, .ii-window .ii-refpick-option.is-active { background: rgba(63, 136, 197, .15); }
+.ii-window .ii-refpick-option .ii-refpick-source { margin-left: auto; text-align: right; }
+body.theme-dark .ii-window .ii-refpick-results { border-color: rgba(255, 255, 255, .15); background: rgba(0, 0, 0, .25); }
+
+/* The field's message and Search button; the search window (scripts/ui/referencePicker.js) */
+.ii-window .ii-refpick-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ii-window .ii-refpick-search { flex: 0 0 auto; width: auto; height: auto; line-height: 1.4; padding: 2px 10px; font-size: 11px; border-radius: 3px; }
+.ii-refpick-window .window-content { padding: 8px; }
+.ii-refpick-window-body { display: flex; flex-direction: column; gap: 6px; height: 100%; min-height: 0; font-size: 12px; }
+.ii-refpick-window .ii-refpick-bar { display: flex; align-items: center; gap: 6px; }
+.ii-refpick-window .ii-refpick-input { flex: 1 1 auto; min-width: 0; height: 28px; font-size: 13px; }
+.ii-refpick-window-note, .ii-refpick-window-hint { margin: 0; font-size: 11px; opacity: .75; }
+.ii-refpick-window .ii-refpick-results {
+    flex: 1 1 auto; min-height: 0; margin: 0; padding: 2px; list-style: none; overflow-y: auto;
+    border: 1px solid var(--color-border, rgba(127, 127, 127, .35)); border-radius: 4px;
+}
+.ii-refpick-window .ii-refpick-option { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 3px; cursor: pointer; }
+.ii-refpick-window .ii-refpick-option:hover, .ii-refpick-window .ii-refpick-option.is-active { background: rgba(63, 136, 197, .25); }
+.ii-refpick-window .ii-refpick-icon { width: 24px; height: 24px; flex: 0 0 24px; border: none; border-radius: 3px; object-fit: cover; text-align: center; line-height: 24px; }
+.ii-refpick-window .ii-refpick-name { font-weight: 600; }
+.ii-refpick-window .ii-refpick-source { margin-left: auto; text-align: right; font-size: 11px; opacity: .7; }
+body.theme-dark .ii-window .ii-refpick-option:hover, body.theme-dark .ii-window .ii-refpick-option.is-active { background: rgba(63, 136, 197, .3); }
+
 .ii-window .ii-batch-item-container { font-size: 11px; opacity: .85; margin-top: 2px; }
 .ii-window .ii-batch-item-container i { margin-right: 4px; opacity: .7; }
 
@@ -1202,3 +1251,114 @@ body.theme-dark .ii-window .ii-ref-dropzone.ii-ref-resolved { border-color: var(
 .ii-window .ii-midi-notice { grid-column: 1 / -1; align-self: start; margin: 0 0 8px; padding: 6px 8px; border-left: 3px solid var(--ii-primary, #3f88c5); background: rgba(63, 136, 197, .08); font-size: 12px; }
 .ii-window .ii-midi-notice p { margin: 0; }
 .ii-window .ii-midi-notice .ii-midi-hint { margin-top: 2px; font-size: 11px; opacity: .8; }
+
+/* ==========================================
+   Compendiums to link first (scripts/ui/referenceCompendiums.js)
+   ========================================== */
+
+.ii-refcomp-window .window-content {
+    padding: 10px;
+}
+
+.ii-refcomp-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.ii-refcomp-hint {
+    margin: 0;
+    opacity: 0.8;
+}
+
+.ii-refcomp-list {
+    margin: 0;
+    padding: 2px;
+    list-style: none;
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border, rgba(127, 127, 127, 0.35));
+    border-radius: 4px;
+}
+
+.ii-refcomp-row,
+.ii-refcomp-empty {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+}
+
+.ii-refcomp-row + .ii-refcomp-row {
+    border-top: 1px solid var(--color-border, rgba(127, 127, 127, 0.2));
+}
+
+.ii-refcomp-empty {
+    opacity: 0.75;
+}
+
+.ii-refcomp-order {
+    flex: 0 0 1.6em;
+    text-align: right;
+    opacity: 0.7;
+}
+
+.ii-refcomp-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.ii-refcomp-kind,
+.ii-refcomp-missing {
+    margin-left: 4px;
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.ii-refcomp-missing {
+    color: var(--color-level-warning, #c58b00);
+    opacity: 1;
+}
+
+.ii-refcomp-button {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 28px;
+    height: 26px;
+    margin: 0;
+    padding: 0 6px;
+    line-height: 1;
+}
+
+.ii-refcomp-add {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.ii-refcomp-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 28px;
+}
+
+.ii-refcomp-footer {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.ii-refcomp-status {
+    flex: 1 1 auto;
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.ii-refcomp-footer button {
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+}

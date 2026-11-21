@@ -9,7 +9,7 @@ import { ADVANCEMENT_TYPE_ROOTS, SUPPORTED_ADVANCEMENT_TYPES, MULTI_LEVEL_ADVANC
 const OWNER = "5e-item-importer";
 // Runtimes the mappings below were reviewed against. dnd5e 6.1.0 added the renown Item type
 // (catalog-only) and the food properties; no stored field of the eight supported types changed.
-const REVIEWED_SYSTEM_VERSIONS = ["6.0.6", "6.1.0"];
+const REVIEWED_SYSTEM_VERSIONS = ["6.0.6", "6.1.0", "6.1.1"];
 const REVIEWED_FOUNDRY_VERSIONS = ["14.369", "14.370"];
 const VERIFIED_VERSION = REVIEWED_SYSTEM_VERSIONS.at(-1);
 const REVIEWED_LABEL = "Foundry " + REVIEWED_FOUNDRY_VERSIONS.join(" / ") + " and dnd5e " + REVIEWED_SYSTEM_VERSIONS.join(" / ");
@@ -256,7 +256,7 @@ function runningOptions(key) {
 }
 function sheetFor(field, entries, current, environment = {}) {
   const path = pathKey(field.path);
-  // The reviewed option lists below are identical in dnd5e 6.0.6 and 6.1.0; the label names the running one.
+  // The reviewed option lists below are identical in dnd5e 6.0.6, 6.1.0 and 6.1.1; the label names the running one.
   const systemLabel = REVIEWED_SYSTEM_VERSIONS.includes(environment.systemVersion) ? environment.systemVersion : VERIFIED_VERSION;
   const sheet = {
     status: "needs-review", verifiedVersion: null, options: [], conditions: [],
@@ -312,7 +312,7 @@ function sheetFor(field, entries, current, environment = {}) {
   if (field.type === "feat" && path === "system.cover")
     reviewed("systems/dnd5e/templates/items/details/details-feat.hbs", ["Cover is shown only for vehicle features (type.value vehicle)."]);
   if (field.type === "feat" && path === "system.crewed")
-    reviewed("systems/dnd5e/templates/items/details/details-feat.hbs", ["dnd5e 6.0.6 and 6.1.0 have no sheet control for this field."], "Stored value is retained; no native control reads it.");
+    reviewed("systems/dnd5e/templates/items/details/details-feat.hbs", ["dnd5e 6.0.6, 6.1.0 and 6.1.1 have no sheet control for this field."], "Stored value is retained; no native control reads it.");
   return sheet;
 }
 function excludedReason(field, path) {

@@ -42,8 +42,8 @@ FEAT:
 
   # Optional, repeatable. One root key per entry; omit the list when the feature
   # grants nothing. Referenced documents resolve by UUID, Name or Identifier; the
-  # import window shows a drop zone for anything missing or ambiguous, and import
-  # waits until every reference resolves. HitPoints, Size and Subclass belong to
+  # import window asks for anything missing or ambiguous, and import waits until
+  # every reference resolves. HitPoints, Size and Subclass belong to
   # classes and species and are rejected here.
   ADVANCEMENT:
     - ABILITY_SCORE_IMPROVEMENT:

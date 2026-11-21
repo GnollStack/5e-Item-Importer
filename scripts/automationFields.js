@@ -1,8 +1,9 @@
 import { cloneExplicit, applyExplicitSource, isMapping } from "./explicitYamlFields.js";
 
 /** Reviewed authored storage, not execution. Shared by the independent importers. */
-// MIDI-QOL 14.6.11 declares dnd5e maximum 6.0.999, so its fields are reviewed on dnd5e 6.0.6.
-export const AUTOMATION_REVIEW = Object.freeze({ foundry: "14.370", system: "6.0.6", midi: "14.6.11", dae: "14.6.9" });
+// MIDI-QOL 14.7.0 runs on dnd5e 6.1 only; its authored fields equal 14.6.11's, reviewed on dnd5e 6.0.6
+// (fieldCatalogMidiRules.js lists both runtimes). DAE 14.6.10 changed no authored flag or choice.
+export const AUTOMATION_REVIEW = Object.freeze({ foundry: "14.370", system: "6.1.0", midi: "14.7.0", dae: "14.6.10" });
 const string = { kind: "string" }, boolean = { kind: "boolean" }, number = { kind: "number" };
 const nullable = spec => ({ ...spec, nullable: true });
 const choice = (...choices) => ({ kind: typeof choices[0], choices });
@@ -67,6 +68,10 @@ const midiItem = { onUseMacroName: nullable(string), noProvokeReaction: boolean,
     rulesText: object({ uuid: string, match: choice("exact", "otherRules", "name") }) };
 const ownedNamespaces = new Set(["midi-qol", "dae", "core"]);
 const derived = { "midi-qol": new Set(["onUseMacroParts"]) };
+// Deprecated flags that export drops instead of refusing (owner decision 2026-11-19). DAE's legacy
+// flags.dae.transfer repeats the native ActiveEffect transfer field, which export keeps; DAE itself
+// deletes the flag when it creates an effect. MIDI-QOL's sample compendium still carries it.
+const deprecated = { dae: new Set(["transfer"]) };
 
 export function automationSchema(kind, type) {
     return object({
@@ -142,7 +147,7 @@ export function exportAutomation(document, kind, type) {
     for (const [provider, flags] of Object.entries(source.flags ?? {})) {
         if (!ownedNamespaces.has(provider)) continue;
         const authored = cloneExplicit(flags);
-        for (const key of derived[provider] ?? []) delete authored?.[key];
+        for (const key of [...(derived[provider] ?? []), ...(deprecated[provider] ?? [])]) delete authored?.[key];
         if (!isMapping(authored)) throw new Error(`flags.${provider} must be a mapping.`);
         if (Object.keys(flags).length && !Object.keys(authored).length) continue;
         if (provider === "midi-qol") (out[provider] ??= {}).flags = authored;

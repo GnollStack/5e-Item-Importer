@@ -336,10 +336,15 @@ function getWorldDocumentCounts() {
     };
 }
 
+// The MCP test bridge keeps its own world settings (a lastActivity heartbeat written while a run is
+// in progress). They are not the importer's writes, and comparing them made the check fail at random.
+const isTestBridgeSetting = (name, document) => name === "Setting" && String(document?.key ?? "").startsWith("foundry-mcp-bridge.");
+
 function snapshotNonFixtureDocumentSources() {
     const collections = game.collections?.entries?.() ?? [["Item", game.items], ["Actor", game.actors], ["Scene", game.scenes]];
     return JSON.stringify(Array.from(collections, ([name, collection]) => [name, collectionValues(collection)
         .filter(document => name !== "Item" || !isFixtureItem(document, getFixtureMarker(document)?.runId))
+        .filter(document => !isTestBridgeSetting(name, document))
         .map(document => document.toObject?.() ?? document._source ?? document)
         .sort((left, right) => String(left?._id ?? "").localeCompare(String(right?._id ?? "")))
     ]).sort(([left], [right]) => String(left).localeCompare(String(right))));

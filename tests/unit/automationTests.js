@@ -126,6 +126,14 @@ export async function runAutomationContractTests({ itemModule = false } = {}) {
             assert(rejected, "Unknown field was accepted.");
         }
     });
+    await test("Deprecated flags.dae.transfer is dropped on export, not refused, and still not accepted on import", () => {
+        // MIDI-QOL's sample compendium still carries DAE's legacy transfer flag; the native transfer field holds the value.
+        const both = exportAutomation({ flags: { dae: { transfer: true, stackable: "noneName" } } }, "effect", "base");
+        assert(same(both, { dae: { stackable: "noneName" } }), "Only the deprecated flag may be dropped: " + JSON.stringify(both));
+        assert(same(exportAutomation({ flags: { dae: { transfer: false } } }, "effect", "base"), {}), "A DAE section of only the deprecated flag must disappear.");
+        let rejected = false; try { parseAutomation({ dae: { transfer: true } }, "effect", "base"); } catch { rejected = true; }
+        assert(rejected, "AUTOMATION.dae.transfer must stay unknown on import.");
+    });
     await test("Macro text is inert in parse/export/preview", () => {
         const command = "globalThis.__automationCanary = true; throw new Error('must not execute')";
         delete globalThis.__automationCanary;

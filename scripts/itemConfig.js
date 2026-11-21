@@ -3,6 +3,9 @@
  * Handles module settings, constants, and configuration options
  */
 
+import { referenceCompendiumsSettingConfig, referenceRulesSettingConfig } from "./referenceLinking.js";
+import { referenceCompendiumsMenuConfig } from "./ui/referenceCompendiums.js";
+
 export const MODULE_ID = "5e-item-importer";
 export const MODULE_NAME = MODULE_ID;
 export const MODULE_TITLE = "5e Item Importer";
@@ -263,6 +266,13 @@ export function registerSettings() {
         type: Boolean,
         default: false
     });
+
+    // Which compendium a spell or document named in the YAML links to; shared with 5e Activity Importer.
+    game.settings.register(MODULE_ID, "referenceRules", referenceRulesSettingConfig(MODULE_ID));
+    // Compendiums whose copies link first, in order (edited in its own window); shared with 5e Activity Importer.
+    game.settings.register(MODULE_ID, "referenceCompendiums", referenceCompendiumsSettingConfig(MODULE_ID));
+    const compendiumsMenu = referenceCompendiumsMenuConfig(MODULE_ID, "ii");
+    if (compendiumsMenu) game.settings.registerMenu(MODULE_ID, "referenceCompendiumsMenu", compendiumsMenu);
 }
 
 /**

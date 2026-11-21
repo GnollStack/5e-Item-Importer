@@ -30,12 +30,14 @@ export async function runFieldCatalogChecks(moduleId) {
   if (!first) return { success: false, tests, warnings };
   const item = moduleId === "5e-item-importer";
   // dnd5e 6.1.0 added the renown Item type (catalog-only), the antimagic activity behavior and
-  // the enchantment effect's own rider lists. Counts are exact per reviewed version.
+  // the enchantment effect's own rider lists; 6.1.1 (a bug-fix release) has the same scope.
+  // Counts are exact per reviewed version.
+  const scope61 = { itemTypes: 14, behaviors: "antimagic,applyActiveEffect,difficultTerrain", enchantmentRiders: true };
   const reviewedScope = { "6.0.6": { itemTypes: 13, behaviors: "applyActiveEffect,difficultTerrain", enchantmentRiders: false },
-    "6.1.0": { itemTypes: 14, behaviors: "antimagic,applyActiveEffect,difficultTerrain", enchantmentRiders: true } }[game.system.version];
+    "6.1.0": scope61, "6.1.1": scope61 }[game.system.version];
   await check("native type registry includes the complete verified scope", () => {
     if (!reviewedScope) {
-      warnings.push("Exact native type counts are verified for dnd5e 6.0.6 and 6.1.0; current version requires review."); return;
+      warnings.push("Exact native type counts are verified for dnd5e 6.0.6, 6.1.0 and 6.1.1; current version requires review."); return;
     }
     if (item) {
       assert(first.types.filter(type => type.kind === "item").length === reviewedScope.itemTypes);

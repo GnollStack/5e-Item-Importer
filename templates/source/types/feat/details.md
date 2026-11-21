@@ -126,7 +126,7 @@ The completed examples below demonstrate array nesting for a passive +1 AC featu
 | `SCALE_VALUE` | ScaleValue | `Identifier` (the `@scale.<feature>.<identifier>` key), `Type` (`string`, `number`, `cr`, `dice`, `distance`, `usage`), `Distance Units`, `SCALE` (list of `Level` entries: `Value` for most types; `Dice Count`, `Die Denomination`, `Modifiers` for dice; `Value` and `Period` for usage). |
 | `TRAIT` | Trait | `Mode` (`default`, `expertise`, `forcedExpertise`, `upgrade`, `mastery`), `Allow Replacements`, `Grants` (trait keys), `CHOICES` (list of `Count`/`Pool`). |
 
-**References** (`ITEMS`, `POOL`, `RECOMMENDATION`, `EFFECT`) accept `UUID`, `Name`, `Identifier` and, for Items, `Type`. A UUID is validated as written. Otherwise a single world or compendium document matching the name (or identifier) resolves automatically; several matches or none produce a drop zone in the import window, and a dropped document always overrides the automatic choice. Advancement UUIDs must point at world or compendium documents, not Items embedded in an Actor.
+**References** (`ITEMS`, `POOL`, `RECOMMENDATION`, `EFFECT`) accept `UUID`, `Name`, `Identifier` and, for Items, `Type`. A UUID is validated as written. Otherwise the import window links the document by name (or identifier): a world copy, a single match, or the copy in dnd5e's compendium for the world's rules. Other matches are listed to choose from, and a missing one gets a search field; a document the user picks, pastes or drops always overrides the automatic choice. Advancement UUIDs must point at world or compendium documents, not Items embedded in an Actor.
 
 **Spell configuration** (`SPELL`): `Ability` lists spellcasting ability identifiers; `Method` is `atwill`, `innate`, `ritual`, `pact` or `spell`; `Prepared` is `unprepared`, `prepared` or `always`; `Uses Max`/`Uses Per`/`Require Slot` give the granted spells their own uses.
 
@@ -205,7 +205,7 @@ The completed examples below demonstrate array nesting for a passive +1 AC featu
 
 ## Explicit fields in Item YAML schema 7
 
-Verification target: D&D5e 6.0.6 and 6.1.0 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6, 6.1.0 and 6.1.1 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|

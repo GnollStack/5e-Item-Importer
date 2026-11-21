@@ -1271,7 +1271,7 @@ export function itemToStrictYamlDocument(item, options = {}) {
   };
   // Prepared sheet values may replace stored formulas or disabled controls.
   const data = builders[type](item._source ?? item);
-  exportExplicitItemFields(data, item);
+  exportExplicitItemFields(data, item, { strict: true });
   // A weapon with the Ammunition property but no stored ammunition type (dnd5e's Vicious Blowgun)
   // loses the key above; an explicit blank lets the parser tell it from YAML that forgot it.
   if (type === "weapon" && data.PROPERTIES?.Ammunition && data.AMMUNITION && !Object.hasOwn(data.AMMUNITION, "Ammunition Type")) {

@@ -14,8 +14,11 @@ import {
     clearReference,
     applyReference,
     hasUnresolvedReferences,
-    summarizeReferences
+    summarizeReferences,
+    searchReferenceCandidates,
+    describeReferenceUuid
 } from "../itemReferenceResolver.js";
+import { bindReferencePicker } from "./referencePicker.js";
 import {
     isStrictYamlFormat,
     isYamlMultiItem,
@@ -272,7 +275,7 @@ function updateSingleImportEligibility(window, item, helper) {
     const blocked = isImportBlocked(item, helper);
     importBtn.disabled = blocked;
     if (blocked) {
-        importBtn.title = "Resolve all inline activity UUIDs and document references before importing.";
+        importBtn.title = "Pick the spells, creatures and documents marked in the preview before importing.";
     } else {
         importBtn.removeAttribute("title");
     }
@@ -325,67 +328,66 @@ async function afterReferenceChange({ item, reference }) {
     await reRenderItemActivities.call(this, _uuidHelper);
 }
 
-async function handleReferenceDrop(zone, event) {
-    const found = findReferenceByZone(this, zone);
-    if (!found) return;
+/** The UUID of a document dropped on a reference field, including compendium drags that carry only pack and id. */
+function referenceUuidFromDrop(reference, event) {
     let dragData = null;
     try {
         dragData = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
     } catch {
         dragData = null;
     }
-    const documentName = dragData?.type ?? found.reference.query?.documentName ?? "Item";
-    const uuid = dragData?.uuid
+    const documentName = dragData?.type ?? reference?.query?.documentName ?? "Item";
+    return dragData?.uuid
         ?? (dragData?.pack && dragData?.id ? `Compendium.${dragData.pack}.${documentName}.${dragData.id}` : null);
-    if (!uuid) {
-        ui.notifications.warn(localize("II.Notifications.ReferenceDropUnsupported", "Drop a document from the sidebar or a compendium onto the reference."));
-        return;
-    }
-    const outcome = await applyDroppedReference(found.reference, uuid, this._getDestination?.() ?? null);
-    if (!outcome.accepted) {
-        ui.notifications.warn(outcome.reason);
-        return;
+}
+
+/** Link a chosen, pasted or dropped document; a candidate of an ambiguous name keeps its listed details. */
+async function linkReferenceFromField(zone, uuid) {
+    const found = findReferenceByZone(this, zone);
+    if (!found) return false;
+    if (!chooseReferenceCandidate(found.reference, uuid)) {
+        const outcome = await applyDroppedReference(found.reference, uuid, this._getDestination?.() ?? null);
+        if (!outcome.accepted) {
+            ui.notifications.warn(outcome.reason);
+            return false;
+        }
     }
     await afterReferenceChange.call(this, found);
+    return true;
 }
 
 /**
- * Bind the Item Importer's own reference drop zones (advancement grants, container
- * placement). These are separate from the companion's activity UUID zones.
+ * Bind the Item Importer's own reference fields (advancement grants, container placement):
+ * live search, pasted UUIDs, drops, Change and Clear. These are separate from the companion's
+ * spell and creature fields.
  * @this {ItemWindow}
  */
 function setupItemReferenceDropZones() {
     const output = this.element?.querySelector("#ii-parse-output");
     if (!output) return;
     for (const zone of output.querySelectorAll(".ii-ref-dropzone")) {
-        if (zone.dataset.iiRefBound === "true") continue;
-        zone.dataset.iiRefBound = "true";
-        zone.addEventListener("dragover", event => {
-            event.preventDefault();
-            if (event.dataTransfer) event.dataTransfer.dropEffect = "link";
-            zone.classList.add("drag-over");
-        });
-        zone.addEventListener("dragleave", event => {
-            if (!zone.contains(event.relatedTarget)) zone.classList.remove("drag-over");
-        });
-        zone.addEventListener("drop", async event => {
-            event.preventDefault();
-            event.stopPropagation();
-            zone.classList.remove("drag-over");
-            await handleReferenceDrop.call(this, zone, event);
-        });
-        zone.querySelector(".ii-ref-candidates")?.addEventListener("change", async event => {
-            const found = findReferenceByZone(this, zone);
-            if (!found || !event.target.value) return;
-            if (chooseReferenceCandidate(found.reference, event.target.value)) await afterReferenceChange.call(this, found);
-        });
-        zone.querySelector(".ii-ref-clear")?.addEventListener("click", async event => {
-            event.preventDefault();
-            event.stopPropagation();
-            const found = findReferenceByZone(this, zone);
-            if (!found) return;
-            clearReference(found.reference);
-            await afterReferenceChange.call(this, found);
+        const host = zone.querySelector(".ii-refpick");
+        if (!host) continue;
+        const reference = findReferenceByZone(this, zone)?.reference;
+        bindReferencePicker(host, {
+            prefix: "ii",
+            noun: Renderer.referenceNoun(reference),
+            search: async query => {
+                const current = findReferenceByZone(this, zone)?.reference;
+                return current ? searchReferenceCandidates(current, query, this._getDestination?.() ?? null) : [];
+            },
+            describeUuid: async uuid => {
+                const current = findReferenceByZone(this, zone)?.reference;
+                return current ? describeReferenceUuid(current, uuid, this._getDestination?.() ?? null) : null;
+            },
+            uuidFromDrop: event => referenceUuidFromDrop(findReferenceByZone(this, zone)?.reference, event),
+            pick: uuid => linkReferenceFromField.call(this, zone, uuid),
+            clear: async () => {
+                const found = findReferenceByZone(this, zone);
+                if (!found) return;
+                clearReference(found.reference);
+                await afterReferenceChange.call(this, found);
+            }
         });
     }
 }

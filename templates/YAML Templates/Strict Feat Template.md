@@ -21,7 +21,7 @@ Paste the complete document into Item Importer. Begin with `SCHEMA_VERSION: 7` a
 
 Item Importer alone supports core fields. Activity/effect attachments require the optional Activity Importer; use its matching templates. Free/core is the default when companion availability is unknown. Features accept activities and passive effects.
 
-Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6 and 6.1.0 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.6.11 and DAE 14.6.9 integrations. Package versions and YAML versions are separate.
+Read the [generation guide](../README.md) and [authoring rules and validation](../../docs/template-authoring.md) with this file. Explicit field contracts target D&D5e 6.0.6, 6.1.0 and 6.1.1 / Foundry 14.370; MIDI/DAE annotations, when used, target the reviewed MIDI-QOL 14.7.0 and DAE 14.6.10 on D&D5e 6.1.0 (and MIDI-QOL 14.6.11 and DAE 14.6.9 on D&D5e 6.0.6). Package versions and YAML versions are separate.
 
 ## Generate or preserve
 
@@ -124,8 +124,8 @@ FEAT:
 
   # Optional, repeatable. One root key per entry; omit the list when the feature
   # grants nothing. Referenced documents resolve by UUID, Name or Identifier; the
-  # import window shows a drop zone for anything missing or ambiguous, and import
-  # waits until every reference resolves. HitPoints, Size and Subclass belong to
+  # import window asks for anything missing or ambiguous, and import waits until
+  # every reference resolves. HitPoints, Size and Subclass belong to
   # classes and species and are rejected here.
   ADVANCEMENT:
     - ABILITY_SCORE_IMPROVEMENT:
@@ -256,7 +256,7 @@ FEAT:
 
 ## Configuration rules
 
-This is a native Feature Item, not a physical inventory item: rarity, quantity, price, weight, attunement and unidentified-description fields are not feature authoring controls and are ignored with a warning. Feature Type and Feature Subtype are dnd5e identifiers, not display labels; unknown values are stored with a warning and the sheet shows them as a generic Feature. Advancement is authored through the `ADVANCEMENT` list: ability score improvements, granted items, item choices, item changes, scale values and traits. Referenced Items and effects are matched by UUID, name or identifier in the world and compendia; anything missing or ambiguous gets a drop zone in the import window, and import waits until every reference resolves. Enchantment limits matter only for Artificer infusion and Rune Knight rune sources, and Cover only for vehicle features; both are retained for any feature. Source-specific attacks, saves, damage, healing and effects require companion attachments in full output.
+This is a native Feature Item, not a physical inventory item: rarity, quantity, price, weight, attunement and unidentified-description fields are not feature authoring controls and are ignored with a warning. Feature Type and Feature Subtype are dnd5e identifiers, not display labels; unknown values are stored with a warning and the sheet shows them as a generic Feature. Advancement is authored through the `ADVANCEMENT` list: ability score improvements, granted items, item choices, item changes, scale values and traits. Referenced Items and effects are matched by UUID, name or identifier in the world and compendia; the import window links clear matches and asks for anything missing or ambiguous, and import waits until every reference resolves. Enchantment limits matter only for Artificer infusion and Rune Knight rune sources, and Cover only for vehicle features; both are retained for any feature. Source-specific attacks, saves, damage, healing and effects require companion attachments in full output.
 
 
 ## Concrete example
@@ -453,7 +453,7 @@ The completed examples below demonstrate array nesting for a passive +1 AC featu
 | `SCALE_VALUE` | ScaleValue | `Identifier` (the `@scale.<feature>.<identifier>` key), `Type` (`string`, `number`, `cr`, `dice`, `distance`, `usage`), `Distance Units`, `SCALE` (list of `Level` entries: `Value` for most types; `Dice Count`, `Die Denomination`, `Modifiers` for dice; `Value` and `Period` for usage). |
 | `TRAIT` | Trait | `Mode` (`default`, `expertise`, `forcedExpertise`, `upgrade`, `mastery`), `Allow Replacements`, `Grants` (trait keys), `CHOICES` (list of `Count`/`Pool`). |
 
-**References** (`ITEMS`, `POOL`, `RECOMMENDATION`, `EFFECT`) accept `UUID`, `Name`, `Identifier` and, for Items, `Type`. A UUID is validated as written. Otherwise a single world or compendium document matching the name (or identifier) resolves automatically; several matches or none produce a drop zone in the import window, and a dropped document always overrides the automatic choice. Advancement UUIDs must point at world or compendium documents, not Items embedded in an Actor.
+**References** (`ITEMS`, `POOL`, `RECOMMENDATION`, `EFFECT`) accept `UUID`, `Name`, `Identifier` and, for Items, `Type`. A UUID is validated as written. Otherwise the import window links the document by name (or identifier): a world copy, a single match, or the copy in dnd5e's compendium for the world's rules. Other matches are listed to choose from, and a missing one gets a search field; a document the user picks, pastes or drops always overrides the automatic choice. Advancement UUIDs must point at world or compendium documents, not Items embedded in an Actor.
 
 **Spell configuration** (`SPELL`): `Ability` lists spellcasting ability identifiers; `Method` is `atwill`, `innate`, `ritual`, `pact` or `spell`; `Prepared` is `unprepared`, `prepared` or `always`; `Uses Max`/`Uses Per`/`Require Slot` give the granted spells their own uses.
 
@@ -552,7 +552,7 @@ The completed examples below demonstrate array nesting for a passive +1 AC featu
 
 ## Explicit fields in Item YAML schema 7
 
-Verification target: D&D5e 6.0.6 and 6.1.0 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
+Verification target: D&D5e 6.0.6, 6.1.0 and 6.1.1 / Foundry 14.370. Item YAML versions 0 to 6 remain accepted in memory. Complete field mappings, conditions, defaults, exclusions, and tests are recorded in [the field coverage reference](../../docs/explicit-yaml-v2.md).
 
 | Field | Stored value / default |
 |---|---|
